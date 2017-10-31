@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"sync"
 	"time"
+
+	"github.com/openzipkin/zipkin-go/kind"
 )
 
 // Span interface
 type Span interface {
 	GetContext() SpanContext
-	SetKind(kind Kind)
 	Annotate(string, time.Time)
 	Tag(string, string)
 	Finish()
@@ -21,10 +22,9 @@ type span struct {
 	SpanContext
 	mtx            sync.RWMutex
 	Name           string            `json:"name"`
-	Kind           Kind              `json:"kind,omitempty"`
+	Kind           kind.Type         `json:"kind,omitempty"`
 	Timestamp      time.Time         `json:"timestamp,omitempty"`
 	Duration       time.Duration     `json:"duration,imitempty"`
-	Debug          bool              `json:"debug,omitempty"`
 	Shared         bool              `json:"shared,omitempty"`
 	LocalEndpoint  *Endpoint         `json:"localEndpoint,omitempty"`
 	RemoteEndpoint *Endpoint         `json:"remoteEndpoint,omitempty"`
@@ -34,10 +34,6 @@ type span struct {
 
 func (s *span) GetContext() SpanContext {
 	return s.SpanContext
-}
-
-func (s *span) SetKind(kind Kind) {
-	s.Kind = kind
 }
 
 // Annotate adds a new Annotation to the Span.

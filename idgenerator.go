@@ -8,7 +8,9 @@ import (
 
 var (
 	seededIDGen = rand.New(rand.NewSource(time.Now().UnixNano()))
-	// The golang rand generators are *not* intrinsically thread-safe.
+	// NewSource returns a new pseudo-random Source seeded with the given value.
+	// Unlike the default Source used by top-level functions, this source is not
+	// safe for concurrent use by multiple goroutines. Hence the need for a mutex.
 	seededIDLock sync.Mutex
 )
 
@@ -18,8 +20,10 @@ type IDGenerator interface {
 	TraceID() TraceID
 }
 
+// RandomID64 can generate 64 bit traceid's and 64 bit spanid's.
 type RandomID64 struct{}
 
+// TraceID implements IDGenerator
 func (r *RandomID64) TraceID() (id TraceID) {
 	seededIDLock.Lock()
 	id = TraceID{
@@ -29,6 +33,7 @@ func (r *RandomID64) TraceID() (id TraceID) {
 	return
 }
 
+// SpanID implements IDGenerator
 func (r *RandomID64) SpanID() (id SpanID) {
 	seededIDLock.Lock()
 	id = SpanID(seededIDGen.Int63())
@@ -36,8 +41,10 @@ func (r *RandomID64) SpanID() (id SpanID) {
 	return
 }
 
+// RandomID128 can generate 128 bit traceid's and 64 bit spanid's.
 type RandomID128 struct{}
 
+// TraceID implements IDGenerator
 func (r *RandomID128) TraceID() (id TraceID) {
 	seededIDLock.Lock()
 	id = TraceID{
@@ -48,6 +55,7 @@ func (r *RandomID128) TraceID() (id TraceID) {
 	return
 }
 
+// SpanID implements IDGenerator
 func (r *RandomID128) SpanID() (id SpanID) {
 	seededIDLock.Lock()
 	id = SpanID(seededIDGen.Int63())
@@ -55,8 +63,11 @@ func (r *RandomID128) SpanID() (id SpanID) {
 	return
 }
 
+// TimestampedRandom can generate 128 bit time sortable traceid's and 64 bit
+// spanid's.
 type TimestampedRandom struct{}
 
+// TraceID implements IDGenerator
 func (t *TimestampedRandom) TraceID() (id TraceID) {
 	seededIDLock.Lock()
 	id = TraceID{
@@ -67,6 +78,7 @@ func (t *TimestampedRandom) TraceID() (id TraceID) {
 	return
 }
 
+// SpanID implements IDGenerator
 func (t *TimestampedRandom) SpanID() (id SpanID) {
 	seededIDLock.Lock()
 	id = SpanID(seededIDGen.Int63())

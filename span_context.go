@@ -10,6 +10,13 @@ type SpanContext struct {
 	TraceID  TraceID `json:"traceId"`
 	ParentID *SpanID `json:"parentId,omitempty"`
 	ID       SpanID  `json:"id"`
+	Sampled  *bool   `json:"-"`
+	Debug    bool    `json:"debug,omitempty"`
+}
+
+// Empty returns true if SpanContext is zero value struct.
+func (s SpanContext) Empty() bool {
+	return (SpanContext{}) == s
 }
 
 // SpanID type

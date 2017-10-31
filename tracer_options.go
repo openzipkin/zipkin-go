@@ -9,6 +9,7 @@ type TracerOptions struct {
 	sharedSpans   bool
 	sampler       Sampler
 	generate      IDGenerator
+	defaultTags   map[string]string
 }
 
 // WithLocalEndpoint sets the local endpoint of the tracer.
@@ -45,6 +46,16 @@ func WithSampler(sampler Sampler) TracerOption {
 func WithIDGenerator(generator IDGenerator) TracerOption {
 	return func(o *TracerOptions) error {
 		o.generate = generator
+		return nil
+	}
+}
+
+// WithTags allows one to set default tags to be added to each created span
+func WithTags(tags map[string]string) TracerOption {
+	return func(o *TracerOptions) error {
+		for k, v := range tags {
+			o.defaultTags[k] = v
+		}
 		return nil
 	}
 }

@@ -39,6 +39,7 @@ func (t TraceID) Empty() bool {
 	return t.Low == 0 && t.High == 0
 }
 
+// UnmarshalJSON custom JSON deserializer
 func (t *TraceID) UnmarshalJSON(traceID []byte) error {
 	tID, err := TraceIDFromHex(string(traceID))
 	if err != nil {
@@ -48,6 +49,7 @@ func (t *TraceID) UnmarshalJSON(traceID []byte) error {
 	return nil
 }
 
+// MarshalJSON custom JSON serializer
 func (t TraceID) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("%q", t.ToHex())), nil
 }
