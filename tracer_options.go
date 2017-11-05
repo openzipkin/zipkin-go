@@ -1,15 +1,35 @@
 package zipkin
 
+import "errors"
+
+// Tracer Option Errors
+var (
+	ErrInvalidEndpoint             = errors.New("requires valid local endpoint")
+	ErrInvalidExtractFailurePolicy = errors.New("invalid extract failure policy provided")
+)
+
+// ExtractFailurePolicy deals with Extraction errors
+type ExtractFailurePolicy int
+
+// ExtractFailurePolicyOptions
+const (
+	ExtractFailurePolicyRestart ExtractFailurePolicy = iota
+	ExtractFailurePolicyError
+	ExtractFailurePolicyTagAndRestart
+)
+
 // TracerOption allows for functional options.
 type TracerOption func(o *TracerOptions) error
 
 // TracerOptions for a Tracer instance.
 type TracerOptions struct {
-	localEndpoint *Endpoint
-	sharedSpans   bool
-	sampler       Sampler
-	generate      IDGenerator
-	defaultTags   map[string]string
+	localEndpoint        *Endpoint
+	sharedSpans          bool
+	sampler              Sampler
+	generate             IDGenerator
+	defaultTags          map[string]string
+	unsampledNoop        bool
+	extractFailurePolicy ExtractFailurePolicy
 }
 
 // WithLocalEndpoint sets the local endpoint of the tracer.
@@ -19,6 +39,26 @@ func WithLocalEndpoint(e *Endpoint) TracerOption {
 			return ErrInvalidEndpoint
 		}
 		o.localEndpoint = e
+		return nil
+	}
+}
+
+// WithExtractFailurePolicy allows one to set the ExtractFailurePolicy.
+func WithExtractFailurePolicy(p ExtractFailurePolicy) TracerOption {
+	return func(o *TracerOptions) error {
+		if p < 0 || p > ExtractFailurePolicyTagAndRestart {
+			return ErrInvalidExtractFailurePolicy
+		}
+		o.extractFailurePolicy = p
+		return nil
+	}
+}
+
+// WithNoopSpan if set to true will switch to a NoopSpan implementation
+// if the trace is not sampled.
+func WithNoopSpan(unsampledNoop bool) TracerOption {
+	return func(o *TracerOptions) error {
+		o.unsampledNoop = unsampledNoop
 		return nil
 	}
 }

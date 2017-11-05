@@ -7,75 +7,57 @@ import (
 )
 
 // SpanOption ...
-type SpanOption func(t *Tracer, s *span)
+type SpanOption func(t *Tracer, s *spanImpl)
 
-// Parent SpanOption allows one to provide the SpanContext of the Parent Span.
+// Parent will return a parent span context given parent's extracted context
 func Parent(sc SpanContext) SpanOption {
-	return func(t *Tracer, s *span) {
+	return func(t *Tracer, s *spanImpl) {
 		if sc.Empty() {
 			return
 		}
 
-		s.SpanContext.TraceID = sc.TraceID
-		s.SpanContext.Sampled = sc.Sampled
-		s.SpanContext.Debug = sc.Debug
-
 		if t.options.sharedSpans && s.Kind == kind.Server {
 			// join span
-			s.SpanContext.ID = sc.ID
-			s.SpanContext.ParentID = sc.ParentID
+			s.Shared = true
 		} else {
 			// regular child span
-			s.SpanContext.ID = t.options.generate.SpanID()
-			s.SpanContext.ParentID = &sc.ID
+			parentID := sc.ID
+			sc.ParentID = &parentID
+			sc.ID = t.options.generate.SpanID()
 		}
+
+		s.SpanContext = sc
+		return
 	}
 }
 
 // WithSpanContext SpanOption allows one to set an explicit SpanContext for the
 // span.
 func WithSpanContext(sc SpanContext) SpanOption {
-	return func(t *Tracer, s *span) {
+	return func(t *Tracer, s *spanImpl) {
 		s.SpanContext = sc
 	}
 }
 
 // StartTime uses a given start time.
 func StartTime(start time.Time) SpanOption {
-	return func(t *Tracer, s *span) {
-		s.Timestamp = start
+	return func(t *Tracer, s *spanImpl) {
+		s.SetTimestamp(start)
 	}
 }
 
 // LocalEndpoint overrides the local endpoint. Typically used in CLIENT
 // Kind spans.
 func LocalEndpoint(e *Endpoint) SpanOption {
-	return func(t *Tracer, s *span) {
-		s.LocalEndpoint = e
+	return func(t *Tracer, s *spanImpl) {
+		s.SetLocalEndpoint(e)
 	}
 }
 
 // RemoteEndpoint overrides the remote endpoint. Typically used in CLIENT
 // Kind spans.
 func RemoteEndpoint(e *Endpoint) SpanOption {
-	return func(t *Tracer, s *span) {
-		s.RemoteEndpoint = e
-	}
-}
-
-// FinishOption ...
-type FinishOption func(s *span)
-
-// FinishTime uses a given finish time.
-func FinishTime(t time.Time) FinishOption {
-	return func(s *span) {
-		s.Duration = t.Sub(s.Timestamp)
-	}
-}
-
-// Duration uses a given duration.
-func Duration(d time.Duration) FinishOption {
-	return func(s *span) {
-		s.Duration = d
+	return func(t *Tracer, s *spanImpl) {
+		s.SetRemoteEndpoint(e)
 	}
 }

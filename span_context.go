@@ -1,30 +1,32 @@
 package zipkin
 
 import (
-	"fmt"
-	"strconv"
+	"errors"
 )
+
+// ErrEmptyContext signals the span.Context was empty
+var ErrEmptyContext = errors.New("empty request context")
 
 // SpanContext holds the context of a Span.
 type SpanContext struct {
 	TraceID  TraceID `json:"traceId"`
-	ParentID *SpanID `json:"parentId,omitempty"`
-	ID       SpanID  `json:"id"`
-	Sampled  *bool   `json:"-"`
+	ID       ID      `json:"id"`
+	ParentID *ID     `json:"parentId,omitempty"`
 	Debug    bool    `json:"debug,omitempty"`
+	Sampled  *bool   `json:"-"`
+	err      error   // extraction error
 }
 
 // Empty returns true if SpanContext is zero value struct.
-func (s SpanContext) Empty() bool {
-	return (SpanContext{}) == s
+func (sc SpanContext) Empty() bool {
+	return (SpanContext{}) == sc
 }
 
-// SpanID type
-type SpanID uint64
-
-// MarshalJSON serializes SpanID to HEX.
-func (s SpanID) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(
-		"%016q", strconv.FormatUint(uint64(s), 16),
-	)), nil
+// HasTrace returns true if SpanContext holds minimally
+// required trace identifiers.
+func (sc SpanContext) HasTrace() bool {
+	if sc.TraceID.Empty() || sc.ID == 0 {
+		return false
+	}
+	return true
 }

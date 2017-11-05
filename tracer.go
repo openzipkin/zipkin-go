@@ -13,6 +13,7 @@ type Tracer struct {
 
 // NewTracer returns a new Zipkin Tracer.
 func NewTracer(options ...TracerOption) (*Tracer, error) {
+	// set default tracer options
 	opts := &TracerOptions{
 		sharedSpans: true,
 		sampler:     alwaysSample,
@@ -20,6 +21,7 @@ func NewTracer(options ...TracerOption) (*Tracer, error) {
 		defaultTags: make(map[string]string),
 	}
 
+	// process functional options
 	for _, option := range options {
 		if err := option(opts); err != nil {
 			return nil, err
@@ -33,31 +35,68 @@ func NewTracer(options ...TracerOption) (*Tracer, error) {
 func (t *Tracer) StartSpan(
 	name string, kind kind.Type, options ...SpanOption,
 ) Span {
-	s := &span{
-		Name:          name,
+	s := &spanImpl{
 		Kind:          kind,
+		Name:          name,
 		Timestamp:     time.Now(),
-		Shared:        t.options.sharedSpans,
 		LocalEndpoint: t.options.localEndpoint,
 		Tags:          make(map[string]string),
-	}
-
-	for k, v := range t.options.defaultTags {
-		s.Tag(k, v)
 	}
 
 	for _, option := range options {
 		option(t, s)
 	}
 
-	if s.SpanContext.Empty() {
-		// our SpanContext is empty, create root span
+	// test if extraction resulted in an error
+	if s.SpanContext.err != nil {
+		switch t.options.extractFailurePolicy {
+		case ExtractFailurePolicyRestart:
+		case ExtractFailurePolicyError:
+			panic(s.SpanContext.err)
+		case ExtractFailurePolicyTagAndRestart:
+			s.Tags["error.extract"] = s.SpanContext.err.Error()
+		default:
+			panic(ErrInvalidExtractFailurePolicy)
+		}
+		// restart the trace
 		s.SpanContext.TraceID = t.options.generate.TraceID()
 		s.SpanContext.ID = t.options.generate.SpanID()
-		// invoke sampler
+		s.SpanContext.ParentID = nil
+		s.SpanContext.err = nil
+	} else if !s.SpanContext.HasTrace() {
+		// create root span
+		s.SpanContext.TraceID = t.options.generate.TraceID()
+		s.SpanContext.ID = t.options.generate.SpanID()
+	}
+
+	if !s.SpanContext.Debug && s.Sampled == nil {
+		// deferred sampled context found, invoke sampler
 		sampled := t.options.sampler(s.SpanContext.TraceID.Low)
 		s.SpanContext.Sampled = &sampled
 	}
 
+	if t.options.unsampledNoop && !s.SpanContext.Debug &&
+		(s.SpanContext.Sampled == nil || !*s.SpanContext.Sampled) {
+		// trace not being sampled and noop requested
+		return &noopSpan{
+			SpanContext: s.SpanContext,
+		}
+	}
+
+	// add default tags to span
+	for k, v := range t.options.defaultTags {
+		s.Tag(k, v)
+	}
+
 	return s
+}
+
+// Extract extracts a SpanContext using the provided Extractor function
+func (t *Tracer) Extract(extractor Extractor) (sc SpanContext) {
+	psc, err := extractor()
+	if psc != nil {
+		sc = *psc
+	}
+	sc.err = err
+	return
 }

@@ -67,3 +67,12 @@ func NewEndpoint(serviceName string, hostPort string) (*Endpoint, error) {
 
 	return e, nil
 }
+
+// NewEndpointOrNil tries to create a new endpoint and returns it. On error
+// nil will be returned.
+func NewEndpointOrNil(serviceName string, hostPort string) *Endpoint {
+	if endpoint, err := NewEndpoint(serviceName, hostPort); err == nil {
+		return endpoint
+	}
+	return nil
+}

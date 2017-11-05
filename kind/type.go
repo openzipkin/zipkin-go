@@ -3,7 +3,7 @@ package kind
 // Type clarifies context of timestamp, duration and remoteEndpoint in a span.
 type Type string
 
-// Type values available
+// Available Type values
 const (
 	Client   Type = "CLIENT"
 	Server   Type = "SERVER"

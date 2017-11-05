@@ -16,7 +16,7 @@ var (
 
 // IDGenerator interface
 type IDGenerator interface {
-	SpanID() SpanID
+	SpanID() ID
 	TraceID() TraceID
 }
 
@@ -34,9 +34,9 @@ func (r *RandomID64) TraceID() (id TraceID) {
 }
 
 // SpanID implements IDGenerator
-func (r *RandomID64) SpanID() (id SpanID) {
+func (r *RandomID64) SpanID() (id ID) {
 	seededIDLock.Lock()
-	id = SpanID(seededIDGen.Int63())
+	id = ID(seededIDGen.Int63())
 	seededIDLock.Unlock()
 	return
 }
@@ -56,9 +56,9 @@ func (r *RandomID128) TraceID() (id TraceID) {
 }
 
 // SpanID implements IDGenerator
-func (r *RandomID128) SpanID() (id SpanID) {
+func (r *RandomID128) SpanID() (id ID) {
 	seededIDLock.Lock()
-	id = SpanID(seededIDGen.Int63())
+	id = ID(seededIDGen.Int63())
 	seededIDLock.Unlock()
 	return
 }
@@ -79,9 +79,9 @@ func (t *TimestampedRandom) TraceID() (id TraceID) {
 }
 
 // SpanID implements IDGenerator
-func (t *TimestampedRandom) SpanID() (id SpanID) {
+func (t *TimestampedRandom) SpanID() (id ID) {
 	seededIDLock.Lock()
-	id = SpanID(seededIDGen.Int63())
+	id = ID(seededIDGen.Int63())
 	seededIDLock.Unlock()
 	return
 }
