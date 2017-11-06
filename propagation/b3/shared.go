@@ -2,7 +2,7 @@ package b3
 
 import "errors"
 
-// Common Header Extraction errors
+// Common Header Extraction / Injection errors
 var (
 	ErrInvalidSampledHeader      = errors.New("invalid B3 Sampled header found")
 	ErrInvalidFlagsHeader        = errors.New("invalid B3 Flags header found")
@@ -10,6 +10,7 @@ var (
 	ErrInvalidSpanIDHeader       = errors.New("invalid B3 SpanID header found")
 	ErrInvalidParentSpanIDHeader = errors.New("invalid B3 ParentSpanID header found")
 	ErrInvalidScope              = errors.New("require either both TraceID and SpanID or none")
+	ErrEmptyContext              = errors.New("empty request context")
 )
 
 const (

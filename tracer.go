@@ -36,11 +36,15 @@ func (t *Tracer) StartSpan(
 	name string, kind kind.Type, options ...SpanOption,
 ) Span {
 	s := &spanImpl{
-		Kind:          kind,
-		Name:          name,
-		Timestamp:     time.Now(),
-		LocalEndpoint: t.options.localEndpoint,
-		Tags:          make(map[string]string),
+		SpanModel: SpanModel{
+			Kind:          kind,
+			Name:          name,
+			Timestamp:     time.Now(),
+			LocalEndpoint: t.options.localEndpoint,
+			Annotations:   make([]Annotation, 0),
+			Tags:          make(map[string]string),
+		},
+		tracer: t,
 	}
 
 	for _, option := range options {
@@ -63,7 +67,7 @@ func (t *Tracer) StartSpan(
 		s.SpanContext.ID = t.options.generate.SpanID()
 		s.SpanContext.ParentID = nil
 		s.SpanContext.err = nil
-	} else if !s.SpanContext.HasTrace() {
+	} else if s.SpanContext.TraceID.Empty() || s.SpanContext.ID == 0 {
 		// create root span
 		s.SpanContext.TraceID = t.options.generate.TraceID()
 		s.SpanContext.ID = t.options.generate.SpanID()
@@ -73,6 +77,9 @@ func (t *Tracer) StartSpan(
 		// deferred sampled context found, invoke sampler
 		sampled := t.options.sampler(s.SpanContext.TraceID.Low)
 		s.SpanContext.Sampled = &sampled
+		s.isSampled = sampled
+	} else {
+		s.isSampled = s.SpanContext.Debug || *s.Sampled
 	}
 
 	if t.options.unsampledNoop && !s.SpanContext.Debug &&

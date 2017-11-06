@@ -12,7 +12,8 @@ type SpanOption func(t *Tracer, s *spanImpl)
 // Parent will return a parent span context given parent's extracted context
 func Parent(sc SpanContext) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
-		if sc.Empty() {
+		if (SpanContext{}) == sc {
+			// Empty SpanContext
 			return
 		}
 

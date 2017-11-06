@@ -81,8 +81,8 @@ func ExtractHTTP(r *http.Request) zipkin.Extractor {
 // InjectHTTP will inject a span.Context into a HTTP Request
 func InjectHTTP(r *http.Request) zipkin.Injector {
 	return func(sc zipkin.SpanContext) error {
-		if sc.Empty() {
-			return zipkin.ErrEmptyContext
+		if (zipkin.SpanContext{}) == sc {
+			return ErrEmptyContext
 		}
 
 		if sc.Debug {

@@ -30,6 +30,7 @@ type TracerOptions struct {
 	defaultTags          map[string]string
 	unsampledNoop        bool
 	extractFailurePolicy ExtractFailurePolicy
+	transporters         []Transporter
 }
 
 // WithLocalEndpoint sets the local endpoint of the tracer.
@@ -96,6 +97,14 @@ func WithTags(tags map[string]string) TracerOption {
 		for k, v := range tags {
 			o.defaultTags[k] = v
 		}
+		return nil
+	}
+}
+
+// WithTransporters sets the transporters to deliver spans to.
+func WithTransporters(t ...Transporter) TracerOption {
+	return func(o *TracerOptions) error {
+		o.transporters = t
 		return nil
 	}
 }
