@@ -43,7 +43,7 @@ func WithSpanContext(sc SpanContext) SpanOption {
 // StartTime uses a given start time.
 func StartTime(start time.Time) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
-		s.SetTimestamp(start)
+		s.Timestamp = start
 	}
 }
 
@@ -51,7 +51,7 @@ func StartTime(start time.Time) SpanOption {
 // Kind spans.
 func LocalEndpoint(e *Endpoint) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
-		s.SetLocalEndpoint(e)
+		s.LocalEndpoint = e
 	}
 }
 
@@ -59,6 +59,6 @@ func LocalEndpoint(e *Endpoint) SpanOption {
 // Kind spans.
 func RemoteEndpoint(e *Endpoint) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
-		s.SetRemoteEndpoint(e)
+		s.RemoteEndpoint = e
 	}
 }

@@ -10,14 +10,9 @@ import (
 // Span interface
 type Span interface {
 	Context() SpanContext
-	SetContext(SpanContext)
-	SetLocalEndpoint(*Endpoint)
-	SetRemoteEndpoint(*Endpoint)
 	Annotate(time.Time, string)
 	Tag(string, string)
 	Finish()
-	SetTimestamp(t time.Time)
-	SetDuration(d time.Duration)
 	FinishWithTime(time.Time)
 	FinishWithDuration(d time.Duration)
 }

@@ -19,7 +19,11 @@ type httpHandler struct {
 
 // WrapHTTPHandler wraps a standard http.Handler with Zipkin tracing.
 func WrapHTTPHandler(t *zipkin.Tracer, op string, h http.Handler) http.Handler {
-	return &httpHandler{tracer: t, next: h, name: op}
+	return &httpHandler{
+		tracer: t,
+		next:   h,
+		name:   op,
+	}
 }
 
 // ServeHTTP implements http.Handler.
@@ -28,7 +32,11 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sc := h.tracer.Extract(b3.ExtractHTTP(r))
 
 	// create Span using SpanContext if found
-	sp := h.tracer.StartSpan(h.name, kind.Server, zipkin.Parent(sc))
+	sp := h.tracer.StartSpan(
+		h.name, kind.Server,
+		zipkin.Parent(sc),
+		zipkin.RemoteEndpoint(zipkin.NewEndpointOrNil("", r.RemoteAddr)),
+	)
 	defer sp.Finish()
 
 	// add our span to context
@@ -38,9 +46,6 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	zipkin.TagHTTPMethod.Set(sp, r.Method)
 	zipkin.TagHTTPUrl.Set(sp, r.URL.String())
 	zipkin.TagHTTPRequestSize.Set(sp, fmt.Sprintf("%d", r.ContentLength))
-
-	// set remote HTTP endpoint based on RemoteAddr
-	sp.SetRemoteEndpoint(zipkin.NewEndpointOrNil("", r.RemoteAddr))
 
 	// create http.ResponseWriter interceptor for tracking response size and
 	// status code.

@@ -16,26 +16,6 @@ func (s *spanImpl) Context() SpanContext {
 	return s.SpanContext
 }
 
-func (s *spanImpl) SetContext(sc SpanContext) {
-	s.SpanContext = sc
-}
-
-func (s *spanImpl) SetTimestamp(t time.Time) {
-	s.Timestamp = t
-}
-
-func (s *spanImpl) SetDuration(d time.Duration) {
-	s.Duration = d
-}
-
-func (s *spanImpl) SetLocalEndpoint(e *Endpoint) {
-	s.LocalEndpoint = e
-}
-
-func (s *spanImpl) SetRemoteEndpoint(e *Endpoint) {
-	s.RemoteEndpoint = e
-}
-
 // Annotate adds a new Annotation to the Span.
 func (s *spanImpl) Annotate(t time.Time, value string) {
 	a := Annotation{
