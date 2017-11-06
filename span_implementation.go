@@ -12,7 +12,7 @@ type spanImpl struct {
 	isSampled bool
 }
 
-func (s *spanImpl) GetContext() SpanContext {
+func (s *spanImpl) Context() SpanContext {
 	return s.SpanContext
 }
 

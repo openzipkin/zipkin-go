@@ -12,7 +12,7 @@ type noopSpan struct {
 
 func (n *noopSpan) GetKind() kind.Type { return "" }
 
-func (n *noopSpan) GetContext() SpanContext { return n.SpanContext }
+func (n *noopSpan) Context() SpanContext { return n.SpanContext }
 
 func (n *noopSpan) SetContext(sc SpanContext) { n.SpanContext = sc }
 

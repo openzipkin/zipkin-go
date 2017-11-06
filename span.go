@@ -9,7 +9,7 @@ import (
 
 // Span interface
 type Span interface {
-	GetContext() SpanContext
+	Context() SpanContext
 	SetContext(SpanContext)
 	SetLocalEndpoint(*Endpoint)
 	SetRemoteEndpoint(*Endpoint)
