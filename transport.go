@@ -24,7 +24,7 @@ type loggerTransport struct {
 }
 
 // NewLoggerTransporter returns a new logger transporter.
-func NewLoggerTransporter(l *log.Logger) *loggerTransport {
+func NewLoggerTransporter(l *log.Logger) Transporter {
 	if l == nil {
 		// use standard type of logger setup
 		l = log.New(os.Stderr, "", log.LstdFlags)
