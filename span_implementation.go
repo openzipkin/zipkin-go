@@ -41,26 +41,20 @@ func (s *spanImpl) Tag(key, value string) {
 func (s *spanImpl) Finish() {
 	s.Duration = time.Since(s.Timestamp)
 	if s.isSampled {
-		for _, t := range s.tracer.options.transporters {
-			t.Send(s.SpanModel)
-		}
+		s.tracer.options.transport.Send(s.SpanModel)
 	}
 }
 
 func (s *spanImpl) FinishWithTime(t time.Time) {
 	s.Duration = t.Sub(s.Timestamp)
 	if s.isSampled {
-		for _, t := range s.tracer.options.transporters {
-			t.Send(s.SpanModel)
-		}
+		s.tracer.options.transport.Send(s.SpanModel)
 	}
 }
 
 func (s *spanImpl) FinishWithDuration(d time.Duration) {
 	s.Duration = d
 	if s.isSampled {
-		for _, t := range s.tracer.options.transporters {
-			t.Send(s.SpanModel)
-		}
+		s.tracer.options.transport.Send(s.SpanModel)
 	}
 }
