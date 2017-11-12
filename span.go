@@ -33,7 +33,7 @@ type SpanModel struct {
 	Name           string            `json:"name"`
 	Kind           kind.Type         `json:"kind,omitempty"`
 	Timestamp      time.Time         `json:"timestamp,omitempty"`
-	Duration       time.Duration     `json:"duration,imitempty"`
+	Duration       time.Duration     `json:"duration,omitempty"`
 	Shared         bool              `json:"shared"`
 	LocalEndpoint  *Endpoint         `json:"localEndpoint,omitempty"`
 	RemoteEndpoint *Endpoint         `json:"remoteEndpoint,omitempty"`
