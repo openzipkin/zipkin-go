@@ -19,6 +19,7 @@ func NewTracer(options ...TracerOption) (*Tracer, error) {
 		sampler:     alwaysSample,
 		generate:    &RandomID64{},
 		defaultTags: make(map[string]string),
+		transport:   &NoopTransport{},
 	}
 
 	// process functional options
