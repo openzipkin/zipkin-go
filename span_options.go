@@ -28,7 +28,6 @@ func Parent(sc SpanContext) SpanOption {
 		}
 
 		s.SpanContext = sc
-		return
 	}
 }
 
