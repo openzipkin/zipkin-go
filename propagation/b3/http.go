@@ -102,11 +102,11 @@ func InjectHTTP(r *http.Request) zipkin.Injector {
 		}
 
 		if sc.ID > 0 {
-			r.Header.Set(b3SpanID, fmt.Sprintf("%16x", sc.ID))
+			r.Header.Set(b3SpanID, fmt.Sprintf("%016x", sc.ID))
 		}
 
 		if sc.ParentID != nil {
-			r.Header.Set(b3ParentSpanID, fmt.Sprintf("%16x", *sc.ParentID))
+			r.Header.Set(b3ParentSpanID, fmt.Sprintf("%016x", *sc.ParentID))
 		}
 
 		return nil
