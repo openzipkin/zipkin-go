@@ -1,43 +1,42 @@
-package transport
+package http
 
 import (
-	"github.com/openzipkin/zipkin-go"
-	"net/http"
-	"sync"
+	"bytes"
 	"encoding/json"
 	"log"
-	"bytes"
+	"net/http"
+	"sync"
 	"time"
+
+	"github.com/openzipkin/zipkin-go"
 )
 
-// Default timeout for http request in seconds
-const defaultHTTPTimeout = time.Second * 5
+// defaults
+const (
+	defaultTimeout       = time.Second * 5 // timeout for http request in seconds
+	defaultBatchInterval = time.Second * 1 // BatchInterval in seconds
+	defaultBatchSize     = 100
+	defaultMaxBacklog    = 1000
+)
 
-// defaultBatchInterval in seconds
-const defaultHTTPBatchInterval = 1
-
-const defaultHTTPBatchSize = 100
-
-const defaultHTTPMaxBacklog = 1000
-
-type HTTPTransport struct {
+type transport struct {
 	url           string
 	client        *http.Client
 	logger        *log.Logger
 	batchInterval time.Duration
 	batchSize     int
 	maxBacklog    int
-	sendMutex     *sync.Mutex
-	batchMutex    *sync.Mutex
+	sendMtx       *sync.Mutex
+	batchMtx      *sync.Mutex
 	batch         []*zipkin.SpanModel
-	spanChan      chan *zipkin.SpanModel
+	spanc         chan *zipkin.SpanModel
 }
 
-func (t *HTTPTransport) Send(s zipkin.SpanModel) {
-	t.spanChan <- &s
+func (t *transport) Send(s zipkin.SpanModel) {
+	t.spanc <- &s
 }
 
-func (t *HTTPTransport) loop() {
+func (t *transport) loop() {
 	var (
 		nextSend   = time.Now().Add(t.batchInterval)
 		ticker     = time.NewTicker(t.batchInterval / 10)
@@ -51,7 +50,7 @@ func (t *HTTPTransport) loop() {
 
 	for {
 		select {
-		case span := <-t.spanChan:
+		case span := <-t.spanc:
 			currentBatchSize := t.append(span)
 			if currentBatchSize >= t.batchSize {
 				nextSend = time.Now().Add(t.batchInterval)
@@ -66,9 +65,9 @@ func (t *HTTPTransport) loop() {
 	}
 }
 
-func (t *HTTPTransport) append(span *zipkin.SpanModel) (newBatchSize int) {
-	t.batchMutex.Lock()
-	defer t.batchMutex.Unlock()
+func (t *transport) append(span *zipkin.SpanModel) (newBatchSize int) {
+	t.batchMtx.Lock()
+	defer t.batchMtx.Unlock()
 
 	t.batch = append(t.batch, span)
 	if len(t.batch) > t.maxBacklog {
@@ -80,15 +79,15 @@ func (t *HTTPTransport) append(span *zipkin.SpanModel) (newBatchSize int) {
 	return
 }
 
-func (t *HTTPTransport) sendBatch() error {
+func (t *transport) sendBatch() error {
 	// in order to prevent sending the same batch twice
-	t.sendMutex.Lock()
-	defer t.sendMutex.Unlock()
+	t.sendMtx.Lock()
+	defer t.sendMtx.Unlock()
 
 	// Select all current spans in the batch to be sent
-	t.batchMutex.Lock()
+	t.batchMtx.Lock()
 	sendBatch := t.batch[:]
-	t.batchMutex.Unlock()
+	t.batchMtx.Unlock()
 
 	if len(sendBatch) == 0 {
 		return nil
@@ -118,55 +117,55 @@ func (t *HTTPTransport) sendBatch() error {
 	}
 
 	// Remove sent spans from the batch even if they were not saved
-	t.batchMutex.Lock()
+	t.batchMtx.Lock()
 	t.batch = t.batch[len(sendBatch):]
-	t.batchMutex.Unlock()
+	t.batchMtx.Unlock()
 
 	return nil
 }
 
-type HTTPTransportOpt func(t *HTTPTransport)
+type TransportOption func(t *transport)
 
-// HTTPTimeout sets maximum timeout for http request.
-func HTTPTimeout(duration time.Duration) HTTPTransportOpt {
-	return func(c *HTTPTransport) { c.client.Timeout = duration }
+// Timeout sets maximum timeout for http request.
+func Timeout(duration time.Duration) TransportOption {
+	return func(c *transport) { c.client.Timeout = duration }
 }
 
-// HTTPBatchSize sets the maximum batch size, after which a collect will be
+// BatchSize sets the maximum batch size, after which a collect will be
 // triggered. The default batch size is 100 traces.
-func HTTPBatchSize(n int) HTTPTransportOpt {
-	return func(c *HTTPTransport) { c.batchSize = n }
+func BatchSize(n int) TransportOption {
+	return func(c *transport) { c.batchSize = n }
 }
 
-// HTTPMaxBacklog sets the maximum backlog size,
+// MaxBacklog sets the maximum backlog size,
 // when batch size reaches this threshold, spans from the
 // beginning of the batch will be disposed
-func HTTPMaxBacklog(n int) HTTPTransportOpt {
-	return func(c *HTTPTransport) { c.maxBacklog = n }
+func MaxBacklog(n int) TransportOption {
+	return func(c *transport) { c.maxBacklog = n }
 }
 
-// HTTPBatchInterval sets the maximum duration we will buffer traces before
+// BatchInterval sets the maximum duration we will buffer traces before
 // emitting them to the collector. The default batch interval is 1 second.
-func HTTPBatchInterval(d time.Duration) HTTPTransportOpt {
-	return func(c *HTTPTransport) { c.batchInterval = d }
+func BatchInterval(d time.Duration) TransportOption {
+	return func(c *transport) { c.batchInterval = d }
 }
 
-// HTTPClient sets a custom http client to use.
-func HTTPClient(client *http.Client) HTTPTransportOpt {
-	return func(c *HTTPTransport) { c.client = client }
+// Client sets a custom http client to use.
+func Client(client *http.Client) TransportOption {
+	return func(c *transport) { c.client = client }
 }
-func NewHTTPTransport (url string, opts ...HTTPTransportOpt) zipkin.Transporter {
-	t := HTTPTransport{
+func NewTransport(url string, opts ...TransportOption) zipkin.Transporter {
+	t := transport{
 		url:           url,
 		logger:        &log.Logger{},
-		client:        &http.Client{Timeout: defaultHTTPTimeout},
-		batchInterval: defaultHTTPBatchInterval * time.Second,
-		batchSize:     defaultHTTPBatchSize,
-		maxBacklog:    defaultHTTPMaxBacklog,
+		client:        &http.Client{Timeout: defaultTimeout},
+		batchInterval: defaultBatchInterval,
+		batchSize:     defaultBatchSize,
+		maxBacklog:    defaultMaxBacklog,
 		batch:         []*zipkin.SpanModel{},
-		spanChan:      make(chan *zipkin.SpanModel),
-		sendMutex:     &sync.Mutex{},
-		batchMutex:    &sync.Mutex{},
+		spanc:         make(chan *zipkin.SpanModel),
+		sendMtx:       &sync.Mutex{},
+		batchMtx:      &sync.Mutex{},
 	}
 
 	for _, opt := range opts {
