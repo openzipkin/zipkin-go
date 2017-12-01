@@ -30,10 +30,18 @@ type transport struct {
 	batchMtx      *sync.Mutex
 	batch         []*zipkin.SpanModel
 	spanc         chan *zipkin.SpanModel
+	quit          chan struct{}
+	shutdown      chan error
+	reqCallback   RequestCallbackFn
 }
 
 func (t *transport) Send(s zipkin.SpanModel) {
 	t.spanc <- &s
+}
+
+func (t *transport) Close() error {
+	close(t.quit)
+	return <-t.shutdown
 }
 
 func (t *transport) loop() {
@@ -61,6 +69,9 @@ func (t *transport) loop() {
 				nextSend = time.Now().Add(t.batchInterval)
 				go t.sendBatch()
 			}
+		case <-t.quit:
+			t.shutdown <- t.sendBatch()
+			return
 		}
 	}
 }
@@ -105,6 +116,9 @@ func (t *transport) sendBatch() error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if t.reqCallback != nil {
+		t.reqCallback(req)
+	}
 
 	resp, err := t.client.Do(req)
 	if err != nil {
@@ -124,36 +138,50 @@ func (t *transport) sendBatch() error {
 	return nil
 }
 
+// RequestCallbackFn receives the initialized request from the Collector before
+// sending it over the wire. This allows one to plug in additional headers or
+// do other customization.
+type RequestCallbackFn func(*http.Request)
+
+// TransportOption sets a parameter for the HTTP Transporter
 type TransportOption func(t *transport)
 
 // Timeout sets maximum timeout for http request.
 func Timeout(duration time.Duration) TransportOption {
-	return func(c *transport) { c.client.Timeout = duration }
+	return func(t *transport) { t.client.Timeout = duration }
 }
 
 // BatchSize sets the maximum batch size, after which a collect will be
 // triggered. The default batch size is 100 traces.
 func BatchSize(n int) TransportOption {
-	return func(c *transport) { c.batchSize = n }
+	return func(t *transport) { t.batchSize = n }
 }
 
 // MaxBacklog sets the maximum backlog size,
 // when batch size reaches this threshold, spans from the
 // beginning of the batch will be disposed
 func MaxBacklog(n int) TransportOption {
-	return func(c *transport) { c.maxBacklog = n }
+	return func(t *transport) { t.maxBacklog = n }
 }
 
 // BatchInterval sets the maximum duration we will buffer traces before
 // emitting them to the collector. The default batch interval is 1 second.
 func BatchInterval(d time.Duration) TransportOption {
-	return func(c *transport) { c.batchInterval = d }
+	return func(t *transport) { t.batchInterval = d }
 }
 
 // Client sets a custom http client to use.
 func Client(client *http.Client) TransportOption {
-	return func(c *transport) { c.client = client }
+	return func(t *transport) { t.client = client }
 }
+
+// RequestCallback registers a callback function to adjust the collector
+// *http.Request before it sends the request to Zipkin.
+func RequestCallback(rc RequestCallbackFn) TransportOption {
+	return func(t *transport) { t.reqCallback = rc }
+}
+
+// NewTransport returns a new HTTP Transporter.
 func NewTransport(url string, opts ...TransportOption) zipkin.Transporter {
 	t := transport{
 		url:           url,
@@ -164,6 +192,8 @@ func NewTransport(url string, opts ...TransportOption) zipkin.Transporter {
 		maxBacklog:    defaultMaxBacklog,
 		batch:         []*zipkin.SpanModel{},
 		spanc:         make(chan *zipkin.SpanModel),
+		quit:          make(chan struct{}, 1),
+		shutdown:      make(chan error, 1),
 		sendMtx:       &sync.Mutex{},
 		batchMtx:      &sync.Mutex{},
 	}

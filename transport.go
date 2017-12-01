@@ -2,6 +2,7 @@ package zipkin
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 // Transporter interface
 type Transporter interface {
+	io.Closer
 	Send(SpanModel)
 }
 
@@ -17,6 +19,9 @@ type NoopTransport struct{}
 
 // Send drops a span
 func (t *NoopTransport) Send(_ SpanModel) {}
+
+// Close closes the transporter
+func (t *NoopTransport) Close() error { return nil }
 
 // loggerTransport will send spans to the default Go Logger.
 type loggerTransport struct {
@@ -40,3 +45,6 @@ func (t *loggerTransport) Send(s SpanModel) {
 		t.logger.Printf("%s:\n%s\n\n", time.Now(), string(b))
 	}
 }
+
+// Close closes the transporter
+func (t *loggerTransport) Close() error { return nil }
