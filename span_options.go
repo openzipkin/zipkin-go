@@ -9,25 +9,18 @@ import (
 // SpanOption ...
 type SpanOption func(t *Tracer, s *spanImpl)
 
+// Kind sets the kind of the span.
+func Kind(k kind.Type) SpanOption {
+	return func(t *Tracer, s *spanImpl) {
+		s.Kind = k
+	}
+}
+
 // Parent will return a parent span context given parent's extracted context
 func Parent(sc SpanContext) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
-		if (SpanContext{}) == sc {
-			// Empty SpanContext
-			return
-		}
-
-		if t.options.sharedSpans && s.Kind == kind.Server {
-			// join span
-			s.Shared = true
-		} else {
-			// regular child span
-			parentID := sc.ID
-			sc.ParentID = &parentID
-			sc.ID = t.options.generate.SpanID()
-		}
-
 		s.SpanContext = sc
+		s.explicitContext = false
 	}
 }
 
@@ -36,6 +29,7 @@ func Parent(sc SpanContext) SpanOption {
 func WithSpanContext(sc SpanContext) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
 		s.SpanContext = sc
+		s.explicitContext = true
 	}
 }
 

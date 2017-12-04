@@ -33,12 +33,10 @@ func NewTracer(options ...TracerOption) (*Tracer, error) {
 }
 
 // StartSpan creates and starts a span
-func (t *Tracer) StartSpan(
-	name string, kind kind.Type, options ...SpanOption,
-) Span {
+func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 	s := &spanImpl{
 		SpanModel: SpanModel{
-			Kind:          kind,
+			Kind:          kind.Undetermined,
 			Name:          name,
 			Timestamp:     time.Now(),
 			LocalEndpoint: t.options.localEndpoint,
@@ -50,6 +48,19 @@ func (t *Tracer) StartSpan(
 
 	for _, option := range options {
 		option(t, s)
+	}
+
+	if !s.explicitContext && (SpanContext{}) != s.SpanContext {
+		// we received a parent SpanContext
+		if t.options.sharedSpans && s.Kind == kind.Server {
+			// join span
+			s.Shared = true
+		} else {
+			// regular child span
+			parentID := s.ID
+			s.ParentID = &parentID
+			s.ID = t.options.generate.SpanID()
+		}
 	}
 
 	// test if extraction resulted in an error
@@ -78,9 +89,13 @@ func (t *Tracer) StartSpan(
 		// deferred sampled context found, invoke sampler
 		sampled := t.options.sampler(s.SpanContext.TraceID.Low)
 		s.SpanContext.Sampled = &sampled
-		s.isSampled = sampled
+		if sampled {
+			s.isSampled = 1
+		}
 	} else {
-		s.isSampled = s.SpanContext.Debug || *s.Sampled
+		if s.SpanContext.Debug || *s.Sampled {
+			s.isSampled = 1
+		}
 	}
 
 	if t.options.unsampledNoop && !s.SpanContext.Debug &&

@@ -5,9 +5,9 @@ type Type string
 
 // Available Type values
 const (
-	Client   Type = "CLIENT"
-	Server   Type = "SERVER"
-	Producer Type = "PRODUCER"
-	Consumer Type = "CONSUMER"
-	Local    Type = ""
+	Undetermined Type = ""
+	Client       Type = "CLIENT"
+	Server       Type = "SERVER"
+	Producer     Type = "PRODUCER"
+	Consumer     Type = "CONSUMER"
 )

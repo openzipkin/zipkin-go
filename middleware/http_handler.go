@@ -33,7 +33,8 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// create Span using SpanContext if found
 	sp := h.tracer.StartSpan(
-		h.name, kind.Server,
+		h.name,
+		zipkin.Kind(kind.Server),
 		zipkin.Parent(sc),
 		zipkin.RemoteEndpoint(zipkin.NewEndpointOrNil("", r.RemoteAddr)),
 	)

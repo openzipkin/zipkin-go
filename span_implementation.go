@@ -2,14 +2,16 @@ package zipkin
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type spanImpl struct {
 	mtx sync.RWMutex
 	SpanModel
-	tracer    *Tracer
-	isSampled bool
+	tracer          *Tracer
+	isSampled       int32 // atomic bool (1 = true, 0 = false)
+	explicitContext bool
 }
 
 func (s *spanImpl) Context() SpanContext {
@@ -38,23 +40,27 @@ func (s *spanImpl) Tag(key, value string) {
 	s.Tags[key] = value
 }
 
+// Finish the span and send to transporter.
 func (s *spanImpl) Finish() {
-	s.Duration = time.Since(s.Timestamp)
-	if s.isSampled {
+	if atomic.CompareAndSwapInt32(&s.isSampled, 1, 0) {
+		s.Duration = time.Since(s.Timestamp)
 		s.tracer.options.transport.Send(s.SpanModel)
 	}
 }
 
+// FinishWithTime allows one to provide the span end time and finishes the span.
 func (s *spanImpl) FinishWithTime(t time.Time) {
-	s.Duration = t.Sub(s.Timestamp)
-	if s.isSampled {
+	if atomic.CompareAndSwapInt32(&s.isSampled, 1, 0) {
+		s.Duration = t.Sub(s.Timestamp)
 		s.tracer.options.transport.Send(s.SpanModel)
 	}
 }
 
+// FinishWithDuration allows one to provide the span duration and finishes the
+// span.
 func (s *spanImpl) FinishWithDuration(d time.Duration) {
-	s.Duration = d
-	if s.isSampled {
+	if atomic.CompareAndSwapInt32(&s.isSampled, 1, 0) {
+		s.Duration = d
 		s.tracer.options.transport.Send(s.SpanModel)
 	}
 }
