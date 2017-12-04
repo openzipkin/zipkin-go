@@ -18,7 +18,8 @@ const (
 	ExtractFailurePolicyTagAndRestart
 )
 
-// TracerOption allows for functional options.
+// TracerOption allows for functional options to adjust behavior of the Tracer
+// to be created with NewTracer().
 type TracerOption func(o *TracerOptions) error
 
 // TracerOptions for a Tracer instance.

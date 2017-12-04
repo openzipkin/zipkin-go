@@ -6,6 +6,7 @@ import (
 )
 
 // TraceID is a 128 bit number internally stored as 2x uint64 (high & low).
+// In case of 64 bit traceIDs, the value can be found in Low.
 type TraceID struct {
 	High uint64
 	Low  uint64
