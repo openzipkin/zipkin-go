@@ -12,14 +12,14 @@ type Tracer struct {
 }
 
 // NewTracer returns a new Zipkin Tracer.
-func NewTracer(options ...TracerOption) (*Tracer, error) {
+func NewTracer(transport Transporter, options ...TracerOption) (*Tracer, error) {
 	// set default tracer options
 	opts := &TracerOptions{
 		sharedSpans: true,
 		sampler:     alwaysSample,
 		generate:    &randomID64{},
 		defaultTags: make(map[string]string),
-		transport:   &noopTransport{},
+		transport:   transport,
 	}
 
 	// process functional options
@@ -32,7 +32,7 @@ func NewTracer(options ...TracerOption) (*Tracer, error) {
 	return &Tracer{options: *opts}, nil
 }
 
-// StartSpan creates and starts a span
+// StartSpan creates and starts a span.
 func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 	s := &spanImpl{
 		SpanModel: SpanModel{
@@ -114,7 +114,7 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 	return s
 }
 
-// Extract extracts a SpanContext using the provided Extractor function
+// Extract extracts a SpanContext using the provided Extractor function.
 func (t *Tracer) Extract(extractor Extractor) (sc SpanContext) {
 	psc, err := extractor()
 	if psc != nil {

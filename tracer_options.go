@@ -101,11 +101,3 @@ func WithTags(tags map[string]string) TracerOption {
 		return nil
 	}
 }
-
-// WithTransporter sets the transporter to deliver spans to.
-func WithTransporter(t Transporter) TracerOption {
-	return func(o *TracerOptions) error {
-		o.transport = t
-		return nil
-	}
-}
