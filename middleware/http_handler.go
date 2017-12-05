@@ -6,18 +6,18 @@ import (
 	"sync/atomic"
 
 	zipkin "github.com/openzipkin/zipkin-go"
-	"github.com/openzipkin/zipkin-go/kind"
+	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 )
 
 type httpHandler struct {
-	tracer zipkin.Tracer
+	tracer *zipkin.Tracer
 	name   string
 	next   http.Handler
 }
 
 // WrapHTTPHandler wraps a standard http.Handler with Zipkin tracing.
-func WrapHTTPHandler(t zipkin.Tracer, op string, h http.Handler) http.Handler {
+func WrapHTTPHandler(t *zipkin.Tracer, op string, h http.Handler) http.Handler {
 	return &httpHandler{
 		tracer: t,
 		next:   h,
@@ -33,7 +33,7 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// create Span using SpanContext if found
 	sp := h.tracer.StartSpan(
 		h.name,
-		zipkin.Kind(kind.Server),
+		zipkin.Kind(model.Server),
 		zipkin.Parent(sc),
 		zipkin.RemoteEndpoint(zipkin.NewEndpointOrNil("", r.RemoteAddr)),
 	)
