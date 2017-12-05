@@ -4,23 +4,25 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/openzipkin/zipkin-go/model"
 )
 
 type spanImpl struct {
 	mtx sync.RWMutex
-	SpanModel
+	model.SpanModel
 	tracer          *Tracer
 	isSampled       int32 // atomic bool (1 = true, 0 = false)
 	explicitContext bool
 }
 
-func (s *spanImpl) Context() SpanContext {
+func (s *spanImpl) Context() model.SpanContext {
 	return s.SpanContext
 }
 
 // Annotate adds a new Annotation to the Span.
 func (s *spanImpl) Annotate(t time.Time, value string) {
-	a := Annotation{
+	a := model.Annotation{
 		Timestamp: t,
 		Value:     value,
 	}
@@ -44,7 +46,7 @@ func (s *spanImpl) Tag(key, value string) {
 func (s *spanImpl) Finish() {
 	if atomic.CompareAndSwapInt32(&s.isSampled, 1, 0) {
 		s.Duration = time.Since(s.Timestamp)
-		s.tracer.options.transport.Send(s.SpanModel)
+		s.tracer.transport.Send(s.SpanModel)
 	}
 }
 
@@ -52,7 +54,7 @@ func (s *spanImpl) Finish() {
 func (s *spanImpl) FinishWithTime(t time.Time) {
 	if atomic.CompareAndSwapInt32(&s.isSampled, 1, 0) {
 		s.Duration = t.Sub(s.Timestamp)
-		s.tracer.options.transport.Send(s.SpanModel)
+		s.tracer.transport.Send(s.SpanModel)
 	}
 }
 
@@ -61,6 +63,6 @@ func (s *spanImpl) FinishWithTime(t time.Time) {
 func (s *spanImpl) FinishWithDuration(d time.Duration) {
 	if atomic.CompareAndSwapInt32(&s.isSampled, 1, 0) {
 		s.Duration = d
-		s.tracer.options.transport.Send(s.SpanModel)
+		s.tracer.transport.Send(s.SpanModel)
 	}
 }

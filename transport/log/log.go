@@ -10,31 +10,32 @@ import (
 	"os"
 	"time"
 
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go/model"
+	"github.com/openzipkin/zipkin-go/transport"
 )
 
-// Transport will send spans to the default Go Logger.
-type Transport struct {
+// transportImpl will send spans to the default Go Logger.
+type transportImpl struct {
 	logger *log.Logger
 }
 
 // NewTransporter returns a new log transporter.
-func NewTransporter(l *log.Logger) *Transport {
+func NewTransporter(l *log.Logger) transport.Transporter {
 	if l == nil {
 		// use standard type of log setup
 		l = log.New(os.Stderr, "", log.LstdFlags)
 	}
-	return &Transport{
+	return &transportImpl{
 		logger: l,
 	}
 }
 
 // Send outputs a span to the Go logger.
-func (t *Transport) Send(s zipkin.SpanModel) {
+func (t *transportImpl) Send(s model.SpanModel) {
 	if b, err := json.MarshalIndent(s, "", "  "); err == nil {
 		t.logger.Printf("%s:\n%s\n\n", time.Now(), string(b))
 	}
 }
 
 // Close closes the transporter
-func (t *Transport) Close() error { return nil }
+func (t *transportImpl) Close() error { return nil }

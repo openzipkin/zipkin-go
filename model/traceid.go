@@ -1,4 +1,4 @@
-package zipkin
+package model
 
 import (
 	"fmt"

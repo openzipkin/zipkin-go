@@ -3,7 +3,7 @@ package zipkin
 import (
 	"time"
 
-	"github.com/openzipkin/zipkin-go/kind"
+	"github.com/openzipkin/zipkin-go/model"
 )
 
 // SpanOption allows for functional options to adjust behavior and payload of
@@ -11,14 +11,14 @@ import (
 type SpanOption func(t *Tracer, s *spanImpl)
 
 // Kind sets the kind of the span being created..
-func Kind(k kind.Type) SpanOption {
+func Kind(kind model.Kind) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
-		s.Kind = k
+		s.Kind = kind
 	}
 }
 
 // Parent will use provided SpanContext as parent to the span being created.
-func Parent(sc SpanContext) SpanOption {
+func Parent(sc model.SpanContext) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
 		s.SpanContext = sc
 		s.explicitContext = false
@@ -27,7 +27,7 @@ func Parent(sc SpanContext) SpanOption {
 
 // WithSpanContext allows one to set an explicit SpanContext for the span being
 // created.
-func WithSpanContext(sc SpanContext) SpanOption {
+func WithSpanContext(sc model.SpanContext) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
 		s.SpanContext = sc
 		s.explicitContext = true
@@ -43,14 +43,14 @@ func StartTime(start time.Time) SpanOption {
 
 // LocalEndpoint overrides the local endpoint of the span being created.
 // Typically used in CLIENT Kind spans.
-func LocalEndpoint(e *Endpoint) SpanOption {
+func LocalEndpoint(e *model.Endpoint) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
 		s.LocalEndpoint = e
 	}
 }
 
 // RemoteEndpoint sets the remote endpoint of the span being created.
-func RemoteEndpoint(e *Endpoint) SpanOption {
+func RemoteEndpoint(e *model.Endpoint) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
 		s.RemoteEndpoint = e
 	}

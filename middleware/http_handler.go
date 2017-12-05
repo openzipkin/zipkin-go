@@ -8,17 +8,16 @@ import (
 	zipkin "github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/kind"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
-	"github.com/openzipkin/zipkin-go/propagation/context/span"
 )
 
 type httpHandler struct {
-	tracer *zipkin.Tracer
+	tracer zipkin.Tracer
 	name   string
 	next   http.Handler
 }
 
 // WrapHTTPHandler wraps a standard http.Handler with Zipkin tracing.
-func WrapHTTPHandler(t *zipkin.Tracer, op string, h http.Handler) http.Handler {
+func WrapHTTPHandler(t zipkin.Tracer, op string, h http.Handler) http.Handler {
 	return &httpHandler{
 		tracer: t,
 		next:   h,
@@ -41,7 +40,7 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer sp.Finish()
 
 	// add our span to context
-	ctx := span.NewContext(r.Context(), sp)
+	ctx := zipkin.NewContext(r.Context(), sp)
 
 	// tag typical HTTP request items
 	zipkin.TagHTTPMethod.Set(sp, r.Method)
@@ -91,4 +90,12 @@ func (r *rwInterceptor) getStatusCode() string {
 
 func (r *rwInterceptor) getResponseSize() string {
 	return strconv.FormatUint(atomic.LoadUint64(&r.size), 10)
+}
+
+// WrapHTTPRequest wraps a standard http.Request with Zipkin tracing.
+func WrapHTTPRequest(req *http.Request, sp zipkin.Span) {
+	if req == nil || sp == nil {
+		return
+	}
+	b3.InjectHTTP(req)(sp.Context())
 }

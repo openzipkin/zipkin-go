@@ -1,6 +1,11 @@
 package zipkin
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/openzipkin/zipkin-go/idgenerator"
+	"github.com/openzipkin/zipkin-go/model"
+)
 
 // Tracer Option Errors
 var (
@@ -20,23 +25,11 @@ const (
 
 // TracerOption allows for functional options to adjust behavior of the Tracer
 // to be created with NewTracer().
-type TracerOption func(o *TracerOptions) error
-
-// TracerOptions for a Tracer instance.
-type TracerOptions struct {
-	localEndpoint        *Endpoint
-	sharedSpans          bool
-	sampler              Sampler
-	generate             IDGenerator
-	defaultTags          map[string]string
-	unsampledNoop        bool
-	extractFailurePolicy ExtractFailurePolicy
-	transport            Transporter
-}
+type TracerOption func(o *Tracer) error
 
 // WithLocalEndpoint sets the local endpoint of the tracer.
-func WithLocalEndpoint(e *Endpoint) TracerOption {
-	return func(o *TracerOptions) error {
+func WithLocalEndpoint(e *model.Endpoint) TracerOption {
+	return func(o *Tracer) error {
 		if e == nil {
 			return ErrInvalidEndpoint
 		}
@@ -47,7 +40,7 @@ func WithLocalEndpoint(e *Endpoint) TracerOption {
 
 // WithExtractFailurePolicy allows one to set the ExtractFailurePolicy.
 func WithExtractFailurePolicy(p ExtractFailurePolicy) TracerOption {
-	return func(o *TracerOptions) error {
+	return func(o *Tracer) error {
 		if p < 0 || p > ExtractFailurePolicyTagAndRestart {
 			return ErrInvalidExtractFailurePolicy
 		}
@@ -59,7 +52,7 @@ func WithExtractFailurePolicy(p ExtractFailurePolicy) TracerOption {
 // WithNoopSpan if set to true will switch to a NoopSpan implementation
 // if the trace is not sampled.
 func WithNoopSpan(unsampledNoop bool) TracerOption {
-	return func(o *TracerOptions) error {
+	return func(o *Tracer) error {
 		o.unsampledNoop = unsampledNoop
 		return nil
 	}
@@ -70,7 +63,7 @@ func WithNoopSpan(unsampledNoop bool) TracerOption {
 // (more in line with other tracing solutions). By default this Tracer
 // uses shared host spans (so client-side and server-side in the same span).
 func WithSharedSpans(val bool) TracerOption {
-	return func(o *TracerOptions) error {
+	return func(o *Tracer) error {
 		o.sharedSpans = val
 		return nil
 	}
@@ -78,15 +71,15 @@ func WithSharedSpans(val bool) TracerOption {
 
 // WithSampler allows one to set a Sampler function
 func WithSampler(sampler Sampler) TracerOption {
-	return func(o *TracerOptions) error {
+	return func(o *Tracer) error {
 		o.sampler = sampler
 		return nil
 	}
 }
 
 // WithIDGenerator allows one to set a custom ID Generator
-func WithIDGenerator(generator IDGenerator) TracerOption {
-	return func(o *TracerOptions) error {
+func WithIDGenerator(generator idgenerator.IDGenerator) TracerOption {
+	return func(o *Tracer) error {
 		o.generate = generator
 		return nil
 	}
@@ -94,9 +87,21 @@ func WithIDGenerator(generator IDGenerator) TracerOption {
 
 // WithTags allows one to set default tags to be added to each created span
 func WithTags(tags map[string]string) TracerOption {
-	return func(o *TracerOptions) error {
+	return func(o *Tracer) error {
 		for k, v := range tags {
 			o.defaultTags[k] = v
+		}
+		return nil
+	}
+}
+
+// WithNoopTracer allows one to start the Tracer as Noop implementation.
+func WithNoopTracer(tracerNoop bool) TracerOption {
+	return func(o *Tracer) error {
+		if tracerNoop {
+			o.noop = 1
+		} else {
+			o.noop = 0
 		}
 		return nil
 	}

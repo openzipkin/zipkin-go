@@ -1,9 +1,16 @@
-package zipkin
+/*
+Package idgenerator contains several Span and Trace ID generators which can be
+used by the Zipkin tracer. Additional third party generators can be plugged in
+if they adhere to the IDGenerator interface.
+*/
+package idgenerator
 
 import (
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/openzipkin/zipkin-go/model"
 )
 
 var (
@@ -17,8 +24,8 @@ var (
 // IDGenerator interface can be used to provide the Zipkin Tracer with custom
 // implementations to generate Span and Trace IDs.
 type IDGenerator interface {
-	SpanID() ID       // Generates a new Span ID
-	TraceID() TraceID // Generates a new Trace ID
+	SpanID() model.ID       // Generates a new Span ID
+	TraceID() model.TraceID // Generates a new Trace ID
 }
 
 // NewRandom64 returns an ID Generator which can generate 64 bit trace and span
@@ -42,18 +49,18 @@ func NewRandomTimestamped() IDGenerator {
 // randomID64 can generate 64 bit traceid's and 64 bit spanid's.
 type randomID64 struct{}
 
-func (r *randomID64) TraceID() (id TraceID) {
+func (r *randomID64) TraceID() (id model.TraceID) {
 	seededIDLock.Lock()
-	id = TraceID{
+	id = model.TraceID{
 		Low: uint64(seededIDGen.Int63()),
 	}
 	seededIDLock.Unlock()
 	return
 }
 
-func (r *randomID64) SpanID() (id ID) {
+func (r *randomID64) SpanID() (id model.ID) {
 	seededIDLock.Lock()
-	id = ID(seededIDGen.Int63())
+	id = model.ID(seededIDGen.Int63())
 	seededIDLock.Unlock()
 	return
 }
@@ -61,9 +68,9 @@ func (r *randomID64) SpanID() (id ID) {
 // randomID128 can generate 128 bit traceid's and 64 bit spanid's.
 type randomID128 struct{}
 
-func (r *randomID128) TraceID() (id TraceID) {
+func (r *randomID128) TraceID() (id model.TraceID) {
 	seededIDLock.Lock()
-	id = TraceID{
+	id = model.TraceID{
 		High: uint64(seededIDGen.Int63()),
 		Low:  uint64(seededIDGen.Int63()),
 	}
@@ -71,9 +78,9 @@ func (r *randomID128) TraceID() (id TraceID) {
 	return
 }
 
-func (r *randomID128) SpanID() (id ID) {
+func (r *randomID128) SpanID() (id model.ID) {
 	seededIDLock.Lock()
-	id = ID(seededIDGen.Int63())
+	id = model.ID(seededIDGen.Int63())
 	seededIDLock.Unlock()
 	return
 }
@@ -82,9 +89,9 @@ func (r *randomID128) SpanID() (id ID) {
 // spanid's.
 type randomTimestamped struct{}
 
-func (t *randomTimestamped) TraceID() (id TraceID) {
+func (t *randomTimestamped) TraceID() (id model.TraceID) {
 	seededIDLock.Lock()
-	id = TraceID{
+	id = model.TraceID{
 		High: uint64(time.Now().UnixNano()),
 		Low:  uint64(seededIDGen.Int63()),
 	}
@@ -92,9 +99,9 @@ func (t *randomTimestamped) TraceID() (id TraceID) {
 	return
 }
 
-func (t *randomTimestamped) SpanID() (id ID) {
+func (t *randomTimestamped) SpanID() (id model.ID) {
 	seededIDLock.Lock()
-	id = ID(seededIDGen.Int63())
+	id = model.ID(seededIDGen.Int63())
 	seededIDLock.Unlock()
 	return
 }

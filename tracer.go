@@ -1,46 +1,72 @@
 package zipkin
 
 import (
+	"context"
+	"sync/atomic"
 	"time"
 
-	"github.com/openzipkin/zipkin-go/kind"
+	"github.com/openzipkin/zipkin-go/idgenerator"
+	"github.com/openzipkin/zipkin-go/model"
+	"github.com/openzipkin/zipkin-go/propagation"
+	"github.com/openzipkin/zipkin-go/transport"
 )
 
 // Tracer is our Zipkin tracer implementation.
 type Tracer struct {
-	options TracerOptions
+	noop                 int32
+	localEndpoint        *model.Endpoint
+	sharedSpans          bool
+	sampler              Sampler
+	generate             idgenerator.IDGenerator
+	defaultTags          map[string]string
+	unsampledNoop        bool
+	extractFailurePolicy ExtractFailurePolicy
+	transport            transport.Transporter
 }
 
 // NewTracer returns a new Zipkin Tracer.
-func NewTracer(transport Transporter, options ...TracerOption) (*Tracer, error) {
+func NewTracer(transport transport.Transporter, options ...TracerOption) (*Tracer, error) {
 	// set default tracer options
-	opts := &TracerOptions{
+	t := &Tracer{
 		sharedSpans: true,
 		sampler:     alwaysSample,
-		generate:    &randomID64{},
+		generate:    idgenerator.NewRandom64(),
 		defaultTags: make(map[string]string),
 		transport:   transport,
 	}
 
 	// process functional options
 	for _, option := range options {
-		if err := option(opts); err != nil {
+		if err := option(t); err != nil {
 			return nil, err
 		}
 	}
 
-	return &Tracer{options: *opts}, nil
+	return t, nil
+}
+
+// StartSpanFromContext creates and starts a span using the span found in
+// context as parent. If no parent span is found a root span is created.
+func (t *Tracer) StartSpanFromContext(ctx context.Context, name string, options ...SpanOption) (Span, context.Context) {
+	if parentSpan := SpanFromContext(ctx); parentSpan != nil {
+		options = append(options, Parent(parentSpan.Context()))
+	}
+	span := t.StartSpan(name, options...)
+	return span, NewContext(ctx, span)
 }
 
 // StartSpan creates and starts a span.
 func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
+	if atomic.LoadInt32(&t.noop) == 1 {
+		return &noopSpan{}
+	}
 	s := &spanImpl{
-		SpanModel: SpanModel{
-			Kind:          kind.Undetermined,
+		SpanModel: model.SpanModel{
+			Kind:          model.Undetermined,
 			Name:          name,
 			Timestamp:     time.Now(),
-			LocalEndpoint: t.options.localEndpoint,
-			Annotations:   make([]Annotation, 0),
+			LocalEndpoint: t.localEndpoint,
+			Annotations:   make([]model.Annotation, 0),
 			Tags:          make(map[string]string),
 		},
 		tracer: t,
@@ -50,44 +76,43 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 		option(t, s)
 	}
 
-	if !s.explicitContext && (SpanContext{}) != s.SpanContext {
+	if !s.explicitContext && (model.SpanContext{}) != s.SpanContext {
 		// we received a parent SpanContext
-		if t.options.sharedSpans && s.Kind == kind.Server {
+		if t.sharedSpans && s.Kind == model.Server {
 			// join span
 			s.Shared = true
 		} else {
 			// regular child span
 			parentID := s.ID
 			s.ParentID = &parentID
-			s.ID = t.options.generate.SpanID()
+			s.ID = t.generate.SpanID()
 		}
 	}
 
 	// test if extraction resulted in an error
-	if s.SpanContext.err != nil {
-		switch t.options.extractFailurePolicy {
+	if s.SpanContext.Err != nil {
+		switch t.extractFailurePolicy {
 		case ExtractFailurePolicyRestart:
 		case ExtractFailurePolicyError:
-			panic(s.SpanContext.err)
+			panic(s.SpanContext.Err)
 		case ExtractFailurePolicyTagAndRestart:
-			s.Tags["error.extract"] = s.SpanContext.err.Error()
+			s.Tags["error.extract"] = s.SpanContext.Err.Error()
 		default:
 			panic(ErrInvalidExtractFailurePolicy)
 		}
 		// restart the trace
-		s.SpanContext.TraceID = t.options.generate.TraceID()
-		s.SpanContext.ID = t.options.generate.SpanID()
+		s.SpanContext.TraceID = t.generate.TraceID()
+		s.SpanContext.ID = t.generate.SpanID()
 		s.SpanContext.ParentID = nil
-		s.SpanContext.err = nil
 	} else if s.SpanContext.TraceID.Empty() || s.SpanContext.ID == 0 {
 		// create root span
-		s.SpanContext.TraceID = t.options.generate.TraceID()
-		s.SpanContext.ID = t.options.generate.SpanID()
+		s.SpanContext.TraceID = t.generate.TraceID()
+		s.SpanContext.ID = t.generate.SpanID()
 	}
 
 	if !s.SpanContext.Debug && s.Sampled == nil {
 		// deferred sampled context found, invoke sampler
-		sampled := t.options.sampler(s.SpanContext.TraceID.Low)
+		sampled := t.sampler(s.SpanContext.TraceID.Low)
 		s.SpanContext.Sampled = &sampled
 		if sampled {
 			s.isSampled = 1
@@ -98,7 +123,7 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 		}
 	}
 
-	if t.options.unsampledNoop && !s.SpanContext.Debug &&
+	if t.unsampledNoop && !s.SpanContext.Debug &&
 		(s.SpanContext.Sampled == nil || !*s.SpanContext.Sampled) {
 		// trace not being sampled and noop requested
 		return &noopSpan{
@@ -107,7 +132,7 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 	}
 
 	// add default tags to span
-	for k, v := range t.options.defaultTags {
+	for k, v := range t.defaultTags {
 		s.Tag(k, v)
 	}
 
@@ -115,11 +140,25 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 }
 
 // Extract extracts a SpanContext using the provided Extractor function.
-func (t *Tracer) Extract(extractor Extractor) (sc SpanContext) {
+func (t *Tracer) Extract(extractor propagation.Extractor) (sc model.SpanContext) {
+	if atomic.LoadInt32(&t.noop) == 1 {
+		return
+	}
 	psc, err := extractor()
 	if psc != nil {
 		sc = *psc
 	}
-	sc.err = err
+	sc.Err = err
 	return
+}
+
+// SetNoop allows for killswitch behavior. If set to true the tracer will return
+// noopSpans and all data is dropped. This allows operators to stop tracing in
+// risk scenarios. Set back to false to resume tracing.
+func (t *Tracer) SetNoop(noop bool) {
+	if noop {
+		atomic.CompareAndSwapInt32(&t.noop, 0, 1)
+	} else {
+		atomic.CompareAndSwapInt32(&t.noop, 1, 0)
+	}
 }

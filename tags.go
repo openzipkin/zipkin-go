@@ -14,7 +14,7 @@ const (
 	TagError            Tag = "error"
 )
 
-// Set a standard Tag on provided Span
+// Set a standard Tag with a payload on provided Span.
 func (t Tag) Set(s Span, value string) {
 	s.Tag(string(t), value)
 }

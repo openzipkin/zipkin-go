@@ -1,5 +1,5 @@
 /*
-Package http implements a transport to send spans to Zipkin V2 collectors.
+Package http implements a HTTP transport to send spans to Zipkin V2 collectors.
 */
 package http
 
@@ -11,7 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go/model"
+	"github.com/openzipkin/zipkin-go/transport"
 )
 
 // defaults
@@ -22,7 +23,7 @@ const (
 	defaultMaxBacklog    = 1000
 )
 
-type transport struct {
+type transportImpl struct {
 	url           string
 	client        *http.Client
 	logger        *log.Logger
@@ -31,25 +32,25 @@ type transport struct {
 	maxBacklog    int
 	sendMtx       *sync.Mutex
 	batchMtx      *sync.Mutex
-	batch         []*zipkin.SpanModel
-	spanc         chan *zipkin.SpanModel
+	batch         []*model.SpanModel
+	spanc         chan *model.SpanModel
 	quit          chan struct{}
 	shutdown      chan error
 	reqCallback   RequestCallbackFn
 }
 
 // Send implements transporter
-func (t *transport) Send(s zipkin.SpanModel) {
+func (t *transportImpl) Send(s model.SpanModel) {
 	t.spanc <- &s
 }
 
 // Close implements transporter
-func (t *transport) Close() error {
+func (t *transportImpl) Close() error {
 	close(t.quit)
 	return <-t.shutdown
 }
 
-func (t *transport) loop() {
+func (t *transportImpl) loop() {
 	var (
 		nextSend   = time.Now().Add(t.batchInterval)
 		ticker     = time.NewTicker(t.batchInterval / 10)
@@ -77,7 +78,7 @@ func (t *transport) loop() {
 	}
 }
 
-func (t *transport) append(span *zipkin.SpanModel) (newBatchSize int) {
+func (t *transportImpl) append(span *model.SpanModel) (newBatchSize int) {
 	t.batchMtx.Lock()
 	defer t.batchMtx.Unlock()
 
@@ -91,7 +92,7 @@ func (t *transport) append(span *zipkin.SpanModel) (newBatchSize int) {
 	return
 }
 
-func (t *transport) sendBatch() error {
+func (t *transportImpl) sendBatch() error {
 	// in order to prevent sending the same batch twice
 	t.sendMtx.Lock()
 	defer t.sendMtx.Unlock()
@@ -145,54 +146,54 @@ func (t *transport) sendBatch() error {
 type RequestCallbackFn func(*http.Request)
 
 // TransportOption sets a parameter for the HTTP Transporter
-type TransportOption func(t *transport)
+type TransportOption func(t *transportImpl)
 
 // Timeout sets maximum timeout for http request.
 func Timeout(duration time.Duration) TransportOption {
-	return func(t *transport) { t.client.Timeout = duration }
+	return func(t *transportImpl) { t.client.Timeout = duration }
 }
 
 // BatchSize sets the maximum batch size, after which a collect will be
 // triggered. The default batch size is 100 traces.
 func BatchSize(n int) TransportOption {
-	return func(t *transport) { t.batchSize = n }
+	return func(t *transportImpl) { t.batchSize = n }
 }
 
 // MaxBacklog sets the maximum backlog size,
 // when batch size reaches this threshold, spans from the
 // beginning of the batch will be disposed
 func MaxBacklog(n int) TransportOption {
-	return func(t *transport) { t.maxBacklog = n }
+	return func(t *transportImpl) { t.maxBacklog = n }
 }
 
 // BatchInterval sets the maximum duration we will buffer traces before
 // emitting them to the collector. The default batch interval is 1 second.
 func BatchInterval(d time.Duration) TransportOption {
-	return func(t *transport) { t.batchInterval = d }
+	return func(t *transportImpl) { t.batchInterval = d }
 }
 
 // Client sets a custom http client to use.
 func Client(client *http.Client) TransportOption {
-	return func(t *transport) { t.client = client }
+	return func(t *transportImpl) { t.client = client }
 }
 
 // RequestCallback registers a callback function to adjust the collector
 // *http.Request before it sends the request to Zipkin.
 func RequestCallback(rc RequestCallbackFn) TransportOption {
-	return func(t *transport) { t.reqCallback = rc }
+	return func(t *transportImpl) { t.reqCallback = rc }
 }
 
 // NewTransport returns a new HTTP Transporter.
-func NewTransport(url string, opts ...TransportOption) zipkin.Transporter {
-	t := transport{
+func NewTransport(url string, opts ...TransportOption) transport.Transporter {
+	t := transportImpl{
 		url:           url,
 		logger:        &log.Logger{},
 		client:        &http.Client{Timeout: defaultTimeout},
 		batchInterval: defaultBatchInterval,
 		batchSize:     defaultBatchSize,
 		maxBacklog:    defaultMaxBacklog,
-		batch:         []*zipkin.SpanModel{},
-		spanc:         make(chan *zipkin.SpanModel),
+		batch:         []*model.SpanModel{},
+		spanc:         make(chan *model.SpanModel),
 		quit:          make(chan struct{}, 1),
 		shutdown:      make(chan error, 1),
 		sendMtx:       &sync.Mutex{},

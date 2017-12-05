@@ -4,20 +4,14 @@ import (
 	"net"
 	"strconv"
 	"strings"
-)
 
-// Endpoint holds the network context of a node in the service graph.
-type Endpoint struct {
-	ServiceName string `json:"serviceName,omitempty"`
-	IPv4        net.IP `json:"ipv4,omitempty"`
-	IPv6        net.IP `json:"ipv6,omitempty"`
-	Port        int    `json:"port,omitempty"`
-}
+	"github.com/openzipkin/zipkin-go/model"
+)
 
 // NewEndpoint creates a new endpoint given the provided serviceName and
 // hostPort.
-func NewEndpoint(serviceName string, hostPort string) (*Endpoint, error) {
-	e := &Endpoint{
+func NewEndpoint(serviceName string, hostPort string) (*model.Endpoint, error) {
+	e := &model.Endpoint{
 		ServiceName: serviceName,
 	}
 
@@ -70,7 +64,7 @@ func NewEndpoint(serviceName string, hostPort string) (*Endpoint, error) {
 
 // NewEndpointOrNil tries to create a new endpoint and returns it. On error
 // nil will be returned.
-func NewEndpointOrNil(serviceName string, hostPort string) *Endpoint {
+func NewEndpointOrNil(serviceName string, hostPort string) *model.Endpoint {
 	if endpoint, err := NewEndpoint(serviceName, hostPort); err == nil {
 		return endpoint
 	}
