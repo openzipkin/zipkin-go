@@ -1,3 +1,7 @@
+/*
+Package span implements logic for propagating Zipkin Spans through Go's
+context.Context.
+*/
 package span
 
 import (

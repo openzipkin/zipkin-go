@@ -1,3 +1,7 @@
+/*
+Package spancontext implements logic for propagating Zipkin SpanContexts through
+Go's context.Context.
+*/
 package spancontext
 
 import (

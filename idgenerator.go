@@ -14,17 +14,35 @@ var (
 	seededIDLock sync.Mutex
 )
 
-// IDGenerator interface
+// IDGenerator interface can be used to provide the Zipkin Tracer with custom
+// implementations to generate Span and Trace IDs.
 type IDGenerator interface {
-	SpanID() ID
-	TraceID() TraceID
+	SpanID() ID       // Generates a new Span ID
+	TraceID() TraceID // Generates a new Trace ID
 }
 
-// RandomID64 can generate 64 bit traceid's and 64 bit spanid's.
-type RandomID64 struct{}
+// NewRandom64 returns an ID Generator which can generate 64 bit trace and span
+// id's
+func NewRandom64() IDGenerator {
+	return &randomID64{}
+}
 
-// TraceID implements IDGenerator
-func (r *RandomID64) TraceID() (id TraceID) {
+// NewRandom128 returns an ID Generator which can generate 128 bit trace and 64
+// bit span id's
+func NewRandom128() IDGenerator {
+	return &randomID128{}
+}
+
+// NewRandomTimestamped generates 128 bit time sortable traceid's and 64 bit
+// spanid's.
+func NewRandomTimestamped() IDGenerator {
+	return &randomTimestamped{}
+}
+
+// randomID64 can generate 64 bit traceid's and 64 bit spanid's.
+type randomID64 struct{}
+
+func (r *randomID64) TraceID() (id TraceID) {
 	seededIDLock.Lock()
 	id = TraceID{
 		Low: uint64(seededIDGen.Int63()),
@@ -33,19 +51,17 @@ func (r *RandomID64) TraceID() (id TraceID) {
 	return
 }
 
-// SpanID implements IDGenerator
-func (r *RandomID64) SpanID() (id ID) {
+func (r *randomID64) SpanID() (id ID) {
 	seededIDLock.Lock()
 	id = ID(seededIDGen.Int63())
 	seededIDLock.Unlock()
 	return
 }
 
-// RandomID128 can generate 128 bit traceid's and 64 bit spanid's.
-type RandomID128 struct{}
+// randomID128 can generate 128 bit traceid's and 64 bit spanid's.
+type randomID128 struct{}
 
-// TraceID implements IDGenerator
-func (r *RandomID128) TraceID() (id TraceID) {
+func (r *randomID128) TraceID() (id TraceID) {
 	seededIDLock.Lock()
 	id = TraceID{
 		High: uint64(seededIDGen.Int63()),
@@ -55,20 +71,18 @@ func (r *RandomID128) TraceID() (id TraceID) {
 	return
 }
 
-// SpanID implements IDGenerator
-func (r *RandomID128) SpanID() (id ID) {
+func (r *randomID128) SpanID() (id ID) {
 	seededIDLock.Lock()
 	id = ID(seededIDGen.Int63())
 	seededIDLock.Unlock()
 	return
 }
 
-// TimestampedRandom can generate 128 bit time sortable traceid's and 64 bit
+// randomTimestamped can generate 128 bit time sortable traceid's and 64 bit
 // spanid's.
-type TimestampedRandom struct{}
+type randomTimestamped struct{}
 
-// TraceID implements IDGenerator
-func (t *TimestampedRandom) TraceID() (id TraceID) {
+func (t *randomTimestamped) TraceID() (id TraceID) {
 	seededIDLock.Lock()
 	id = TraceID{
 		High: uint64(time.Now().UnixNano()),
@@ -78,8 +92,7 @@ func (t *TimestampedRandom) TraceID() (id TraceID) {
 	return
 }
 
-// SpanID implements IDGenerator
-func (t *TimestampedRandom) SpanID() (id ID) {
+func (t *randomTimestamped) SpanID() (id ID) {
 	seededIDLock.Lock()
 	id = ID(seededIDGen.Int63())
 	seededIDLock.Unlock()

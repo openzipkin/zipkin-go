@@ -1,3 +1,6 @@
+/*
+Package http implements a transport to send spans to Zipkin V2 collectors.
+*/
 package http
 
 import (
@@ -35,10 +38,12 @@ type transport struct {
 	reqCallback   RequestCallbackFn
 }
 
+// Send implements transporter
 func (t *transport) Send(s zipkin.SpanModel) {
 	t.spanc <- &s
 }
 
+// Close implements transporter
 func (t *transport) Close() error {
 	close(t.quit)
 	return <-t.shutdown
@@ -50,10 +55,6 @@ func (t *transport) loop() {
 		ticker     = time.NewTicker(t.batchInterval / 10)
 		tickerChan = ticker.C
 	)
-
-	// Sends
-	defer t.sendBatch()
-
 	defer ticker.Stop()
 
 	for {

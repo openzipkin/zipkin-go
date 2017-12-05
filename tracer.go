@@ -17,9 +17,9 @@ func NewTracer(options ...TracerOption) (*Tracer, error) {
 	opts := &TracerOptions{
 		sharedSpans: true,
 		sampler:     alwaysSample,
-		generate:    &RandomID64{},
+		generate:    &randomID64{},
 		defaultTags: make(map[string]string),
-		transport:   &NoopTransport{},
+		transport:   &noopTransport{},
 	}
 
 	// process functional options

@@ -7,7 +7,7 @@ import (
 	"github.com/openzipkin/zipkin-go/kind"
 )
 
-// Span interface
+// Span interface as returned by Tracer.StartSpan()
 type Span interface {
 	Context() SpanContext
 	Annotate(time.Time, string)

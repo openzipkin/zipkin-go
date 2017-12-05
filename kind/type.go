@@ -1,3 +1,6 @@
+/*
+Package kind implements the kind type to use in Zipkin Spans.
+*/
 package kind
 
 // Type clarifies context of timestamp, duration and remoteEndpoint in a span.

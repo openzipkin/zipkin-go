@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
+	"strconv"
 	"sync/atomic"
 
 	zipkin "github.com/openzipkin/zipkin-go"
@@ -46,7 +46,7 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// tag typical HTTP request items
 	zipkin.TagHTTPMethod.Set(sp, r.Method)
 	zipkin.TagHTTPUrl.Set(sp, r.URL.String())
-	zipkin.TagHTTPRequestSize.Set(sp, fmt.Sprintf("%d", r.ContentLength))
+	zipkin.TagHTTPRequestSize.Set(sp, strconv.FormatInt(r.ContentLength, 10))
 
 	// create http.ResponseWriter interceptor for tracking response size and
 	// status code.
@@ -86,9 +86,9 @@ func (r *rwInterceptor) WriteHeader(i int) {
 }
 
 func (r *rwInterceptor) getStatusCode() string {
-	return fmt.Sprintf("%d", r.statusCode)
+	return strconv.Itoa(r.statusCode)
 }
 
 func (r *rwInterceptor) getResponseSize() string {
-	return fmt.Sprintf("%d", atomic.LoadUint64(&r.size))
+	return strconv.FormatUint(atomic.LoadUint64(&r.size), 10)
 }
