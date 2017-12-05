@@ -19,9 +19,5 @@ func NewContext(ctx context.Context, s Span) context.Context {
 }
 
 type ctxKey struct{}
-type tracerCtxKey struct{}
 
-var (
-	spanKey          = ctxKey{}
-	tracerContextKey = tracerCtxKey{}
-)
+var spanKey = ctxKey{}
