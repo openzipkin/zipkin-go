@@ -42,11 +42,11 @@ func (s *spanImpl) Tag(key, value string) {
 	s.Tags[key] = value
 }
 
-// Finish the span and send to transporter.
+// Finish the span and send to reporter.
 func (s *spanImpl) Finish() {
 	if atomic.CompareAndSwapInt32(&s.isSampled, 1, 0) {
 		s.Duration = time.Since(s.Timestamp)
-		s.tracer.transport.Send(s.SpanModel)
+		s.tracer.reporter.Send(s.SpanModel)
 	}
 }
 
@@ -54,7 +54,7 @@ func (s *spanImpl) Finish() {
 func (s *spanImpl) FinishWithTime(t time.Time) {
 	if atomic.CompareAndSwapInt32(&s.isSampled, 1, 0) {
 		s.Duration = t.Sub(s.Timestamp)
-		s.tracer.transport.Send(s.SpanModel)
+		s.tracer.reporter.Send(s.SpanModel)
 	}
 }
 
@@ -63,6 +63,6 @@ func (s *spanImpl) FinishWithTime(t time.Time) {
 func (s *spanImpl) FinishWithDuration(d time.Duration) {
 	if atomic.CompareAndSwapInt32(&s.isSampled, 1, 0) {
 		s.Duration = d
-		s.tracer.transport.Send(s.SpanModel)
+		s.tracer.reporter.Send(s.SpanModel)
 	}
 }
