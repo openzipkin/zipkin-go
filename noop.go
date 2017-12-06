@@ -17,7 +17,3 @@ func (*noopSpan) Annotate(time.Time, string) {}
 func (*noopSpan) Tag(string, string) {}
 
 func (*noopSpan) Finish() {}
-
-func (*noopSpan) FinishWithTime(time.Time) {}
-
-func (*noopSpan) FinishWithDuration(time.Duration) {}

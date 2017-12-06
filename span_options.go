@@ -21,16 +21,6 @@ func Kind(kind model.Kind) SpanOption {
 func Parent(sc model.SpanContext) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
 		s.SpanContext = sc
-		s.explicitContext = false
-	}
-}
-
-// WithSpanContext allows one to set an explicit SpanContext for the span being
-// created.
-func WithSpanContext(sc model.SpanContext) SpanOption {
-	return func(t *Tracer, s *spanImpl) {
-		s.SpanContext = sc
-		s.explicitContext = true
 	}
 }
 
@@ -38,14 +28,6 @@ func WithSpanContext(sc model.SpanContext) SpanOption {
 func StartTime(start time.Time) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
 		s.Timestamp = start
-	}
-}
-
-// LocalEndpoint overrides the local endpoint of the span being created.
-// Typically used in CLIENT Kind spans.
-func LocalEndpoint(e *model.Endpoint) SpanOption {
-	return func(t *Tracer, s *spanImpl) {
-		s.LocalEndpoint = e
 	}
 }
 

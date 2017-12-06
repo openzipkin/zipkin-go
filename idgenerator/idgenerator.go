@@ -24,8 +24,8 @@ var (
 // IDGenerator interface can be used to provide the Zipkin Tracer with custom
 // implementations to generate Span and Trace IDs.
 type IDGenerator interface {
-	SpanID() model.ID       // Generates a new Span ID
-	TraceID() model.TraceID // Generates a new Trace ID
+	SpanID(traceID model.TraceID) model.ID // Generates a new Span ID
+	TraceID() model.TraceID                // Generates a new Trace ID
 }
 
 // NewRandom64 returns an ID Generator which can generate 64 bit trace and span
@@ -58,7 +58,10 @@ func (r *randomID64) TraceID() (id model.TraceID) {
 	return
 }
 
-func (r *randomID64) SpanID() (id model.ID) {
+func (r *randomID64) SpanID(traceID model.TraceID) (id model.ID) {
+	if !traceID.Empty() {
+		return model.ID(traceID.Low)
+	}
 	seededIDLock.Lock()
 	id = model.ID(seededIDGen.Int63())
 	seededIDLock.Unlock()
@@ -78,7 +81,10 @@ func (r *randomID128) TraceID() (id model.TraceID) {
 	return
 }
 
-func (r *randomID128) SpanID() (id model.ID) {
+func (r *randomID128) SpanID(traceID model.TraceID) (id model.ID) {
+	if !traceID.Empty() {
+		return model.ID(traceID.Low)
+	}
 	seededIDLock.Lock()
 	id = model.ID(seededIDGen.Int63())
 	seededIDLock.Unlock()
@@ -99,7 +105,10 @@ func (t *randomTimestamped) TraceID() (id model.TraceID) {
 	return
 }
 
-func (t *randomTimestamped) SpanID() (id model.ID) {
+func (t *randomTimestamped) SpanID(traceID model.TraceID) (id model.ID) {
+	if !traceID.Empty() {
+		return model.ID(traceID.Low)
+	}
 	seededIDLock.Lock()
 	id = model.ID(seededIDGen.Int63())
 	seededIDLock.Unlock()

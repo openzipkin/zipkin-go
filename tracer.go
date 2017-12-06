@@ -76,7 +76,7 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 		option(t, s)
 	}
 
-	if !s.explicitContext && (model.SpanContext{}) != s.SpanContext {
+	if (model.SpanContext{}) != s.SpanContext {
 		// we received a parent SpanContext
 		if t.sharedSpans && s.Kind == model.Server {
 			// join span
@@ -85,7 +85,7 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 			// regular child span
 			parentID := s.ID
 			s.ParentID = &parentID
-			s.ID = t.generate.SpanID()
+			s.ID = t.generate.SpanID(model.TraceID{})
 		}
 	}
 
@@ -102,12 +102,12 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 		}
 		// restart the trace
 		s.SpanContext.TraceID = t.generate.TraceID()
-		s.SpanContext.ID = t.generate.SpanID()
+		s.SpanContext.ID = t.generate.SpanID(s.SpanContext.TraceID)
 		s.SpanContext.ParentID = nil
 	} else if s.SpanContext.TraceID.Empty() || s.SpanContext.ID == 0 {
 		// create root span
 		s.SpanContext.TraceID = t.generate.TraceID()
-		s.SpanContext.ID = t.generate.SpanID()
+		s.SpanContext.ID = t.generate.SpanID(s.SpanContext.TraceID)
 	}
 
 	if !s.SpanContext.Debug && s.Sampled == nil {

@@ -12,6 +12,4 @@ type Span interface {
 	Annotate(time.Time, string)
 	Tag(string, string)
 	Finish()
-	FinishWithTime(time.Time)
-	FinishWithDuration(d time.Duration)
 }
