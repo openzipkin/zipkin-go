@@ -2,23 +2,26 @@ package zipkin
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/openzipkin/zipkin-go/model"
 )
 
 type spanImpl struct {
 	mtx sync.RWMutex
-	SpanModel
+	model.SpanModel
 	tracer    *Tracer
-	isSampled bool
+	isSampled int32 // atomic bool (1 = true, 0 = false)
 }
 
-func (s *spanImpl) Context() SpanContext {
+func (s *spanImpl) Context() model.SpanContext {
 	return s.SpanContext
 }
 
 // Annotate adds a new Annotation to the Span.
 func (s *spanImpl) Annotate(t time.Time, value string) {
-	a := Annotation{
+	a := model.Annotation{
 		Timestamp: t,
 		Value:     value,
 	}
@@ -38,23 +41,10 @@ func (s *spanImpl) Tag(key, value string) {
 	s.Tags[key] = value
 }
 
+// Finish the span and send to reporter.
 func (s *spanImpl) Finish() {
-	s.Duration = time.Since(s.Timestamp)
-	if s.isSampled {
-		s.tracer.options.transport.Send(s.SpanModel)
-	}
-}
-
-func (s *spanImpl) FinishWithTime(t time.Time) {
-	s.Duration = t.Sub(s.Timestamp)
-	if s.isSampled {
-		s.tracer.options.transport.Send(s.SpanModel)
-	}
-}
-
-func (s *spanImpl) FinishWithDuration(d time.Duration) {
-	s.Duration = d
-	if s.isSampled {
-		s.tracer.options.transport.Send(s.SpanModel)
+	if atomic.CompareAndSwapInt32(&s.isSampled, 1, 0) {
+		s.Duration = time.Since(s.Timestamp)
+		s.tracer.reporter.Send(s.SpanModel)
 	}
 }

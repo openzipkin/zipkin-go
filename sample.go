@@ -15,8 +15,8 @@ func neverSample(_ uint64) bool { return false }
 
 func alwaysSample(_ uint64) bool { return true }
 
-// ModuloSampler provides a typical OpenTracing type Sampler.
-func ModuloSampler(mod uint64) Sampler {
+// NewModuloSampler provides a generic type Sampler.
+func NewModuloSampler(mod uint64) Sampler {
 	if mod < 2 {
 		return alwaysSample
 	}
