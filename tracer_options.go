@@ -77,6 +77,20 @@ func WithSampler(sampler Sampler) TracerOption {
 	}
 }
 
+// WithTraceID128Bit if set to true will instruct the Tracer to start traces
+// with 128 bit TraceID's. If set to false the Tracer will start traces with
+// 64 bits.
+func WithTraceID128Bit(val bool) TracerOption {
+	return func(o *Tracer) error {
+		if val {
+			o.generate = idgenerator.NewRandom128()
+		} else {
+			o.generate = idgenerator.NewRandom64()
+		}
+		return nil
+	}
+}
+
 // WithIDGenerator allows one to set a custom ID Generator
 func WithIDGenerator(generator idgenerator.IDGenerator) TracerOption {
 	return func(o *Tracer) error {
