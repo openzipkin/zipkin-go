@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -187,7 +188,7 @@ func RequestCallback(rc RequestCallbackFn) ReporterOption {
 func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 	r := httpReporter{
 		url:           url,
-		logger:        &log.Logger{},
+		logger:        log.New(os.Stderr, "", log.LstdFlags),
 		client:        &http.Client{Timeout: defaultTimeout},
 		batchInterval: defaultBatchInterval,
 		batchSize:     defaultBatchSize,
