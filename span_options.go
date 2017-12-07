@@ -20,6 +20,20 @@ func Kind(kind model.Kind) SpanOption {
 // Parent will use provided SpanContext as parent to the span being created.
 func Parent(sc model.SpanContext) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
+		if sc.Err != nil {
+			// encountered an extraction error
+			switch t.extractFailurePolicy {
+			case ExtractFailurePolicyRestart:
+			case ExtractFailurePolicyError:
+				panic(s.SpanContext.Err)
+			case ExtractFailurePolicyTagAndRestart:
+				s.Tags["error.extract"] = sc.Err.Error()
+			default:
+				panic(ErrInvalidExtractFailurePolicy)
+			}
+			/* don't use provided SpanContext, but restart trace */
+			return
+		}
 		s.SpanContext = sc
 	}
 }
