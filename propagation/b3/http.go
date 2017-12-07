@@ -5,13 +5,14 @@ import (
 	"net/http"
 	"strconv"
 
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go/model"
+	"github.com/openzipkin/zipkin-go/propagation"
 )
 
 // ExtractHTTP will extract a span.Context from the HTTP Request if found in
 // B3 header format
-func ExtractHTTP(r *http.Request) zipkin.Extractor {
-	return func() (*zipkin.SpanContext, error) {
+func ExtractHTTP(r *http.Request) propagation.Extractor {
+	return func() (*model.SpanContext, error) {
 		var (
 			err                error
 			spanID             uint64
@@ -23,7 +24,7 @@ func ExtractHTTP(r *http.Request) zipkin.Extractor {
 			flagsHeader        = r.Header.Get(b3Flags)
 		)
 
-		sc := &zipkin.SpanContext{}
+		sc := &model.SpanContext{}
 
 		switch sampledHeader {
 		case "0":
@@ -49,7 +50,7 @@ func ExtractHTTP(r *http.Request) zipkin.Extractor {
 
 		if traceIDHeader != "" {
 			requiredCount++
-			if sc.TraceID, err = zipkin.TraceIDFromHex(traceIDHeader); err != nil {
+			if sc.TraceID, err = model.TraceIDFromHex(traceIDHeader); err != nil {
 				return nil, ErrInvalidTraceIDHeader
 			}
 		}
@@ -59,7 +60,7 @@ func ExtractHTTP(r *http.Request) zipkin.Extractor {
 			if spanID, err = strconv.ParseUint(spanIDHeader, 16, 64); err != nil {
 				return nil, ErrInvalidSpanIDHeader
 			}
-			sc.ID = zipkin.ID(spanID)
+			sc.ID = model.ID(spanID)
 		}
 
 		if requiredCount != 0 && requiredCount != 2 {
@@ -70,7 +71,7 @@ func ExtractHTTP(r *http.Request) zipkin.Extractor {
 			if spanID, err = strconv.ParseUint(parentSpanIDHeader, 16, 64); err != nil {
 				return nil, ErrInvalidParentSpanIDHeader
 			}
-			parentSpanID := zipkin.ID(spanID)
+			parentSpanID := model.ID(spanID)
 			sc.ParentID = &parentSpanID
 		}
 
@@ -79,9 +80,9 @@ func ExtractHTTP(r *http.Request) zipkin.Extractor {
 }
 
 // InjectHTTP will inject a span.Context into a HTTP Request
-func InjectHTTP(r *http.Request) zipkin.Injector {
-	return func(sc zipkin.SpanContext) error {
-		if (zipkin.SpanContext{}) == sc {
+func InjectHTTP(r *http.Request) propagation.Injector {
+	return func(sc model.SpanContext) error {
+		if (model.SpanContext{}) == sc {
 			return ErrEmptyContext
 		}
 
