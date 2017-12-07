@@ -11,8 +11,8 @@ import (
 type spanImpl struct {
 	mtx sync.RWMutex
 	model.SpanModel
-	tracer    *Tracer
-	isSampled int32 // used as atomic bool (1 = true, 0 = false)
+	tracer      *Tracer
+	mustCollect int32 // used as atomic bool (1 = true, 0 = false)
 }
 
 func (s *spanImpl) Context() model.SpanContext {
@@ -43,7 +43,7 @@ func (s *spanImpl) Tag(key, value string) {
 
 // Finish the span and send to reporter.
 func (s *spanImpl) Finish() {
-	if atomic.CompareAndSwapInt32(&s.isSampled, 1, 0) {
+	if atomic.CompareAndSwapInt32(&s.mustCollect, 1, 0) {
 		s.Duration = time.Since(s.Timestamp)
 		s.tracer.reporter.Send(s.SpanModel)
 	}
