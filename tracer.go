@@ -13,7 +13,7 @@ import (
 
 // Tracer is our Zipkin tracer implementation.
 type Tracer struct {
-	noop                 int32
+	noop                 int32 // used as atomic bool (1 = true, 0 = false)
 	localEndpoint        *model.Endpoint
 	sharedSpans          bool
 	sampler              Sampler

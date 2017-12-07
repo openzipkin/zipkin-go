@@ -28,7 +28,7 @@ func NewEndpoint(serviceName string, hostPort string) (*model.Endpoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	e.Port = int(p)
+	e.Port = uint16(p)
 
 	addrs, err := net.LookupIP(host)
 	if err != nil {
@@ -60,13 +60,4 @@ func NewEndpoint(serviceName string, hostPort string) (*model.Endpoint, error) {
 	}
 
 	return e, nil
-}
-
-// NewEndpointOrNil tries to create a new endpoint and returns it. On error
-// nil will be returned.
-func NewEndpointOrNil(serviceName string, hostPort string) *model.Endpoint {
-	if endpoint, err := NewEndpoint(serviceName, hostPort); err == nil {
-		return endpoint
-	}
-	return nil
 }

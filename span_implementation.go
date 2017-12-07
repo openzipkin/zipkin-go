@@ -12,7 +12,7 @@ type spanImpl struct {
 	mtx sync.RWMutex
 	model.SpanModel
 	tracer    *Tracer
-	isSampled int32 // atomic bool (1 = true, 0 = false)
+	isSampled int32 // used as atomic bool (1 = true, 0 = false)
 }
 
 func (s *spanImpl) Context() model.SpanContext {

@@ -30,12 +30,14 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// try to extract B3 Headers from upstream
 	sc := h.tracer.Extract(b3.ExtractHTTP(r))
 
+	remoteEndpoint, _ := zipkin.NewEndpoint("", r.RemoteAddr)
+
 	// create Span using SpanContext if found
 	sp := h.tracer.StartSpan(
 		h.name,
 		zipkin.Kind(model.Server),
 		zipkin.Parent(sc),
-		zipkin.RemoteEndpoint(zipkin.NewEndpointOrNil("", r.RemoteAddr)),
+		zipkin.RemoteEndpoint(remoteEndpoint),
 	)
 	defer sp.Finish()
 

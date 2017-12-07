@@ -7,5 +7,5 @@ type Endpoint struct {
 	ServiceName string `json:"serviceName,omitempty"`
 	IPv4        net.IP `json:"ipv4,omitempty"`
 	IPv6        net.IP `json:"ipv6,omitempty"`
-	Port        int    `json:"port,omitempty"`
+	Port        uint16 `json:"port,omitempty"`
 }
