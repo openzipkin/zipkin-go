@@ -181,7 +181,7 @@ func TestUnsampledSpan(t *testing.T) {
 
 	if cSC.Sampled == nil {
 		t.Error("expected explicit Sampled value, got nil")
-	} else if !*cSC.Sampled {
+	} else if *cSC.Sampled {
 		t.Errorf("expected Sampled value false, got %+v", *cSC.Sampled)
 	}
 
