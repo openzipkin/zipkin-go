@@ -66,12 +66,16 @@ func (r *httpReporter) loop() {
 			currentBatchSize := r.append(span)
 			if currentBatchSize >= r.batchSize {
 				nextSend = time.Now().Add(r.batchInterval)
-				go r.sendBatch()
+				go func() {
+					_ = r.sendBatch()
+				}()
 			}
 		case <-tickerChan:
 			if time.Now().After(nextSend) {
 				nextSend = time.Now().Add(r.batchInterval)
-				go r.sendBatch()
+				go func() {
+					_ = r.sendBatch()
+				}()
 			}
 		case <-r.quit:
 			r.shutdown <- r.sendBatch()
@@ -129,7 +133,7 @@ func (r *httpReporter) sendBatch() error {
 		r.logger.Printf("failed to send the request: %s\n", err.Error())
 		return err
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		r.logger.Printf("failed the request with status code %d\n", resp.StatusCode)
 	}

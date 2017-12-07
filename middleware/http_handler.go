@@ -99,5 +99,5 @@ func WrapHTTPRequest(req *http.Request, sp zipkin.Span) {
 	if req == nil || sp == nil {
 		return
 	}
-	b3.InjectHTTP(req)(sp.Context())
+	_ = b3.InjectHTTP(req)(sp.Context())
 }

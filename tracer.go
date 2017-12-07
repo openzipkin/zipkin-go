@@ -13,15 +13,15 @@ import (
 
 // Tracer is our Zipkin tracer implementation.
 type Tracer struct {
-	noop                 int32 // used as atomic bool (1 = true, 0 = false)
-	localEndpoint        *model.Endpoint
-	sharedSpans          bool
+	defaultTags          map[string]string
+	extractFailurePolicy ExtractFailurePolicy
 	sampler              Sampler
 	generate             idgenerator.IDGenerator
-	defaultTags          map[string]string
-	unsampledNoop        bool
-	extractFailurePolicy ExtractFailurePolicy
 	reporter             reporter.Reporter
+	localEndpoint        *model.Endpoint
+	noop                 int32 // used as atomic bool (1 = true, 0 = false)
+	sharedSpans          bool
+	unsampledNoop        bool
 }
 
 // NewTracer returns a new Zipkin Tracer.

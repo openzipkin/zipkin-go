@@ -181,7 +181,7 @@ func TestUnsampledSpan(t *testing.T) {
 
 	if cSC.Sampled == nil {
 		t.Error("expected explicit Sampled value, got nil")
-	} else if *cSC.Sampled != false {
+	} else if !*cSC.Sampled {
 		t.Errorf("expected Sampled value false, got %+v", *cSC.Sampled)
 	}
 
@@ -221,7 +221,7 @@ func TestDefaultTags(t *testing.T) {
 
 	for key, value := range tags {
 		foundValue, foundKey := foundTags[key]
-		if foundKey == false {
+		if !foundKey {
 			t.Errorf("expected tag %q = %q, got key not found", key, value)
 		} else if value != foundValue {
 			t.Errorf("expected tag %q = %q, got %q = %q", key, value, key, foundValue)
@@ -327,7 +327,7 @@ func TestParentSpanInSharedMode(t *testing.T) {
 
 	if cSC.Sampled == nil {
 		t.Error("expected explicit Sampled value, got nil")
-	} else if *cSC.Sampled != true {
+	} else if !*cSC.Sampled {
 		t.Errorf("expected Sampled value true, got %+v", *cSC.Sampled)
 	}
 
@@ -378,7 +378,7 @@ func TestParentSpanInSpanPerNodeMode(t *testing.T) {
 
 	if cSC.Sampled == nil {
 		t.Error("expected explicit Sampled value, got nil")
-	} else if *cSC.Sampled != true {
+	} else if !*cSC.Sampled {
 		t.Errorf("expected Sampled value true, got %+v", *cSC.Sampled)
 	}
 
