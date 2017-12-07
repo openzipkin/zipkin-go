@@ -1,27 +1,29 @@
-package zipkin
+package zipkin_test
 
 import (
-	"testing"
-	"strings"
-	"net"
 	"fmt"
+	"net"
+	"strings"
+	"testing"
+
+	zipkin "github.com/openzipkin/zipkin-go"
 )
 
 const (
-	serviceName = "service_name"
-	port = 8081
-	invalidNegativePort = "localhost:-8081"
+	serviceName           = "service_name"
+	port                  = 8081
+	invalidNegativePort   = "localhost:-8081"
 	invalidOutOfRangePort = "localhost:65536"
-	unreachableHostPort = "nosuchhost:8081"
+	unreachableHostPort   = "nosuchhost:8081"
 )
 
 var (
-	hostPort = "localhost:" + fmt.Sprintf("%d", port)
-	ip4ForLocalhost = net.IPv4(127,0, 0, 1)
+	hostPort        = "localhost:" + fmt.Sprintf("%d", port)
+	ip4ForLocalhost = net.IPv4(127, 0, 0, 1)
 )
 
 func TestNewEndpointFailsDueToOutOfRangePort(t *testing.T) {
-	_, err := NewEndpoint(serviceName, invalidOutOfRangePort)
+	_, err := zipkin.NewEndpoint(serviceName, invalidOutOfRangePort)
 
 	if err == nil {
 		t.Fatalf("expected error")
@@ -33,7 +35,7 @@ func TestNewEndpointFailsDueToOutOfRangePort(t *testing.T) {
 }
 
 func TestNewEndpointFailsDueToNegativePort(t *testing.T) {
-	_, err := NewEndpoint(serviceName, invalidNegativePort)
+	_, err := zipkin.NewEndpoint(serviceName, invalidNegativePort)
 
 	if err == nil {
 		t.Fatalf("expected error")
@@ -45,7 +47,7 @@ func TestNewEndpointFailsDueToNegativePort(t *testing.T) {
 }
 
 func TestNewEndpointFailsDueToLookupIP(t *testing.T) {
-	_, err := NewEndpoint(serviceName, unreachableHostPort)
+	_, err := zipkin.NewEndpoint(serviceName, unreachableHostPort)
 
 	if err == nil {
 		t.Fatalf("expected error")
@@ -57,7 +59,7 @@ func TestNewEndpointFailsDueToLookupIP(t *testing.T) {
 }
 
 func TestNewEndpointSuccess(t *testing.T) {
-	endpoint, err := NewEndpoint(serviceName, hostPort)
+	endpoint, err := zipkin.NewEndpoint(serviceName, hostPort)
 
 	if err != nil {
 		t.Fatalf("not error expected, got %s", err.Error())
@@ -71,7 +73,7 @@ func TestNewEndpointSuccess(t *testing.T) {
 		t.Fatalf("wrong ip4, expected %s and got %s", ip4ForLocalhost.String(), endpoint.IPv4.String())
 	}
 
-	if port != endpoint.Port{
+	if port != endpoint.Port {
 		t.Fatalf("wrong port, expected %s and got %s", ip4ForLocalhost.String(), endpoint.IPv4.String())
 	}
 }
