@@ -5,7 +5,7 @@
 [![GoDoc](https://godoc.org/github.com/openzipkin/zipkin-go?status.svg)](https://godoc.org/github.com/openzipkin/zipkin-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/openzipkin/zipkin-go)](https://goreportcard.com/report/github.com/openzipkin/zipkin-go)
 [![Sourcegraph](https://sourcegraph.com/github.com/openzipkin/zipkin-go/-/badge.svg)](https://sourcegraph.com/github.com/openzipkin/zipkin-go?badge)
-[![Coverage Status](https://coveralls.io/repos/github/openzipkin/zipkin-go/badge.svg?branch=master)](https://coveralls.io/github/openzipkin/zipkin-go?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/openzipkin/zipkin-go/badge.svg?branch=master&service=github)](https://coveralls.io/github/openzipkin/zipkin-go?branch=master)
 
 Zipkin tracer library for go
 
