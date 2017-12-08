@@ -109,7 +109,7 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 	}
 
 	if want, have := code, httpRecorder.Code; want != have {
-		t.Errorf("Expected http status code %s, got %s", want, have)
+		t.Errorf("Expected http status code %d, got %d", want, have)
 	}
 
 	for key, value := range headers {
