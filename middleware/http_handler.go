@@ -55,7 +55,12 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// tag found response size and status code on exit
 	defer func() {
-		zipkin.TagHTTPStatusCode.Set(sp, ri.getStatusCode())
+		code := ri.getStatusCode()
+		sCode := strconv.Itoa(code)
+		if code > 399 {
+			zipkin.TagError.Set(sp, sCode)
+		}
+		zipkin.TagHTTPStatusCode.Set(sp, sCode)
 		zipkin.TagHTTPResponseSize.Set(sp, ri.getResponseSize())
 	}()
 
@@ -86,18 +91,10 @@ func (r *rwInterceptor) WriteHeader(i int) {
 	r.w.WriteHeader(i)
 }
 
-func (r *rwInterceptor) getStatusCode() string {
-	return strconv.Itoa(r.statusCode)
+func (r *rwInterceptor) getStatusCode() int {
+	return r.statusCode
 }
 
 func (r *rwInterceptor) getResponseSize() string {
 	return strconv.FormatUint(atomic.LoadUint64(&r.size), 10)
-}
-
-// WrapHTTPRequest wraps a standard http.Request with Zipkin tracing.
-func WrapHTTPRequest(req *http.Request, sp zipkin.Span) {
-	if req == nil || sp == nil {
-		return
-	}
-	_ = b3.InjectHTTP(req)(sp.Context())
 }

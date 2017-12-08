@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter/log"
@@ -236,6 +237,112 @@ func TestDefaultTags(t *testing.T) {
 	}
 }
 
+func TestTagOverwriteRules(t *testing.T) {
+	var (
+		k1      = "key1"
+		v1First = "value to overwrite"
+		v1Last  = "value to keep"
+		k2      = string(TagError)
+	)
+
+	tr, err := NewTracer(log.NewReporter(nil))
+	if err != nil {
+		t.Fatalf("unable to create tracer instance: %+v", err)
+	}
+
+	s := tr.StartSpan("test_tags")
+	defer s.Finish()
+
+	s.Tag(k1, v1First)
+
+	if want, have := v1First, s.(*spanImpl).Tags[k1]; want != have {
+		t.Errorf("Expect %s=%s, got %s=%s", k1, want, k1, have)
+	}
+
+	s.Tag(k1, v1Last)
+
+	if want, have := v1Last, s.(*spanImpl).Tags[k1]; want != have {
+		t.Errorf("Expect %s=%s, got %s=%s", k1, want, k1, have)
+	}
+
+	s.Tag(k2, v1First)
+
+	if want, have := v1First, s.(*spanImpl).Tags[k2]; want != have {
+		t.Errorf("Expect %s=%s, got %s=%s", k1, want, k1, have)
+	}
+
+	s.Tag(k2, v1Last)
+
+	if want, have := v1First, s.(*spanImpl).Tags[k2]; want != have {
+		t.Errorf("Expect %s=%s, got %s=%s", k1, want, k1, have)
+	}
+
+	TagError.Set(s, v1Last)
+
+	if want, have := v1First, s.(*spanImpl).Tags[k2]; want != have {
+		t.Errorf("Expect %s=%s, got %s=%s", k1, want, k1, have)
+	}
+}
+
+func TestAnnotations(t *testing.T) {
+	tr, err := NewTracer(log.NewReporter(nil))
+	if err != nil {
+		t.Fatalf("unable to create tracer instance: %+v", err)
+	}
+
+	s := tr.StartSpan("test_tags")
+	defer s.Finish()
+
+	annotations := []model.Annotation{
+		model.Annotation{
+			Timestamp: time.Now().Add(10 * time.Millisecond),
+			Value:     "annotation 1",
+		},
+		model.Annotation{
+			Timestamp: time.Now().Add(20 * time.Millisecond),
+			Value:     "annotation 2",
+		},
+		model.Annotation{
+			Timestamp: time.Now().Add(30 * time.Millisecond),
+			Value:     "annotation 3",
+		},
+	}
+
+	for _, annotation := range annotations {
+		s.Annotate(annotation.Timestamp, annotation.Value)
+	}
+
+	time.Sleep(40 * time.Millisecond)
+
+	if want, have := len(annotations), len(s.(*spanImpl).Annotations); want != have {
+		t.Fatalf("expected %d annotations, got %d", want, have)
+	}
+
+	for idx, annotation := range annotations {
+		if want, have := annotation, s.(*spanImpl).Annotations[idx]; want != have {
+			t.Errorf("[%d] expected %+v, got %+v", idx, want, have)
+		}
+	}
+}
+
+func TestExplicitStartTime(t *testing.T) {
+	tr, err := NewTracer(log.NewReporter(nil))
+	if err != nil {
+		t.Fatalf("unable to create tracer instance: %+v", err)
+	}
+
+	st := time.Now()
+
+	time.Sleep(10 * time.Millisecond)
+
+	s := tr.StartSpan("test_tags", StartTime(st))
+	defer s.Finish()
+
+	if want, have := st, s.(*spanImpl).Timestamp; want != have {
+		t.Errorf("Expected start time %+v, got %+v", want, have)
+	}
+}
+
 func TestDebugFlagWithoutParentTrace(t *testing.T) {
 	/*
 	   Test handling of a single Debug flag without an existing trace
@@ -420,5 +527,4 @@ func TestStartSpanFromContext(t *testing.T) {
 	if want, have := cS.ParentID, sS.ParentID; want != have {
 		t.Errorf("expected Span ID: %+v, got: %+v", want, have)
 	}
-
 }

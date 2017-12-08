@@ -50,3 +50,26 @@ func TestCountingSampler(t *testing.T) {
 		}
 	}
 }
+
+func TestModuleSampler(t *testing.T) {
+	const (
+		max = 1000
+		mod = 25
+	)
+
+	var (
+		sampler = zipkin.NewModuloSampler(mod)
+		found   = 0
+	)
+
+	for i := uint64(0); i < max; i++ {
+		if sampler(i) {
+			found++
+		}
+	}
+
+	if want, have := max/mod, found; want != have {
+		t.Errorf("expected %d samples, got %d", want, have)
+	}
+
+}
