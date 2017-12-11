@@ -254,4 +254,55 @@ func TestHTTPInject(t *testing.T) {
 	if want, have := b3.ErrEmptyContext, b3.InjectHTTP(nil)(model.SpanContext{}); want != have {
 		t.Errorf("expected error %+v, got %+v", want, have)
 	}
+
+	r, err := http.NewRequest("test", "", nil)
+
+	if err != nil {
+		t.Fatalf("unable to create new HTTP Request: %+v", err)
+	}
+
+	sc := model.SpanContext{
+		Debug: true,
+	}
+
+	b3.InjectHTTP(r)(sc)
+
+	if want, have := "1", r.Header.Get(b3.Flags); want != have {
+		t.Errorf("expected B3 flags %s, got %s", want, have)
+	}
+
+	sampled := false
+	sc = model.SpanContext{
+		Sampled: &sampled,
+	}
+
+	r, err = http.NewRequest("test", "", nil)
+
+	if err != nil {
+		t.Fatalf("unable to create new HTTP Request: %+v", err)
+	}
+
+	b3.InjectHTTP(r)(sc)
+
+	if want, have := "0", r.Header.Get(b3.Sampled); want != have {
+		t.Errorf("expected B3 sampled %s, got %s", want, have)
+	}
+
+	sampled = true
+	sc = model.SpanContext{
+		Debug:   true,
+		Sampled: &sampled,
+	}
+
+	r, err = http.NewRequest("test", "", nil)
+
+	if err != nil {
+		t.Fatalf("unable to create new HTTP Request: %+v", err)
+	}
+
+	b3.InjectHTTP(r)(sc)
+	if want, have := "", r.Header.Get(b3.Sampled); want != have {
+		t.Errorf("expected empty B3 sampled header, got %s", have)
+	}
+
 }

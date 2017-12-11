@@ -14,11 +14,11 @@ import (
 func ExtractGRPC(md *metadata.MD) propagation.Extractor {
 	return func() (*model.SpanContext, error) {
 		var (
-			traceIDHeader      = getGRPCHeader(md, TraceID)
-			spanIDHeader       = getGRPCHeader(md, SpanID)
-			parentSpanIDHeader = getGRPCHeader(md, ParentSpanID)
-			sampledHeader      = getGRPCHeader(md, Sampled)
-			flagsHeader        = getGRPCHeader(md, Flags)
+			traceIDHeader      = GetGRPCHeader(md, TraceID)
+			spanIDHeader       = GetGRPCHeader(md, SpanID)
+			parentSpanIDHeader = GetGRPCHeader(md, ParentSpanID)
+			sampledHeader      = GetGRPCHeader(md, Sampled)
+			flagsHeader        = GetGRPCHeader(md, Flags)
 		)
 
 		return parseHeaders(
@@ -63,12 +63,14 @@ func InjectGRPC(md *metadata.MD) propagation.Injector {
 	}
 }
 
-func getGRPCHeader(md *metadata.MD, key string) string {
+// GetGRPCHeader retrieves the last value found for a particular key. If key is
+// not found it returns an empty string.
+func GetGRPCHeader(md *metadata.MD, key string) string {
 	v := (*md)[key]
 	if len(v) < 1 {
 		return ""
 	}
-	return v[0]
+	return v[len(v)-1]
 }
 
 func setGRPCHeader(md *metadata.MD, key, value string) {

@@ -193,4 +193,41 @@ func TestGRPCInject(t *testing.T) {
 	if want, have := b3.ErrEmptyContext, b3.InjectGRPC(nil)(model.SpanContext{}); want != have {
 		t.Errorf("expected error %+v, got %+v", want, have)
 	}
+
+	md := metadata.MD{}
+	sc := model.SpanContext{
+		Debug: true,
+	}
+
+	b3.InjectGRPC(&md)(sc)
+
+	if want, have := "1", b3.GetGRPCHeader(&md, b3.Flags); want != have {
+		t.Errorf("expected B3 flags %s, got %s", want, have)
+	}
+
+	md = metadata.MD{}
+	sampled := false
+	sc = model.SpanContext{
+		Sampled: &sampled,
+	}
+
+	b3.InjectGRPC(&md)(sc)
+
+	if want, have := "0", b3.GetGRPCHeader(&md, b3.Sampled); want != have {
+		t.Errorf("expected B3 sampled %s, got %s", want, have)
+	}
+
+	md = metadata.MD{}
+	sampled = true
+	sc = model.SpanContext{
+		Debug:   true,
+		Sampled: &sampled,
+	}
+
+	b3.InjectGRPC(&md)(sc)
+
+	if want, have := "", b3.GetGRPCHeader(&md, b3.Sampled); want != have {
+		t.Errorf("expected empty B3 sampled header, got %s", have)
+	}
+
 }
