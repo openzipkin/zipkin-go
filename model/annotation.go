@@ -26,7 +26,7 @@ func (a *Annotation) MarshalJSON() ([]byte, error) {
 func (a *Annotation) UnmarshalJSON(b []byte) error {
 	type Alias Annotation
 	annotation := &struct {
-		TimeStamp int64 `json:"timestamp, omitempty"`
+		TimeStamp int64 `json:"timestamp,omitempty"`
 		*Alias
 	}{
 		Alias: (*Alias)(a),
