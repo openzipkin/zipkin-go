@@ -14,11 +14,11 @@ import (
 func ExtractGRPC(md *metadata.MD) propagation.Extractor {
 	return func() (*model.SpanContext, error) {
 		var (
-			traceIDHeader      = getGRPCHeader(md, b3TraceID)
-			spanIDHeader       = getGRPCHeader(md, b3SpanID)
-			parentSpanIDHeader = getGRPCHeader(md, b3ParentSpanID)
-			sampledHeader      = getGRPCHeader(md, b3Sampled)
-			flagsHeader        = getGRPCHeader(md, b3Flags)
+			traceIDHeader      = getGRPCHeader(md, TraceID)
+			spanIDHeader       = getGRPCHeader(md, SpanID)
+			parentSpanIDHeader = getGRPCHeader(md, ParentSpanID)
+			sampledHeader      = getGRPCHeader(md, Sampled)
+			flagsHeader        = getGRPCHeader(md, Flags)
 		)
 
 		return parseHeaders(
@@ -36,27 +36,27 @@ func InjectGRPC(md *metadata.MD) propagation.Injector {
 		}
 
 		if sc.Debug {
-			setGRPCHeader(md, b3Flags, "1")
+			setGRPCHeader(md, Flags, "1")
 		} else if sc.Sampled != nil {
 			// Debug is encoded as X-B3-Flags: 1. Since Debug implies Sampled,
 			// so don't also send "X-B3-Sampled: 1".
 			if *sc.Sampled {
-				setGRPCHeader(md, b3Sampled, "1")
+				setGRPCHeader(md, Sampled, "1")
 			} else {
-				setGRPCHeader(md, b3Sampled, "0")
+				setGRPCHeader(md, Sampled, "0")
 			}
 		}
 
 		if !sc.TraceID.Empty() {
-			setGRPCHeader(md, b3TraceID, sc.TraceID.ToHex())
+			setGRPCHeader(md, TraceID, sc.TraceID.ToHex())
 		}
 
 		if sc.ID > 0 {
-			setGRPCHeader(md, b3SpanID, fmt.Sprintf("%016x", sc.ID))
+			setGRPCHeader(md, SpanID, fmt.Sprintf("%016x", sc.ID))
 		}
 
 		if sc.ParentID != nil {
-			setGRPCHeader(md, b3ParentSpanID, fmt.Sprintf("%016x", *sc.ParentID))
+			setGRPCHeader(md, ParentSpanID, fmt.Sprintf("%016x", *sc.ParentID))
 		}
 
 		return nil

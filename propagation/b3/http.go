@@ -13,11 +13,11 @@ import (
 func ExtractHTTP(r *http.Request) propagation.Extractor {
 	return func() (*model.SpanContext, error) {
 		var (
-			traceIDHeader      = r.Header.Get(b3TraceID)
-			spanIDHeader       = r.Header.Get(b3SpanID)
-			parentSpanIDHeader = r.Header.Get(b3ParentSpanID)
-			sampledHeader      = r.Header.Get(b3Sampled)
-			flagsHeader        = r.Header.Get(b3Flags)
+			traceIDHeader      = r.Header.Get(TraceID)
+			spanIDHeader       = r.Header.Get(SpanID)
+			parentSpanIDHeader = r.Header.Get(ParentSpanID)
+			sampledHeader      = r.Header.Get(Sampled)
+			flagsHeader        = r.Header.Get(Flags)
 		)
 
 		return parseHeaders(
@@ -35,27 +35,27 @@ func InjectHTTP(r *http.Request) propagation.Injector {
 		}
 
 		if sc.Debug {
-			r.Header.Set(b3Flags, "1")
+			r.Header.Set(Flags, "1")
 		} else if sc.Sampled != nil {
 			// Debug is encoded as X-B3-Flags: 1. Since Debug implies Sampled,
 			// so don't also send "X-B3-Sampled: 1".
 			if *sc.Sampled {
-				r.Header.Set(b3Sampled, "1")
+				r.Header.Set(Sampled, "1")
 			} else {
-				r.Header.Set(b3Sampled, "0")
+				r.Header.Set(Sampled, "0")
 			}
 		}
 
 		if !sc.TraceID.Empty() {
-			r.Header.Set(b3TraceID, sc.TraceID.ToHex())
+			r.Header.Set(TraceID, sc.TraceID.ToHex())
 		}
 
 		if sc.ID > 0 {
-			r.Header.Set(b3SpanID, fmt.Sprintf("%016x", sc.ID))
+			r.Header.Set(SpanID, fmt.Sprintf("%016x", sc.ID))
 		}
 
 		if sc.ParentID != nil {
-			r.Header.Set(b3ParentSpanID, fmt.Sprintf("%016x", *sc.ParentID))
+			r.Header.Set(ParentSpanID, fmt.Sprintf("%016x", *sc.ParentID))
 		}
 
 		return nil

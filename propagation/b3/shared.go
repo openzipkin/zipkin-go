@@ -10,13 +10,15 @@ var (
 	ErrInvalidSpanIDHeader       = errors.New("invalid B3 SpanID header found")
 	ErrInvalidParentSpanIDHeader = errors.New("invalid B3 ParentSpanID header found")
 	ErrInvalidScope              = errors.New("require either both TraceID and SpanID or none")
+	ErrInvalidScopeParent        = errors.New("ParentSpanID requires both TraceID and SpanID to be available")
 	ErrEmptyContext              = errors.New("empty request context")
 )
 
+// Default B3 Header keys
 const (
-	b3TraceID      = "x-b3-traceid"
-	b3SpanID       = "x-b3-spanid"
-	b3ParentSpanID = "x-b3-parentspanid"
-	b3Sampled      = "x-b3-sampled"
-	b3Flags        = "x-b3-flags"
+	TraceID      = "x-b3-traceid"
+	SpanID       = "x-b3-spanid"
+	ParentSpanID = "x-b3-parentspanid"
+	Sampled      = "x-b3-sampled"
+	Flags        = "x-b3-flags"
 )

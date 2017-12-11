@@ -2,6 +2,7 @@ package b3
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/openzipkin/zipkin-go/model"
 )
@@ -16,11 +17,11 @@ func parseHeaders(
 		sc            = &model.SpanContext{}
 	)
 
-	switch sampledHeader {
-	case "0":
+	switch strings.ToLower(sampledHeader) {
+	case "0", "false":
 		sampled := false
 		sc.Sampled = &sampled
-	case "1":
+	case "1", "true":
 		sampled := true
 		sc.Sampled = &sampled
 	case "":
@@ -34,6 +35,9 @@ func parseHeaders(
 		// sc.Debug = false
 	case "1":
 		sc.Debug = true
+		if sc.Sampled != nil {
+			sc.Sampled = nil
+		}
 	default:
 		return nil, ErrInvalidFlagsHeader
 	}
@@ -57,7 +61,10 @@ func parseHeaders(
 		return nil, ErrInvalidScope
 	}
 
-	if requiredCount == 2 && parentSpanIDHeader != "" {
+	if parentSpanIDHeader != "" {
+		if requiredCount == 0 {
+			return nil, ErrInvalidScopeParent
+		}
 		if spanID, err = strconv.ParseUint(parentSpanIDHeader, 16, 64); err != nil {
 			return nil, ErrInvalidParentSpanIDHeader
 		}
