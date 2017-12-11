@@ -33,10 +33,17 @@ func (s *spanImpl) Annotate(t time.Time, value string) {
 }
 
 // Tag sets Tag with given key and value to the Span. If key already exists in
-// the span the value will be overridden.
+// the span the value will be overridden except for error tags where the first
+// value is persisted.
 func (s *spanImpl) Tag(key, value string) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
+
+	if key == string(TagError) {
+		if _, found := s.Tags[key]; found {
+			return
+		}
+	}
 
 	s.Tags[key] = value
 }
