@@ -19,6 +19,14 @@ func (s *spanImpl) Context() model.SpanContext {
 	return s.SpanContext
 }
 
+func (s *spanImpl) SetRemoteEndpoint(e *model.Endpoint) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	s.RemoteEndpoint = &model.Endpoint{}
+	*s.RemoteEndpoint = *e
+}
+
 // Annotate adds a new Annotation to the Span.
 func (s *spanImpl) Annotate(t time.Time, value string) {
 	a := model.Annotation{
