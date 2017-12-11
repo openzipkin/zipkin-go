@@ -42,7 +42,7 @@ func (s SpanModel) MarshalJSON() ([]byte, error) {
 		Duration  int64 `json:"duration,omitempty"`
 		Alias
 	}{
-		Timestamp: s.Timestamp.UnixNano() / 1e3,
+		Timestamp: s.Timestamp.Round(time.Microsecond).UnixNano() / 1e3,
 		Duration:  s.Duration.Nanoseconds() / 1e3,
 		Alias:     (Alias)(s),
 	})

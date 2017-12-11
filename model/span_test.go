@@ -63,10 +63,10 @@ func TestJSON(t *testing.T) {
 	span1.Sampled = nil
 	span1.Err = nil
 
-	// reset monotonic clock readings in time.Time values for comparison
-	span1.Timestamp = span1.Timestamp.Round(0)
+	// trim resolution back to microseconds (Zipkin's smallest time unit)
+	span1.Timestamp = span1.Timestamp.Round(time.Microsecond)
 	for idx := range span1.Annotations {
-		span1.Annotations[idx].Timestamp = span1.Annotations[idx].Timestamp.Round(0)
+		span1.Annotations[idx].Timestamp = span1.Annotations[idx].Timestamp.Round(time.Microsecond)
 	}
 
 	if !reflect.DeepEqual(span1, span2) {
