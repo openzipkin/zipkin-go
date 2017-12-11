@@ -47,3 +47,22 @@ func (s SpanModel) MarshalJSON() ([]byte, error) {
 		Alias:     (Alias)(s),
 	})
 }
+
+// UnmarshalJSON imports our Model from a Zipkin V2 API compatible span
+// representation.
+func (s *SpanModel) UnmarshalJSON(b []byte) error {
+	type Alias SpanModel
+	span := &struct {
+		TimeStamp int64 `json:"timestamp,omitempty"`
+		Duration  int64 `json:"duration,omitempty"`
+		*Alias
+	}{
+		Alias: (*Alias)(s),
+	}
+	if err := json.Unmarshal(b, &span); err != nil {
+		return err
+	}
+	s.Timestamp = time.Unix(0, span.TimeStamp*1e3)
+	s.Duration = time.Duration(span.Duration*1e3) * time.Nanosecond
+	return nil
+}
