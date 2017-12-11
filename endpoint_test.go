@@ -70,7 +70,7 @@ func TestNewEndpointDefaultsPortToZeroWhenMissing(t *testing.T) {
 	}
 
 	if endpoint.Port != defaultPort {
-		t.Fatalf("wrong port, expected %d and got %d", defaultPort, endpoint.Port)
+		t.Fatalf("expected port %d, got %d", defaultPort, endpoint.Port)
 	}
 }
 
@@ -78,19 +78,19 @@ func TestNewEndpointIpv4Success(t *testing.T) {
 	endpoint, err := zipkin.NewEndpoint(serviceName, ipv4HostPort)
 
 	if err != nil {
-		t.Fatalf("not error expected, got %s", err.Error())
+		t.Fatalf("unexpected error: %s", err.Error())
 	}
 
 	if serviceName != endpoint.ServiceName {
-		t.Fatalf("wrong service name, expected %s and got %s", serviceName, endpoint.ServiceName)
+		t.Fatalf("expected service name %s, got %s", serviceName, endpoint.ServiceName)
 	}
 
 	if !ipv4ForHostPort.Equal(endpoint.IPv4) {
-		t.Fatalf("wrong ip4, expected %s and got %s", ipv4ForHostPort.String(), endpoint.IPv4.String())
+		t.Fatalf("expected IPv4 %s, got %s", ipv4ForHostPort.String(), endpoint.IPv4.String())
 	}
 
 	if port != endpoint.Port {
-		t.Fatalf("wrong port, expected %d and got %d", port, endpoint.Port)
+		t.Fatalf("expected port %d, got %d", port, endpoint.Port)
 	}
 }
 
@@ -98,18 +98,18 @@ func TestNewEndpointIpv6Success(t *testing.T) {
 	endpoint, err := zipkin.NewEndpoint(serviceName, ipv6HostPort)
 
 	if err != nil {
-		t.Fatalf("not error expected, got %s", err.Error())
+		t.Fatalf("unexpected error: %s", err.Error())
 	}
 
 	if serviceName != endpoint.ServiceName {
-		t.Fatalf("wrong service name, expected %s and got %s", serviceName, endpoint.ServiceName)
+		t.Fatalf("expected service name %s, got %s", serviceName, endpoint.ServiceName)
 	}
 
 	if !ipv6ForHostPort.Equal(endpoint.IPv6) {
-		t.Fatalf("wrong ip6, expected %s and got %s", ipv6ForHostPort.String(), endpoint.IPv6.String())
+		t.Fatalf("expected IPv6 %s, got %s", ipv6ForHostPort.String(), endpoint.IPv6.String())
 	}
 
 	if port != endpoint.Port {
-		t.Fatalf("wrong port, expected %d and got %d", port, endpoint.Port)
+		t.Fatalf("expected port %d, got %d", port, endpoint.Port)
 	}
 }
