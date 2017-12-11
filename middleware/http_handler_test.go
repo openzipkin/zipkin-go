@@ -2,7 +2,6 @@ package middleware_test
 
 import (
 	"bytes"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -21,7 +20,6 @@ func httpHandler(code int, headers http.Header, body *bytes.Buffer) http.Handler
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(code)
 		for key, value := range headers {
-			log.Println(key, value)
 			w.Header().Add(key, value[0])
 		}
 		w.Write(body.Bytes())
