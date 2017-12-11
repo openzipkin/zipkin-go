@@ -14,9 +14,9 @@ var (
 )
 
 const (
-	b3TraceID      = "X-B3-TraceId"
-	b3SpanID       = "X-B3-SpanId"
-	b3ParentSpanID = "X-B3-ParentSpanId"
-	b3Sampled      = "X-B3-Sampled"
-	b3Flags        = "X-B3-Flags"
+	b3TraceID      = "x-b3-traceid"
+	b3SpanID       = "x-b3-spanid"
+	b3ParentSpanID = "x-b3-parentspanid"
+	b3Sampled      = "x-b3-sampled"
+	b3Flags        = "x-b3-flags"
 )
