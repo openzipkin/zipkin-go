@@ -21,3 +21,19 @@ func (a *Annotation) MarshalJSON() ([]byte, error) {
 		Value:     a.Value,
 	})
 }
+
+//
+func (a *Annotation) UnmarshalJSON(b []byte) error {
+	type Alias Annotation
+	annotation := &struct {
+		TimeStamp int64 `json:"timestamp, omitempty"`
+		*Alias
+	}{
+		Alias: (*Alias)(a),
+	}
+	if err := json.Unmarshal(b, &annotation); err != nil {
+		return err
+	}
+	a.Timestamp = time.Unix(0, annotation.TimeStamp*1e3)
+	return nil
+}
