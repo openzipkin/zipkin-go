@@ -294,15 +294,15 @@ func TestAnnotations(t *testing.T) {
 	defer s.Finish()
 
 	annotations := []model.Annotation{
-		model.Annotation{
+		{
 			Timestamp: time.Now().Add(10 * time.Millisecond),
 			Value:     "annotation 1",
 		},
-		model.Annotation{
+		{
 			Timestamp: time.Now().Add(20 * time.Millisecond),
 			Value:     "annotation 2",
 		},
-		model.Annotation{
+		{
 			Timestamp: time.Now().Add(30 * time.Millisecond),
 			Value:     "annotation 3",
 		},
