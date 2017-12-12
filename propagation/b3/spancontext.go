@@ -42,20 +42,20 @@ func parseHeaders(
 			sc.Sampled = nil
 		}
 	default:
-		return nil, ErrInvalidhdrFlags
+		return nil, ErrInvalidFlagsHeader
 	}
 
 	if hdrTraceID != "" {
 		requiredCount++
 		if sc.TraceID, err = model.TraceIDFromHex(hdrTraceID); err != nil {
-			return nil, ErrInvalidhdrTraceID
+			return nil, ErrInvalidTraceIDHeader
 		}
 	}
 
 	if hdrSpanID != "" {
 		requiredCount++
 		if spanID, err = strconv.ParseUint(hdrSpanID, 16, 64); err != nil {
-			return nil, ErrInvalidhdrSpanID
+			return nil, ErrInvalidSpanIDHeader
 		}
 		sc.ID = model.ID(spanID)
 	}
@@ -69,7 +69,7 @@ func parseHeaders(
 			return nil, ErrInvalidScopeParent
 		}
 		if spanID, err = strconv.ParseUint(hdrParentSpanID, 16, 64); err != nil {
-			return nil, ErrInvalidhdrParentSpanID
+			return nil, ErrInvalidParentSpanIDHeader
 		}
 		parentSpanID := model.ID(spanID)
 		sc.ParentID = &parentSpanID

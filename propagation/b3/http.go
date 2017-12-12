@@ -36,6 +36,14 @@ func InjectHTTP(r *http.Request) propagation.Injector {
 
 		if sc.Debug {
 			r.Header.Set(Flags, "1")
+		} else if sc.Sampled != nil {
+			// Debug is encoded as X-B3-Flags: 1. Since Debug implies Sampled,
+			// so don't also send "X-B3-Sampled: 1".
+			if *sc.Sampled {
+				r.Header.Set(Sampled, "1")
+			} else {
+				r.Header.Set(Sampled, "0")
+			}
 		}
 
 		if !sc.TraceID.Empty() && sc.ID > 0 {
@@ -43,15 +51,6 @@ func InjectHTTP(r *http.Request) propagation.Injector {
 			r.Header.Set(SpanID, fmt.Sprintf("%016x", sc.ID))
 			if sc.ParentID != nil {
 				r.Header.Set(ParentSpanID, fmt.Sprintf("%016x", *sc.ParentID))
-			}
-			// Debug is encoded as X-B3-Flags: 1. Since Debug implies Sampled,
-			// so don't also send "X-B3-Sampled: 1".
-			if sc.Sampled != nil && !sc.Debug {
-				if *sc.Sampled {
-					r.Header.Set(Sampled, "1")
-				} else {
-					r.Header.Set(Sampled, "0")
-				}
 			}
 		}
 
