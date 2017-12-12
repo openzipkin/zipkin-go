@@ -8,7 +8,7 @@ import (
 )
 
 func parseHeaders(
-	traceIDHeader, spanIDHeader, parentSpanIDHeader, sampledHeader, flagsHeader string,
+	hdrTraceID, hdrSpanID, hdrParentSpanID, hdrSampled, hdrFlags string,
 ) (*model.SpanContext, error) {
 	var (
 		err           error
@@ -17,7 +17,10 @@ func parseHeaders(
 		sc            = &model.SpanContext{}
 	)
 
-	switch strings.ToLower(sampledHeader) {
+	// correct values for an existing sampled header are "0" and "1".
+	// For legacy support and  being lenient to other tracing implementations we
+	// allow "true" and "false" as inputs for interop purposes.
+	switch strings.ToLower(hdrSampled) {
 	case "0", "false":
 		sampled := false
 		sc.Sampled = &sampled
@@ -30,7 +33,7 @@ func parseHeaders(
 		return nil, ErrInvalidSampledHeader
 	}
 
-	switch flagsHeader {
+	switch hdrFlags {
 	case "", "0":
 		// sc.Debug = false
 	case "1":
@@ -39,20 +42,20 @@ func parseHeaders(
 			sc.Sampled = nil
 		}
 	default:
-		return nil, ErrInvalidFlagsHeader
+		return nil, ErrInvalidhdrFlags
 	}
 
-	if traceIDHeader != "" {
+	if hdrTraceID != "" {
 		requiredCount++
-		if sc.TraceID, err = model.TraceIDFromHex(traceIDHeader); err != nil {
-			return nil, ErrInvalidTraceIDHeader
+		if sc.TraceID, err = model.TraceIDFromHex(hdrTraceID); err != nil {
+			return nil, ErrInvalidhdrTraceID
 		}
 	}
 
-	if spanIDHeader != "" {
+	if hdrSpanID != "" {
 		requiredCount++
-		if spanID, err = strconv.ParseUint(spanIDHeader, 16, 64); err != nil {
-			return nil, ErrInvalidSpanIDHeader
+		if spanID, err = strconv.ParseUint(hdrSpanID, 16, 64); err != nil {
+			return nil, ErrInvalidhdrSpanID
 		}
 		sc.ID = model.ID(spanID)
 	}
@@ -61,12 +64,12 @@ func parseHeaders(
 		return nil, ErrInvalidScope
 	}
 
-	if parentSpanIDHeader != "" {
+	if hdrParentSpanID != "" {
 		if requiredCount == 0 {
 			return nil, ErrInvalidScopeParent
 		}
-		if spanID, err = strconv.ParseUint(parentSpanIDHeader, 16, 64); err != nil {
-			return nil, ErrInvalidParentSpanIDHeader
+		if spanID, err = strconv.ParseUint(hdrParentSpanID, 16, 64); err != nil {
+			return nil, ErrInvalidhdrParentSpanID
 		}
 		parentSpanID := model.ID(spanID)
 		sc.ParentID = &parentSpanID

@@ -37,26 +37,24 @@ func InjectGRPC(md *metadata.MD) propagation.Injector {
 
 		if sc.Debug {
 			setGRPCHeader(md, Flags, "1")
-		} else if sc.Sampled != nil {
-			// Debug is encoded as X-B3-Flags: 1. Since Debug implies Sampled,
-			// so don't also send "X-B3-Sampled: 1".
-			if *sc.Sampled {
-				setGRPCHeader(md, Sampled, "1")
-			} else {
-				setGRPCHeader(md, Sampled, "0")
-			}
 		}
 
-		if !sc.TraceID.Empty() {
+		if !sc.TraceID.Empty() && sc.ID > 0 {
+			// set identifiers
 			setGRPCHeader(md, TraceID, sc.TraceID.ToHex())
-		}
-
-		if sc.ID > 0 {
 			setGRPCHeader(md, SpanID, fmt.Sprintf("%016x", sc.ID))
-		}
-
-		if sc.ParentID != nil {
-			setGRPCHeader(md, ParentSpanID, fmt.Sprintf("%016x", *sc.ParentID))
+			if sc.ParentID != nil {
+				setGRPCHeader(md, ParentSpanID, fmt.Sprintf("%016x", *sc.ParentID))
+			}
+			// Debug is encoded as X-B3-Flags: 1. Since Debug implies Sampled,
+			// we don't send "X-B3-Sampled" if Debug is set.
+			if sc.Sampled != nil && !sc.Debug {
+				if *sc.Sampled {
+					setGRPCHeader(md, Sampled, "1")
+				} else {
+					setGRPCHeader(md, Sampled, "0")
+				}
+			}
 		}
 
 		return nil
