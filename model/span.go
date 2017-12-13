@@ -64,8 +64,13 @@ func (s SpanModel) MarshalJSON() ([]byte, error) {
 			s.Duration = 1 * time.Microsecond
 		}
 	} else {
-		// duration is rounded to nearest microsecond representation
-		s.Duration = s.Duration.Round(time.Microsecond)
+		// Duration will be rounded to nearest microsecond representation.
+		//
+		// NOTE: Duration.Round() is not available in Go 1.8 which we still support.
+		// To handle microsecond resolution rounding we'll add 500 nanoseconds to
+		// the duration. When truncated to microseconds in the call to marshal, it
+		// will be naturally rounded. See TestSpanDurationRounding in span_test.go
+		s.Duration += 500 * time.Nanosecond
 	}
 
 	return json.Marshal(&struct {
