@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"reflect"
 	"testing"
@@ -145,5 +146,26 @@ func TestSpanNegativeTimestamp(t *testing.T) {
 
 	if err := json.Unmarshal(b, &span); err == nil {
 		t.Errorf("Unmarshal should have failed with error, have: %+v", span)
+	}
+
+	span = SpanModel{
+		SpanContext: SpanContext{
+			TraceID: TraceID{Low: 1},
+			ID:      ID(1),
+		},
+		Timestamp: time.Unix(0, 0),
+		Duration:  10 * time.Millisecond,
+	}
+
+	_, err := json.Marshal(span)
+	if err == nil {
+		t.Fatalf("MarshalJSON Error expected, have nil")
+	}
+	want := fmt.Sprintf(
+		"json: error calling MarshalJSON for type model.SpanModel: %s",
+		ErrValidTimestampRequired.Error(),
+	)
+	if have := err.Error(); want == have {
+		t.Errorf("Marshal Error want %+v, have %+v", want, have)
 	}
 }
