@@ -43,6 +43,9 @@ func (t TraceID) Empty() bool {
 // UnmarshalJSON custom JSON deserializer to retrieve the traceID from the hex
 // encoded representation.
 func (t *TraceID) UnmarshalJSON(traceID []byte) error {
+	if len(traceID) < 3 {
+		return ErrValidTraceIDRequired
+	}
 	tID, err := TraceIDFromHex(string(traceID[1 : len(traceID)-1]))
 	if err != nil {
 		return err

@@ -28,11 +28,15 @@ type Tracer struct {
 func NewTracer(reporter reporter.Reporter, options ...TracerOption) (*Tracer, error) {
 	// set default tracer options
 	t := &Tracer{
-		sharedSpans: true,
-		sampler:     alwaysSample,
-		generate:    idgenerator.NewRandom64(),
-		defaultTags: make(map[string]string),
-		reporter:    reporter,
+		defaultTags:          make(map[string]string),
+		extractFailurePolicy: ExtractFailurePolicyRestart,
+		sampler:              alwaysSample,
+		generate:             idgenerator.NewRandom64(),
+		reporter:             reporter,
+		localEndpoint:        &model.Endpoint{},
+		noop:                 0,
+		sharedSpans:          true,
+		unsampledNoop:        false,
 	}
 
 	// process functional options
@@ -143,4 +147,11 @@ func (t *Tracer) SetNoop(noop bool) {
 	} else {
 		atomic.CompareAndSwapInt32(&t.noop, 1, 0)
 	}
+}
+
+// LocalEndpoint returns a copy of the currently set local endpoint of the
+// tracer instance.
+func (t *Tracer) LocalEndpoint() *model.Endpoint {
+	ep := *t.localEndpoint
+	return &ep
 }

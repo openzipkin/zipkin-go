@@ -46,7 +46,7 @@ func TestCountingSampler(t *testing.T) {
 			}
 		}
 		if found != n {
-			t.Errorf("want %d, have %d\n", n, found)
+			t.Errorf("want %d, have %d", n, found)
 		}
 	}
 }

@@ -12,6 +12,8 @@ type noopSpan struct {
 
 func (n *noopSpan) Context() model.SpanContext { return n.SpanContext }
 
+func (*noopSpan) SetRemoteEndpoint(*model.Endpoint) {}
+
 func (*noopSpan) Annotate(time.Time, string) {}
 
 func (*noopSpan) Tag(string, string) {}

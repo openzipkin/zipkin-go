@@ -33,7 +33,7 @@ func WithLocalEndpoint(e *model.Endpoint) TracerOption {
 		if e == nil {
 			return ErrInvalidEndpoint
 		}
-		o.localEndpoint = e
+		*o.localEndpoint = *e
 		return nil
 	}
 }

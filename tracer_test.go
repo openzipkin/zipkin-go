@@ -7,12 +7,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/openzipkin/zipkin-go/idgenerator"
 	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter/log"
+	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
-func TestInvalidTracerOption(t *testing.T) {
-	tr, err := NewTracer(log.NewReporter(nil), WithLocalEndpoint(nil))
+func TestTracerOptionLocalEndpoint(t *testing.T) {
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec, WithLocalEndpoint(nil))
+
 	if want, have := ErrInvalidEndpoint, err; want != have {
 		t.Errorf("expected tracer creation failure: want %+v, have: %+v", want, have)
 	}
@@ -20,10 +25,113 @@ func TestInvalidTracerOption(t *testing.T) {
 	if tr != nil {
 		t.Errorf("expected tracer to be nil got: %+v", tr)
 	}
+
+	wantEP, err := NewEndpoint("testService", "localhost:80")
+
+	if err != nil {
+		t.Fatalf("expected valid endpoint, got error: %+v", err)
+	}
+
+	tr, err = NewTracer(rec, WithLocalEndpoint(wantEP))
+
+	if err != nil {
+		t.Fatalf("expected valid tracer, got error: %+v", err)
+	}
+
+	if tr == nil {
+		t.Error("expected valid tracer, got nil")
+	}
+
+	haveEP := tr.LocalEndpoint()
+
+	if want, have := wantEP.ServiceName, haveEP.ServiceName; want != have {
+		t.Errorf("ServiceName want %s, have %s", want, have)
+	}
+
+	if !wantEP.IPv4.Equal(haveEP.IPv4) {
+		t.Errorf(" IPv4 want %+v, have %+v", wantEP.IPv4, haveEP.IPv4)
+	}
+
+	if !wantEP.IPv6.Equal(haveEP.IPv6) {
+		t.Errorf("IPv6 want %+v, have %+v", wantEP.IPv6, haveEP.IPv6)
+	}
+}
+
+func TestTracerOptionExtractFailurePolicy(t *testing.T) {
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	policies := []struct {
+		policy ExtractFailurePolicy
+		err    error
+	}{
+		{-1, ErrInvalidExtractFailurePolicy},
+		{ExtractFailurePolicyRestart, nil},
+		{ExtractFailurePolicyError, nil},
+		{ExtractFailurePolicyTagAndRestart, nil},
+		{3, ErrInvalidExtractFailurePolicy},
+	}
+
+	for idx, item := range policies {
+		tr, err := NewTracer(rec, WithExtractFailurePolicy(item.policy))
+
+		if want, have := item.err, err; want != have {
+			t.Errorf("[%d] expected tracer creation failure: want %+v, have %+v", idx, item.err, err)
+		}
+
+		if err != nil && tr != nil {
+			t.Errorf("[%d] expected tracer to be nil, have: %+v", idx, tr)
+		}
+	}
+}
+
+func TestTracerIDGeneratorOption(t *testing.T) {
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	gen := idgenerator.NewRandomTimestamped()
+
+	tr, err := NewTracer(rec, WithIDGenerator(gen))
+
+	if err != nil {
+		t.Fatalf("expected valid tracer, got error: %+v", err)
+	}
+
+	if want, have := gen, tr.generate; want != have {
+		t.Errorf("id generator want %+v, have %+v", want, have)
+	}
+}
+
+func TestTracerWithTraceID128BitOption(t *testing.T) {
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec, WithTraceID128Bit(false))
+
+	if err != nil {
+		t.Fatalf("expected valid tracer, got error: %+v", err)
+	}
+
+	if want, have := reflect.TypeOf(idgenerator.NewRandom64()), reflect.TypeOf(tr.generate); want != have {
+		t.Errorf("id generator want %+v, have %+v", want, have)
+	}
+
+	tr, err = NewTracer(rec, WithTraceID128Bit(true))
+
+	if err != nil {
+		t.Fatalf("expected valid tracer, got error: %+v", err)
+	}
+
+	if want, have := reflect.TypeOf(idgenerator.NewRandom128()), reflect.TypeOf(tr.generate); want != have {
+		t.Errorf("id generator want %+v, have %+v", want, have)
+	}
 }
 
 func TestTracerExtractor(t *testing.T) {
-	tr, err := NewTracer(log.NewReporter(nil))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec)
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -36,7 +144,7 @@ func TestTracerExtractor(t *testing.T) {
 	sc := tr.Extract(extractorErr)
 
 	if want, have := testErr1, sc.Err; want != have {
-		t.Errorf("expected extractor error: %+v, got %+v", want, have)
+		t.Errorf("Err want %+v, have %+v", want, have)
 	}
 
 	spanContext := model.SpanContext{}
@@ -47,16 +155,19 @@ func TestTracerExtractor(t *testing.T) {
 	sc = tr.Extract(extractor)
 
 	if want, have := spanContext, sc; want != have {
-		t.Errorf("expected span context: %+v, got %+v", want, have)
+		t.Errorf("SpanContext want %+v, have %+v", want, have)
 	}
 
 	if want, have := &spanContext, &sc; want == have {
-		t.Errorf("expected different span context objects")
+		t.Error("expected different span context objects")
 	}
 }
 
 func TestNoopTracer(t *testing.T) {
-	tr, err := NewTracer(log.NewReporter(nil))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec)
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -72,7 +183,7 @@ func TestNoopTracer(t *testing.T) {
 	span := tr.StartSpan("test", Parent(pSC))
 
 	if want, have := reflect.TypeOf(&spanImpl{}), reflect.TypeOf(span); want != have {
-		t.Errorf("expected span implementation type: %+v, got %+v", want, have)
+		t.Errorf("span implementation type want %+v, have %+v", want, have)
 	}
 
 	span.Finish()
@@ -87,13 +198,13 @@ func TestNoopTracer(t *testing.T) {
 	sc := tr.Extract(extractor)
 
 	if sc.Err != nil {
-		t.Errorf("expected extractor noop: got error: %+v", sc.Err)
+		t.Errorf("Err want nil, have %+v", sc.Err)
 	}
 
 	span = tr.StartSpan("test", Parent(pSC))
 
 	if want, have := reflect.TypeOf(&noopSpan{}), reflect.TypeOf(span); want != have {
-		t.Errorf("expected span implementation type: %+v, got %+v", want, have)
+		t.Errorf("span implementation type want %+v, have %+v", want, have)
 	}
 
 	span.Finish()
@@ -103,14 +214,50 @@ func TestNoopTracer(t *testing.T) {
 	span = tr.StartSpan("test", Parent(pSC))
 
 	if want, have := reflect.TypeOf(&spanImpl{}), reflect.TypeOf(span); want != have {
-		t.Errorf("expected span implementation type: %+v, got %+v", want, have)
+		t.Errorf("span implementation type want %+v, have %+v", want, have)
 	}
 
 	span.Finish()
+
+	tr, err = NewTracer(rec, WithNoopTracer(true))
+	if err != nil {
+		t.Fatalf("unable to create tracer instance: %+v", err)
+	}
+
+	testErr1 = errors.New("extractor error")
+	extractor = func() (*model.SpanContext, error) {
+		return nil, testErr1
+	}
+
+	sc = tr.Extract(extractor)
+
+	if sc.Err != nil {
+		t.Errorf("Err want nil, have %+v", sc.Err)
+	}
+
+	span = tr.StartSpan("test", Parent(pSC))
+
+	if want, have := reflect.TypeOf(&noopSpan{}), reflect.TypeOf(span); want != have {
+		t.Errorf("span implementation type want %+v, have %+v", want, have)
+	}
+
+	tr, err = NewTracer(rec, WithNoopTracer(false))
+	if err != nil {
+		t.Fatalf("unable to create tracer instance: %+v", err)
+	}
+
+	span = tr.StartSpan("test", Parent(pSC))
+
+	if want, have := reflect.TypeOf(&spanImpl{}), reflect.TypeOf(span); want != have {
+		t.Errorf("span implementation type want %+v, have %+v", want, have)
+	}
 }
 
 func TestNoopSpan(t *testing.T) {
-	tr, err := NewTracer(log.NewReporter(nil), WithNoopSpan(true))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec, WithNoopSpan(true))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -128,14 +275,17 @@ func TestNoopSpan(t *testing.T) {
 	span := tr.StartSpan("test", Parent(pSC))
 
 	if want, have := reflect.TypeOf(&noopSpan{}), reflect.TypeOf(span); want != have {
-		t.Errorf("expected span implementation type: %+v, got %+v", want, have)
+		t.Errorf("span implementation type want %+v, have %+v", want, have)
 	}
 
 	span.Finish()
 }
 
 func TestUnsampledSpan(t *testing.T) {
-	tr, err := NewTracer(log.NewReporter(nil))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec, WithTraceID128Bit(false))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -153,37 +303,37 @@ func TestUnsampledSpan(t *testing.T) {
 	span := tr.StartSpan("test", Parent(pSC))
 
 	if want, have := reflect.TypeOf(&spanImpl{}), reflect.TypeOf(span); want != have {
-		t.Errorf("expected span implementation type: %+v, got %+v", want, have)
+		t.Errorf("span implementation type want %+v, have %+v", want, have)
 	}
 
 	cSC := span.Context()
 
 	if cSC.Err != nil {
-		t.Errorf("expected Err to be nil, got %+v", cSC.Err)
+		t.Errorf("Err want nil, have %+v", cSC.Err)
 	}
 
 	if want, have := pSC.Debug, cSC.Debug; want != have {
-		t.Errorf("expected Debug %t, got %t", want, have)
+		t.Errorf("Debug want %t, have %t", want, have)
 	}
 
 	if want, have := pSC.TraceID, cSC.TraceID; want != have {
-		t.Errorf("expected TraceID: %+v, got: %+v", want, have)
+		t.Errorf("TraceID want %+v, have %+v", want, have)
 	}
 
 	if cSC.ID == 0 {
-		t.Error("expected valid ID")
+		t.Error("ID want valid value, have 0")
 	}
 
 	if cSC.ParentID == nil {
-		t.Error("expected valid ParentID, got nil")
+		t.Errorf("ParentID want %+v, have nil", pSC.ID)
 	} else if want, have := pSC.ID, *cSC.ParentID; want != have {
-		t.Errorf("expected ParentID: %+v, got: %+v", want, have)
+		t.Errorf("ParentID want %+v, have %+v", want, have)
 	}
 
 	if cSC.Sampled == nil {
-		t.Error("expected explicit Sampled value, got nil")
+		t.Error("Sampled want false, have nil")
 	} else if *cSC.Sampled {
-		t.Errorf("expected Sampled value false, got %+v", *cSC.Sampled)
+		t.Errorf("Sampled want false, have %+v", *cSC.Sampled)
 	}
 
 	if want, have := int32(0), span.(*spanImpl).mustCollect; want != have {
@@ -202,7 +352,10 @@ func TestDefaultTags(t *testing.T) {
 	tags["platform"] = "zipkin_test"
 	tags["version"] = "1.0"
 
-	tr, err := NewTracer(log.NewReporter(nil), WithTags(tags))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec, WithTags(tags), WithTraceID128Bit(true))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -223,17 +376,17 @@ func TestDefaultTags(t *testing.T) {
 	for key, value := range tags {
 		foundValue, foundKey := foundTags[key]
 		if !foundKey {
-			t.Errorf("expected tag %q = %q, got key not found", key, value)
+			t.Errorf("Tag want %s=%s, have key not found", key, value)
 		} else if value != foundValue {
-			t.Errorf("expected tag %q = %q, got %q = %q", key, value, key, foundValue)
+			t.Errorf("Tag want %s=%s, have %s=%s", key, value, key, foundValue)
 		}
 	}
 
 	foundValue, foundKey := foundTags[scTagKey]
 	if !foundKey {
-		t.Errorf("expected tag %q = %q, got key not found", scTagKey, scTagValue)
+		t.Errorf("Tag want %s=%s, have key not found", scTagKey, scTagValue)
 	} else if want, have := scTagValue, foundValue; want != have {
-		t.Errorf("expected tag %q = %q, got %q = %q", scTagKey, scTagValue, scTagKey, foundValue)
+		t.Errorf("Tag want %s=%s, have %s=%s", scTagKey, scTagValue, scTagKey, foundValue)
 	}
 }
 
@@ -245,7 +398,10 @@ func TestTagOverwriteRules(t *testing.T) {
 		k2      = string(TagError)
 	)
 
-	tr, err := NewTracer(log.NewReporter(nil))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec, WithIDGenerator(idgenerator.NewRandomTimestamped()))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -256,36 +412,39 @@ func TestTagOverwriteRules(t *testing.T) {
 	s.Tag(k1, v1First)
 
 	if want, have := v1First, s.(*spanImpl).Tags[k1]; want != have {
-		t.Errorf("Expect %s=%s, got %s=%s", k1, want, k1, have)
+		t.Errorf("Tag want %s=%s, have %s=%s", k1, want, k1, have)
 	}
 
 	s.Tag(k1, v1Last)
 
 	if want, have := v1Last, s.(*spanImpl).Tags[k1]; want != have {
-		t.Errorf("Expect %s=%s, got %s=%s", k1, want, k1, have)
+		t.Errorf("Tag want %s=%s, have %s=%s", k1, want, k1, have)
 	}
 
 	s.Tag(k2, v1First)
 
 	if want, have := v1First, s.(*spanImpl).Tags[k2]; want != have {
-		t.Errorf("Expect %s=%s, got %s=%s", k1, want, k1, have)
+		t.Errorf("Tag want %s=%s, have %s=%s", k1, want, k1, have)
 	}
 
 	s.Tag(k2, v1Last)
 
 	if want, have := v1First, s.(*spanImpl).Tags[k2]; want != have {
-		t.Errorf("Expect %s=%s, got %s=%s", k1, want, k1, have)
+		t.Errorf("Tag want %s=%s, have %s=%s", k1, want, k1, have)
 	}
 
 	TagError.Set(s, v1Last)
 
 	if want, have := v1First, s.(*spanImpl).Tags[k2]; want != have {
-		t.Errorf("Expect %s=%s, got %s=%s", k1, want, k1, have)
+		t.Errorf("Tag want %s=%s, have %s=%s", k1, want, k1, have)
 	}
 }
 
 func TestAnnotations(t *testing.T) {
-	tr, err := NewTracer(log.NewReporter(nil))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec)
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -294,15 +453,15 @@ func TestAnnotations(t *testing.T) {
 	defer s.Finish()
 
 	annotations := []model.Annotation{
-		model.Annotation{
+		{
 			Timestamp: time.Now().Add(10 * time.Millisecond),
 			Value:     "annotation 1",
 		},
-		model.Annotation{
+		{
 			Timestamp: time.Now().Add(20 * time.Millisecond),
 			Value:     "annotation 2",
 		},
-		model.Annotation{
+		{
 			Timestamp: time.Now().Add(30 * time.Millisecond),
 			Value:     "annotation 3",
 		},
@@ -315,18 +474,21 @@ func TestAnnotations(t *testing.T) {
 	time.Sleep(40 * time.Millisecond)
 
 	if want, have := len(annotations), len(s.(*spanImpl).Annotations); want != have {
-		t.Fatalf("expected %d annotations, got %d", want, have)
+		t.Fatalf("Annotation count want %d, have %d", want, have)
 	}
 
 	for idx, annotation := range annotations {
 		if want, have := annotation, s.(*spanImpl).Annotations[idx]; want != have {
-			t.Errorf("[%d] expected %+v, got %+v", idx, want, have)
+			t.Errorf("Annotation #%d want %+v, have %+v", idx, want, have)
 		}
 	}
 }
 
 func TestExplicitStartTime(t *testing.T) {
-	tr, err := NewTracer(log.NewReporter(nil))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec, WithSampler(NewModuloSampler(2)))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -339,7 +501,7 @@ func TestExplicitStartTime(t *testing.T) {
 	defer s.Finish()
 
 	if want, have := st, s.(*spanImpl).Timestamp; want != have {
-		t.Errorf("Expected start time %+v, got %+v", want, have)
+		t.Errorf("Timestamp want %+v, have %+v", want, have)
 	}
 }
 
@@ -347,7 +509,10 @@ func TestDebugFlagWithoutParentTrace(t *testing.T) {
 	/*
 	   Test handling of a single Debug flag without an existing trace
 	*/
-	tr, err := NewTracer(log.NewReporter(nil), WithSharedSpans(true))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec, WithSharedSpans(true))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -361,11 +526,11 @@ func TestDebugFlagWithoutParentTrace(t *testing.T) {
 	cSC := span.Context()
 
 	if cSC.Err != nil {
-		t.Errorf("expected Err to be nil, got %+v", cSC.Err)
+		t.Errorf("Err want nil, have %+v", cSC.Err)
 	}
 
 	if want, have := pSC.Debug, cSC.Debug; want != have {
-		t.Errorf("expected Debug %t, got %t", want, have)
+		t.Errorf("Debug want %t, have %t", want, have)
 	}
 
 	if want, have := false, cSC.TraceID.Empty(); want != have {
@@ -377,20 +542,23 @@ func TestDebugFlagWithoutParentTrace(t *testing.T) {
 	}
 
 	if cSC.ParentID != nil {
-		t.Errorf("expected empty ParentID, got: %+v", cSC.ParentID)
+		t.Errorf("ParentID want nil, have %+v", cSC.ParentID)
 	}
 
 	if cSC.Sampled != nil {
-		t.Errorf("expected Sampled to be nil, got: %+v", cSC.Sampled)
+		t.Errorf("Sampled want nil, have %+v", cSC.Sampled)
 	}
 
 	if want, have := int32(1), span.(*spanImpl).mustCollect; want != have {
-		t.Errorf("expected mustCollect %d, got %d", want, have)
+		t.Errorf("mustCollect want %d, have %d", want, have)
 	}
 }
 
 func TestParentSpanInSharedMode(t *testing.T) {
-	tr, err := NewTracer(log.NewReporter(nil), WithSharedSpans(true))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec, WithSharedSpans(true))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -411,40 +579,43 @@ func TestParentSpanInSharedMode(t *testing.T) {
 	cSC := span.Context()
 
 	if cSC.Err != nil {
-		t.Errorf("expected Err to be nil, got %+v", cSC.Err)
+		t.Errorf("Err want nil, have %+v", cSC.Err)
 	}
 
 	if want, have := pSC.Debug, cSC.Debug; want != have {
-		t.Errorf("expected Debug %t, got %t", want, have)
+		t.Errorf("Debug want %t, have %t", want, have)
 	}
 
 	if want, have := pSC.TraceID, cSC.TraceID; want != have {
-		t.Errorf("expected TraceID: %+v, got: %+v", want, have)
+		t.Errorf("TraceID want %+v, have %+v", want, have)
 	}
 
 	if want, have := pSC.ID, cSC.ID; want != have {
-		t.Errorf("expected ID: %+v, got: %+v", want, have)
+		t.Errorf("ID want %+v, have %+v", want, have)
 	}
 
 	if cSC.ParentID == nil {
-		t.Error("expected valid ParentID, got nil")
+		t.Error("ParentID want valid value, have nil")
 	} else if want, have := parentID, *cSC.ParentID; want != have {
-		t.Errorf("expected ParentID: %+v, got: %+v", want, have)
+		t.Errorf("ParentID want %+v, have %+v", want, have)
 	}
 
 	if cSC.Sampled == nil {
-		t.Error("expected explicit Sampled value, got nil")
+		t.Error("Sampled want explicit value, have nil")
 	} else if !*cSC.Sampled {
-		t.Errorf("expected Sampled value true, got %+v", *cSC.Sampled)
+		t.Errorf("Sampled want true, have %+v", *cSC.Sampled)
 	}
 
 	if want, have := int32(1), span.(*spanImpl).mustCollect; want != have {
-		t.Errorf("expected mustCollect %d, got %d", want, have)
+		t.Errorf("mustCollect want %d, have %d", want, have)
 	}
 }
 
 func TestParentSpanInSpanPerNodeMode(t *testing.T) {
-	tr, err := NewTracer(log.NewReporter(nil), WithSharedSpans(false))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec, WithSharedSpans(false))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -462,15 +633,15 @@ func TestParentSpanInSpanPerNodeMode(t *testing.T) {
 	cSC := span.Context()
 
 	if cSC.Err != nil {
-		t.Errorf("expected Err to be nil, got %+v", cSC.Err)
+		t.Errorf("Err want nil, have %+v", cSC.Err)
 	}
 
 	if want, have := pSC.Debug, cSC.Debug; want != have {
-		t.Errorf("expected Debug %t, got %t", want, have)
+		t.Errorf("Debug want %t, have %t", want, have)
 	}
 
 	if want, have := pSC.TraceID, cSC.TraceID; want != have {
-		t.Errorf("expected TraceID: %+v, got: %+v", want, have)
+		t.Errorf("TraceID want %+v, have: %+v", want, have)
 	}
 
 	if cSC.ID == 0 {
@@ -478,24 +649,27 @@ func TestParentSpanInSpanPerNodeMode(t *testing.T) {
 	}
 
 	if cSC.ParentID == nil {
-		t.Error("expected valid ParentID, got nil")
+		t.Error("ParentID want valid value, have nil")
 	} else if want, have := pSC.ID, *cSC.ParentID; want != have {
-		t.Errorf("expected ParentID: %+v, got: %+v", want, have)
+		t.Errorf("ParentID want %+v, have %+v", want, have)
 	}
 
 	if cSC.Sampled == nil {
-		t.Error("expected explicit Sampled value, got nil")
+		t.Error("Sampled want explicit value, have nil")
 	} else if !*cSC.Sampled {
-		t.Errorf("expected Sampled value true, got %+v", *cSC.Sampled)
+		t.Errorf("Sampled want true, have %+v", *cSC.Sampled)
 	}
 
 	if want, have := int32(1), span.(*spanImpl).mustCollect; want != have {
-		t.Errorf("expected mustCollect %d, got %d", want, have)
+		t.Errorf("mustCollect want %d, have %d", want, have)
 	}
 }
 
 func TestStartSpanFromContext(t *testing.T) {
-	tr, err := NewTracer(log.NewReporter(nil), WithSharedSpans(true))
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tr, err := NewTracer(rec, WithSharedSpans(true))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -509,22 +683,95 @@ func TestStartSpanFromContext(t *testing.T) {
 	cS, sS := cSpan.(*spanImpl), sSpan.(*spanImpl)
 
 	if want, have := model.Client, cS.Kind; want != have {
-		t.Errorf("expected Kind: %+v, got: %+v", want, have)
+		t.Errorf("Kind want %+v, have %+v", want, have)
 	}
 
 	if want, have := model.Server, sS.Kind; want != have {
-		t.Errorf("expected Kind: %+v, got: %+v", want, have)
+		t.Errorf("Kind want %+v, have: %+v", want, have)
 	}
 
 	if want, have := cS.TraceID, sS.TraceID; want != have {
-		t.Errorf("expected TraceID: %+v, got: %+v", want, have)
+		t.Errorf("TraceID want %+v, have: %+v", want, have)
 	}
 
 	if want, have := cS.ID, sS.ID; want != have {
-		t.Errorf("expected Span ID: %+v, got: %+v", want, have)
+		t.Errorf("ID want %+v, have %+v", want, have)
 	}
 
 	if want, have := cS.ParentID, sS.ParentID; want != have {
-		t.Errorf("expected Span ID: %+v, got: %+v", want, have)
+		t.Errorf("ParentID want %+v, have %+v", want, have)
+	}
+}
+
+func TestLocalEndpoint(t *testing.T) {
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tracer, err := NewTracer(rec)
+	if err != nil {
+		t.Fatalf("expected valid tracer, got error: %+v", err)
+	}
+
+	ep, err := NewEndpoint("my service", "localhost:80")
+
+	if err != nil {
+		t.Fatalf("expected valid endpoint, got error: %+v", err)
+	}
+
+	tracer, err = NewTracer(rec, WithLocalEndpoint(ep))
+	if err != nil {
+		t.Fatalf("expected valid tracer, got error: %+v", err)
+	}
+
+	want, have := ep, tracer.LocalEndpoint()
+
+	if have == nil {
+		t.Fatalf("endpoint want %+v, have nil", want)
+	}
+
+	if want.ServiceName != have.ServiceName {
+		t.Errorf("serviceName want %s, have %s", want.ServiceName, have.ServiceName)
+	}
+
+	if !want.IPv4.Equal(have.IPv4) {
+		t.Errorf("IPv4 endpoint want %+v, have %+v", want.IPv4, have.IPv4)
+	}
+
+	if !want.IPv6.Equal(have.IPv6) {
+		t.Errorf("IPv6 endpoint want %+v, have %+v", want.IPv6, have.IPv6)
+	}
+}
+
+func TestRemoteEndpoint(t *testing.T) {
+	rec := recorder.NewReporter()
+	defer rec.Close()
+
+	tracer, err := NewTracer(rec)
+	if err != nil {
+		t.Fatalf("expected valid tracer, got error: %+v", err)
+	}
+
+	ep1, err := NewEndpoint("myService", "www.google.com:80")
+
+	if err != nil {
+		t.Fatalf("expected valid endpoint, got error: %+v", err)
+	}
+
+	span := tracer.StartSpan("test", RemoteEndpoint(ep1))
+
+	if !reflect.DeepEqual(span.(*spanImpl).RemoteEndpoint, ep1) {
+		t.Errorf("RemoteEndpoint want %+v, have %+v", ep1, span.(*spanImpl).RemoteEndpoint)
+	}
+
+	ep2, err := NewEndpoint("otherService", "www.microsoft.com:443")
+
+	if err != nil {
+		t.Fatalf("expected valid endpoint, got error: %+v", err)
+	}
+
+	span.SetRemoteEndpoint(ep2)
+
+	if !reflect.DeepEqual(span.(*spanImpl).RemoteEndpoint, ep2) {
+		t.Errorf("RemoteEndpoint want %+v, have %+v", ep1, span.(*spanImpl).RemoteEndpoint)
 	}
 }

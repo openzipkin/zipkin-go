@@ -2,53 +2,24 @@ package middleware_test
 
 import (
 	"bytes"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
-	"sync"
 	"testing"
 
 	zipkin "github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/middleware"
-	"github.com/openzipkin/zipkin-go/model"
+	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
 var (
 	lep, _ = zipkin.NewEndpoint("testSvc", "127.0.0.1:0")
 )
 
-type reporterRecorder struct {
-	mtx   sync.Mutex
-	spans []model.SpanModel
-}
-
-func (r *reporterRecorder) Send(span model.SpanModel) {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
-
-	r.spans = append(r.spans, span)
-}
-
-func (r *reporterRecorder) Flush() []model.SpanModel {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
-
-	spans := r.spans
-	r.spans = nil
-	return spans
-}
-
-func (r *reporterRecorder) Close() error {
-	_ = r.Flush
-	return nil
-}
-
 func httpHandler(code int, headers http.Header, body *bytes.Buffer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(code)
 		for key, value := range headers {
-			log.Println(key, value)
 			w.Header().Add(key, value[0])
 		}
 		w.Write(body.Bytes())
@@ -57,7 +28,7 @@ func httpHandler(code int, headers http.Header, body *bytes.Buffer) http.Handler
 
 func TestHTTPHandlerWrapping(t *testing.T) {
 	var (
-		spanRecorder = &reporterRecorder{}
+		spanRecorder = &recorder.ReporterRecorder{}
 		tr, _        = zipkin.NewTracer(spanRecorder, zipkin.WithLocalEndpoint(lep))
 		httpRecorder = httptest.NewRecorder()
 		requestBuf   = bytes.NewBuffer([]byte("incoming data"))

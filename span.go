@@ -9,6 +9,7 @@ import (
 // Span interface as returned by Tracer.StartSpan()
 type Span interface {
 	Context() model.SpanContext
+	SetRemoteEndpoint(*model.Endpoint)
 	Annotate(time.Time, string)
 	Tag(string, string)
 	Finish()
