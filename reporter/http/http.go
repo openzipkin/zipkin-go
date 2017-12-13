@@ -35,7 +35,7 @@ type httpReporter struct {
 	sendMtx       *sync.Mutex
 	batchMtx      *sync.Mutex
 	batch         []*model.SpanModel
-	spanc         chan *model.SpanModel
+	spanC         chan *model.SpanModel
 	quit          chan struct{}
 	shutdown      chan error
 	reqCallback   RequestCallbackFn
@@ -43,7 +43,7 @@ type httpReporter struct {
 
 // Send implements reporter
 func (r *httpReporter) Send(s model.SpanModel) {
-	r.spanc <- &s
+	r.spanC <- &s
 }
 
 // Close implements reporter
@@ -62,7 +62,7 @@ func (r *httpReporter) loop() {
 
 	for {
 		select {
-		case span := <-r.spanc:
+		case span := <-r.spanC:
 			currentBatchSize := r.append(span)
 			if currentBatchSize >= r.batchSize {
 				nextSend = time.Now().Add(r.batchInterval)
@@ -198,7 +198,7 @@ func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 		batchSize:     defaultBatchSize,
 		maxBacklog:    defaultMaxBacklog,
 		batch:         []*model.SpanModel{},
-		spanc:         make(chan *model.SpanModel),
+		spanC:         make(chan *model.SpanModel),
 		quit:          make(chan struct{}, 1),
 		shutdown:      make(chan error, 1),
 		sendMtx:       &sync.Mutex{},

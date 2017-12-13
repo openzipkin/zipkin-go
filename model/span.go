@@ -45,17 +45,18 @@ type SpanModel struct {
 func (s SpanModel) MarshalJSON() ([]byte, error) {
 	type Alias SpanModel
 
-	var timestamp int64
+	var timestamp uint64
 	if !s.Timestamp.IsZero() {
-		timestamp = s.Timestamp.Round(time.Microsecond).UnixNano() / 1e3
+		timestamp = uint64(s.Timestamp.Round(time.Microsecond).UnixNano() / 1e3)
 	}
+
 	return json.Marshal(&struct {
-		Timestamp int64 `json:"timestamp,omitempty"`
-		Duration  int64 `json:"duration,omitempty"`
+		Timestamp uint64 `json:"timestamp,omitempty"`
+		Duration  uint64 `json:"duration,omitempty"`
 		Alias
 	}{
 		Timestamp: timestamp,
-		Duration:  s.Duration.Nanoseconds() / 1e3,
+		Duration:  uint64(s.Duration.Nanoseconds() / 1e3),
 		Alias:     (Alias)(s),
 	})
 }
