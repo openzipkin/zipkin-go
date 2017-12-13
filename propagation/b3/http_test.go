@@ -36,7 +36,7 @@ func TestHTTPExtractSampledOnly(t *testing.T) {
 	}
 
 	if sc.Sampled == nil {
-		t.Fatal("Sampled want %t, have nil", false)
+		t.Fatalf("Sampled want %t, have nil", false)
 	}
 
 	if want, have := false, *sc.Sampled; want != have {

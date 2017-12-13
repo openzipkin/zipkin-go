@@ -23,15 +23,15 @@ type SpanContext struct {
 // export data to a Zipkin server using the Zipkin V2 Span model.
 type SpanModel struct {
 	SpanContext
-	Name           string            `json:"name"`
+	Name           string            `json:"name,omitempty"`
 	Kind           Kind              `json:"kind,omitempty"`
 	Timestamp      time.Time         `json:"timestamp,omitempty"`
 	Duration       time.Duration     `json:"duration,omitempty"`
-	Shared         bool              `json:"shared"`
+	Shared         bool              `json:"shared,omitempty"`
 	LocalEndpoint  *Endpoint         `json:"localEndpoint,omitempty"`
 	RemoteEndpoint *Endpoint         `json:"remoteEndpoint,omitempty"`
-	Annotations    []Annotation      `json:"annotations"`
-	Tags           map[string]string `json:"tags"`
+	Annotations    []Annotation      `json:"annotations,omitempty"`
+	Tags           map[string]string `json:"tags,omitempty"`
 }
 
 // MarshalJSON exports our Model into the correct format for the Zipkin V2 API.
