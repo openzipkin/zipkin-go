@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"reflect"
 	"testing"
@@ -126,24 +127,116 @@ func TestSpanEmptyTimeStamp(t *testing.T) {
 	}
 }
 
+func TestSpanDurationRounding(t *testing.T) {
+	durations := []struct {
+		nano  time.Duration
+		micro time.Duration
+	}{
+		{0, 0},
+		{1, 1000},
+		{999, 1000},
+		{1000, 1000},
+		{1001, 1000},
+		{1499, 1000},
+		{1500, 2000},
+		{2000, 2000},
+		{2001, 2000},
+		{2499, 2000},
+		{2500, 3000},
+		{2999, 3000},
+		{3000, 3000},
+	}
+
+	for i, duration := range durations {
+		span := SpanModel{
+			SpanContext: SpanContext{
+				TraceID: TraceID{Low: 1},
+				ID:      ID(1),
+			},
+			Timestamp: time.Now(),
+			Duration:  duration.nano,
+		}
+
+		b, err := json.Marshal(span)
+		if err != nil {
+			t.Fatalf("span marshal failed: %+v", err)
+		}
+
+		span2 := SpanModel{}
+
+		if err := json.Unmarshal(b, &span2); err != nil {
+			t.Fatalf("span unmarshal failed: %+v", err)
+		}
+
+		if want, have := duration.micro, span2.Duration; want != have {
+			t.Errorf("[%d] Duration want %d, have %d", i, want, have)
+		}
+	}
+}
+
 func TestSpanNegativeDuration(t *testing.T) {
 	var (
+		err  error
 		span SpanModel
 		b    = []byte(`{"duration":-1}`)
 	)
 
-	if err := json.Unmarshal(b, &span); err == nil {
+	if err = json.Unmarshal(b, &span); err == nil {
 		t.Errorf("Unmarshal should have failed with error, have: %+v", span)
+	}
+
+	span = SpanModel{
+		SpanContext: SpanContext{
+			TraceID: TraceID{Low: 1},
+			ID:      ID(1),
+		},
+		Timestamp: time.Now(),
+		Duration:  -1 * time.Nanosecond,
+	}
+
+	if _, err = json.Marshal(span); err == nil {
+		t.Fatalf("Span Marshal Error expected, have nil")
+	}
+
+	want := fmt.Sprintf(
+		"json: error calling MarshalJSON for type model.SpanModel: %s",
+		ErrValidDurationRequired.Error(),
+	)
+
+	if have := err.Error(); want != have {
+		t.Errorf("Span Marshal Error want %s, have %s", want, have)
 	}
 }
 
 func TestSpanNegativeTimestamp(t *testing.T) {
 	var (
+		err  error
 		span SpanModel
 		b    = []byte(`{"timestamp":-1}`)
 	)
 
-	if err := json.Unmarshal(b, &span); err == nil {
+	if err = json.Unmarshal(b, &span); err == nil {
 		t.Errorf("Unmarshal should have failed with error, have: %+v", span)
 	}
+
+	span = SpanModel{
+		SpanContext: SpanContext{
+			TraceID: TraceID{Low: 1},
+			ID:      ID(1),
+		},
+		Timestamp: time.Unix(-1, 0),
+	}
+
+	if _, err = json.Marshal(span); err == nil {
+		t.Fatalf("Span Marshal Error expected, have nil")
+	}
+
+	want := fmt.Sprintf(
+		"json: error calling MarshalJSON for type model.SpanModel: %s",
+		ErrValidTimestampRequired.Error(),
+	)
+	if have := err.Error(); want != have {
+		t.Errorf("Span Marshal Error want %s, have %s", want, have)
+	}
+
 }

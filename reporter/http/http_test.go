@@ -36,7 +36,17 @@ func TestSpanIsBeingReported(t *testing.T) {
 		}
 
 		aSpans = append(aSpans, span)
-		eSpans = append(eSpans, fmt.Sprintf(expectedSpanTpl, span.Timestamp.Round(time.Microsecond).UnixNano()/1e3, span.SpanContext.TraceID.ToHex(), fmt.Sprintf("%16x", span.SpanContext.ID), span.Name, span.Kind))
+		eSpans = append(
+			eSpans,
+			fmt.Sprintf(
+				`{"timestamp":%d,"traceId":"%s","id":"%s","name":"%s","kind":"%s"}`,
+				span.Timestamp.Round(time.Microsecond).UnixNano()/1e3,
+				span.SpanContext.TraceID.ToHex(),
+				fmt.Sprintf("%016x", span.SpanContext.ID),
+				span.Name,
+				span.Kind,
+			),
+		)
 	}
 
 	eSpansPayload := fmt.Sprintf("[%s]", strings.Join(eSpans, ","))
@@ -65,5 +75,3 @@ func TestSpanIsBeingReported(t *testing.T) {
 		rep.Send(span)
 	}
 }
-
-const expectedSpanTpl = `{"timestamp":%d,"traceId":"%s","id":"%s","name":"%s","kind":"%s"}`
