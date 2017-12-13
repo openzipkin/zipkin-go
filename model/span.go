@@ -8,8 +8,9 @@ import (
 
 // unmarshal errors
 var (
-	ErrValidTraceIDRequired = errors.New("valid traceId required")
-	ErrValidIDRequired      = errors.New("valid span id required")
+	ErrValidTraceIDRequired  = errors.New("valid traceId required")
+	ErrValidIDRequired       = errors.New("valid span id required")
+	ErrValidDurationRequired = errors.New("valid duration required")
 )
 
 // SpanContext holds the context of a Span.
@@ -45,18 +46,35 @@ type SpanModel struct {
 func (s SpanModel) MarshalJSON() ([]byte, error) {
 	type Alias SpanModel
 
-	var timestamp uint64
+	var timestamp int64
 	if !s.Timestamp.IsZero() {
-		timestamp = uint64(s.Timestamp.Round(time.Microsecond).UnixNano() / 1e3)
+		if s.Timestamp.Unix() < 1 {
+			// Zipkin does not allow Timestamps before Unix epoch
+			return nil, ErrValidTimestampRequired
+		}
+		timestamp = s.Timestamp.Round(time.Microsecond).UnixNano() / 1e3
+	}
+
+	if s.Duration < time.Microsecond {
+		if s.Duration < 0 {
+			// negative duration is not allowed and signals a timing logic error
+			return nil, ErrValidDurationRequired
+		} else if s.Duration > 0 {
+			// sub microsecond durations are reported as 1 microsecond
+			s.Duration = 1 * time.Microsecond
+		}
+	} else {
+		// duration is rounded to nearest microsecond representation
+		s.Duration = s.Duration.Round(time.Microsecond)
 	}
 
 	return json.Marshal(&struct {
-		Timestamp uint64 `json:"timestamp,omitempty"`
-		Duration  uint64 `json:"duration,omitempty"`
+		Timestamp int64 `json:"timestamp,omitempty"`
+		Duration  int64 `json:"duration,omitempty"`
 		Alias
 	}{
 		Timestamp: timestamp,
-		Duration:  uint64(s.Duration.Nanoseconds() / 1e3),
+		Duration:  s.Duration.Nanoseconds() / 1e3,
 		Alias:     (Alias)(s),
 	})
 }
