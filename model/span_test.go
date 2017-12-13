@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func TestJSON(t *testing.T) {
+func TestSpanJSON(t *testing.T) {
 	var (
 		span1    SpanModel
 		span2    SpanModel
@@ -71,5 +71,79 @@ func TestJSON(t *testing.T) {
 
 	if !reflect.DeepEqual(span1, span2) {
 		t.Errorf("want SpanModel: %+v, have: %+v", span1, span2)
+	}
+}
+
+func TestEmptyTraceID(t *testing.T) {
+	var (
+		span SpanModel
+		b    = []byte(`{"traceId":"","id":"1"}`)
+	)
+
+	if err := json.Unmarshal(b, &span); err == nil {
+		t.Errorf("Unmarshal should have failed with error, have: %+v", span)
+	}
+}
+
+func TestEmptySpanID(t *testing.T) {
+	var (
+		span SpanModel
+		b    = []byte(`{"traceId":"1","id":""}`)
+	)
+
+	if err := json.Unmarshal(b, &span); err == nil {
+		t.Errorf("Unmarshal should have failed with error, have: %+v", span)
+	}
+}
+
+func TestSpanEmptyTimeStamp(t *testing.T) {
+	var (
+		span1 SpanModel
+		span2 SpanModel
+		ts    time.Time
+	)
+
+	span1 = SpanModel{
+		SpanContext: SpanContext{
+			TraceID: TraceID{
+				Low: 1,
+			},
+			ID: 1,
+		},
+	}
+
+	b, err := json.Marshal(span1)
+	if err != nil {
+		t.Fatalf("unable to marshal span: %+v", err)
+	}
+
+	if err := json.Unmarshal(b, &span2); err != nil {
+		t.Fatalf("unable to unmarshal span: %+v", err)
+	}
+
+	if want, have := ts, span2.Timestamp; want != have {
+		t.Errorf("Timestamp want %s, have %s", want, have)
+	}
+}
+
+func TestSpanNegativeDuration(t *testing.T) {
+	var (
+		span SpanModel
+		b    = []byte(`{"duration":-1}`)
+	)
+
+	if err := json.Unmarshal(b, &span); err == nil {
+		t.Errorf("Unmarshal should have failed with error, have: %+v", span)
+	}
+}
+
+func TestSpanNegativeTimestamp(t *testing.T) {
+	var (
+		span SpanModel
+		b    = []byte(`{"timestamp":-1}`)
+	)
+
+	if err := json.Unmarshal(b, &span); err == nil {
+		t.Errorf("Unmarshal should have failed with error, have: %+v", span)
 	}
 }

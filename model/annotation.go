@@ -2,8 +2,12 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 )
+
+// ErrValidTimestampRequired error
+var ErrValidTimestampRequired = errors.New("valid annotation timestamp required")
 
 // Annotation associates an event that explains latency with a timestamp.
 type Annotation struct {
@@ -26,7 +30,7 @@ func (a *Annotation) MarshalJSON() ([]byte, error) {
 func (a *Annotation) UnmarshalJSON(b []byte) error {
 	type Alias Annotation
 	annotation := &struct {
-		TimeStamp int64 `json:"timestamp,omitempty"`
+		TimeStamp uint64 `json:"timestamp"`
 		*Alias
 	}{
 		Alias: (*Alias)(a),
@@ -34,6 +38,9 @@ func (a *Annotation) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &annotation); err != nil {
 		return err
 	}
-	a.Timestamp = time.Unix(0, annotation.TimeStamp*1e3)
+	if annotation.TimeStamp < 1 {
+		return ErrValidTimestampRequired
+	}
+	a.Timestamp = time.Unix(0, int64(annotation.TimeStamp)*1e3)
 	return nil
 }

@@ -2,7 +2,14 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
+)
+
+// unmarshal errors
+var (
+	ErrValidTraceIDRequired = errors.New("valid traceId required")
+	ErrValidIDRequired      = errors.New("valid span id required")
 )
 
 // SpanContext holds the context of a Span.
@@ -37,12 +44,17 @@ type SpanModel struct {
 // MarshalJSON exports our Model into the correct format for the Zipkin V2 API.
 func (s SpanModel) MarshalJSON() ([]byte, error) {
 	type Alias SpanModel
+
+	var timestamp int64
+	if !s.Timestamp.IsZero() {
+		timestamp = s.Timestamp.Round(time.Microsecond).UnixNano() / 1e3
+	}
 	return json.Marshal(&struct {
 		Timestamp int64 `json:"timestamp,omitempty"`
 		Duration  int64 `json:"duration,omitempty"`
 		Alias
 	}{
-		Timestamp: s.Timestamp.Round(time.Microsecond).UnixNano() / 1e3,
+		Timestamp: timestamp,
 		Duration:  s.Duration.Nanoseconds() / 1e3,
 		Alias:     (Alias)(s),
 	})
@@ -53,8 +65,8 @@ func (s SpanModel) MarshalJSON() ([]byte, error) {
 func (s *SpanModel) UnmarshalJSON(b []byte) error {
 	type Alias SpanModel
 	span := &struct {
-		TimeStamp int64 `json:"timestamp,omitempty"`
-		Duration  int64 `json:"duration,omitempty"`
+		TimeStamp uint64 `json:"timestamp,omitempty"`
+		Duration  uint64 `json:"duration,omitempty"`
 		*Alias
 	}{
 		Alias: (*Alias)(s),
@@ -62,7 +74,12 @@ func (s *SpanModel) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &span); err != nil {
 		return err
 	}
-	s.Timestamp = time.Unix(0, span.TimeStamp*1e3)
+	if s.ID < 1 {
+		return ErrValidIDRequired
+	}
+	if span.TimeStamp > 0 {
+		s.Timestamp = time.Unix(0, int64(span.TimeStamp)*1e3)
+	}
 	s.Duration = time.Duration(span.Duration*1e3) * time.Nanosecond
 	return nil
 }
