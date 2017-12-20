@@ -71,12 +71,12 @@ func TestCountingSampler(t *testing.T) {
 			sampler, _ = zipkin.NewCountingSampler(rate)
 			found      = 0
 		)
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 1000; i++ {
 			if sampler(1) {
 				found++
 			}
 		}
-		if found != n {
+		if found != n*10 {
 			t.Errorf("rate %f, want %d, have %d", rate, n, found)
 		}
 	}
