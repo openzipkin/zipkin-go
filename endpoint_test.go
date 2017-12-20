@@ -3,19 +3,22 @@ package zipkin_test
 import (
 	"fmt"
 	"net"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go/model"
 )
 
 const (
-	serviceName           = "service_name"
+	serviceName           = "my_service"
 	onlyHost              = "localhost"
 	defaultPort           = 0
 	port                  = 8081
 	invalidNegativePort   = "localhost:-8081"
 	invalidOutOfRangePort = "localhost:65536"
+	invalidHostPort       = "::1:8081"
 	unreachableHostPort   = "nosuchhost:8081"
 )
 
@@ -26,11 +29,44 @@ var (
 	ipv6ForHostPort = net.ParseIP("2001:db8::68")
 )
 
+func TestEmptyEndpoint(t *testing.T) {
+	ep, err := zipkin.NewEndpoint("", "")
+	if err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+	if want, have := &(model.Endpoint{}), ep; !reflect.DeepEqual(want, have) {
+		t.Errorf("endpoint want %+v, have: %+v", want, have)
+	}
+}
+
+func TestServiceNameOnlyEndpoint(t *testing.T) {
+	have, err := zipkin.NewEndpoint(serviceName, "")
+	if err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+	want := &model.Endpoint{ServiceName: serviceName}
+	if !reflect.DeepEqual(want, have) {
+		t.Errorf("endpoint want %+v, have: %+v", want, have)
+	}
+}
+
+func TestInvalidHostPort(t *testing.T) {
+	_, err := zipkin.NewEndpoint(serviceName, invalidHostPort)
+
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if !strings.Contains(err.Error(), "too many colons in address") {
+		t.Fatalf("expected too many colons in address error, got: %s", err.Error())
+	}
+}
+
 func TestNewEndpointFailsDueToOutOfRangePort(t *testing.T) {
 	_, err := zipkin.NewEndpoint(serviceName, invalidOutOfRangePort)
 
 	if err == nil {
-		t.Fatalf("expected error")
+		t.Fatal("expected error")
 	}
 
 	if !strings.Contains(err.Error(), "value out of range") {
@@ -42,7 +78,7 @@ func TestNewEndpointFailsDueToNegativePort(t *testing.T) {
 	_, err := zipkin.NewEndpoint(serviceName, invalidNegativePort)
 
 	if err == nil {
-		t.Fatalf("expected error")
+		t.Fatal("expected error")
 	}
 
 	if !strings.Contains(err.Error(), "invalid syntax") {
@@ -54,7 +90,7 @@ func TestNewEndpointFailsDueToLookupIP(t *testing.T) {
 	_, err := zipkin.NewEndpoint(serviceName, unreachableHostPort)
 
 	if err == nil {
-		t.Fatalf("expected error")
+		t.Fatal("expected error")
 	}
 
 	if !strings.Contains(err.Error(), "no such host") {
@@ -66,7 +102,7 @@ func TestNewEndpointDefaultsPortToZeroWhenMissing(t *testing.T) {
 	endpoint, err := zipkin.NewEndpoint(serviceName, onlyHost)
 
 	if err != nil {
-		t.Fatalf("not error expected, got %s", err.Error())
+		t.Fatalf("unexpected error: %s", err.Error())
 	}
 
 	if endpoint.Port != defaultPort {

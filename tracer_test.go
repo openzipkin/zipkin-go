@@ -13,20 +13,29 @@ import (
 )
 
 func TestTracerOptionLocalEndpoint(t *testing.T) {
+	var (
+		err    error
+		wantEP = &model.Endpoint{}
+	)
+
 	rec := recorder.NewReporter()
 	defer rec.Close()
 
 	tr, err := NewTracer(rec, WithLocalEndpoint(nil))
 
-	if want, have := ErrInvalidEndpoint, err; want != have {
-		t.Errorf("expected tracer creation failure: want %+v, have: %+v", want, have)
+	if err != nil {
+		t.Fatalf("unexpected tracer creation failure: %+v", err.Error())
 	}
 
-	if tr != nil {
-		t.Errorf("expected tracer to be nil got: %+v", tr)
+	if tr == nil {
+		t.Error("expected valid tracer, got: nil")
 	}
 
-	wantEP, err := NewEndpoint("testService", "localhost:80")
+	if want, have := wantEP, tr.LocalEndpoint(); !reflect.DeepEqual(want, have) {
+		t.Errorf("local Endpoint want %+v, have %+v", want, have)
+	}
+
+	wantEP, err = NewEndpoint("testService", "localhost:80")
 
 	if err != nil {
 		t.Fatalf("expected valid endpoint, got error: %+v", err)
@@ -707,18 +716,13 @@ func TestLocalEndpoint(t *testing.T) {
 	rec := recorder.NewReporter()
 	defer rec.Close()
 
-	tracer, err := NewTracer(rec)
-	if err != nil {
-		t.Fatalf("expected valid tracer, got error: %+v", err)
-	}
-
 	ep, err := NewEndpoint("my service", "localhost:80")
 
 	if err != nil {
 		t.Fatalf("expected valid endpoint, got error: %+v", err)
 	}
 
-	tracer, err = NewTracer(rec, WithLocalEndpoint(ep))
+	tracer, err := NewTracer(rec, WithLocalEndpoint(ep))
 	if err != nil {
 		t.Fatalf("expected valid tracer, got error: %+v", err)
 	}
