@@ -1,6 +1,7 @@
 package zipkin
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"sync"
@@ -28,32 +29,39 @@ func NewModuloSampler(mod uint64) Sampler {
 // NewBoundarySampler is appropriate for high-traffic instrumentation who
 // provision random trace ids, and make the sampling decision only once.
 // It defends against nodes in the cluster selecting exactly the same ids.
-func NewBoundarySampler(rate float64, salt int64) Sampler {
-	if rate <= 0 {
-		return neverSample
+func NewBoundarySampler(rate float64, salt int64) (Sampler, error) {
+	if rate == 0.0 {
+		return neverSample, nil
 	}
-	if rate >= 1.0 {
-		return alwaysSample
+	if rate == 1.0 {
+		return alwaysSample, nil
 	}
+	if rate < 0.0001 || rate > 1 {
+		return nil, fmt.Errorf("rate should be 0.0 or between 0.0001 and 1: was %f", rate)
+	}
+
 	var (
 		boundary = int64(rate * 10000)
 		usalt    = uint64(salt)
 	)
 	return func(id uint64) bool {
 		return int64(math.Abs(float64(id^usalt)))%10000 < boundary
-	}
+	}, nil
 }
 
 // NewCountingSampler is appropriate for low-traffic instrumentation or
 // those who do not provision random trace ids. It is not appropriate for
 // collectors as the sampling decision isn't idempotent (consistent based
 // on trace id).
-func NewCountingSampler(rate float64) Sampler {
-	if rate <= 0 {
-		return neverSample
+func NewCountingSampler(rate float64) (Sampler, error) {
+	if rate == 0.0 {
+		return neverSample, nil
 	}
-	if rate >= 1.0 {
-		return alwaysSample
+	if rate == 1.0 {
+		return alwaysSample, nil
+	}
+	if rate < 0.01 || rate > 1 {
+		return nil, fmt.Errorf("rate should be 0.0 or between 0.01 and 1: was %f", rate)
 	}
 	var (
 		i         = 0
@@ -71,7 +79,7 @@ func NewCountingSampler(rate float64) Sampler {
 			i = 0
 		}
 		return result
-	}
+	}, nil
 }
 
 /**
