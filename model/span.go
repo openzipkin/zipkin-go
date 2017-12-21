@@ -73,6 +73,14 @@ func (s SpanModel) MarshalJSON() ([]byte, error) {
 		s.Duration += 500 * time.Nanosecond
 	}
 
+	if s.LocalEndpoint.Empty() {
+		s.LocalEndpoint = nil
+	}
+
+	if s.RemoteEndpoint.Empty() {
+		s.RemoteEndpoint = nil
+	}
+
 	return json.Marshal(&struct {
 		Timestamp int64 `json:"timestamp,omitempty"`
 		Duration  int64 `json:"duration,omitempty"`
@@ -105,5 +113,12 @@ func (s *SpanModel) UnmarshalJSON(b []byte) error {
 		s.Timestamp = time.Unix(0, int64(span.TimeStamp)*1e3)
 	}
 	s.Duration = time.Duration(span.Duration*1e3) * time.Nanosecond
+	if s.LocalEndpoint.Empty() {
+		s.LocalEndpoint = nil
+	}
+
+	if s.RemoteEndpoint.Empty() {
+		s.RemoteEndpoint = nil
+	}
 	return nil
 }

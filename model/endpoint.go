@@ -9,3 +9,9 @@ type Endpoint struct {
 	IPv6        net.IP `json:"ipv6,omitempty"`
 	Port        uint16 `json:"port,omitempty"`
 }
+
+// Empty returns if all Endpoint properties are empty / unspecified.
+func (e *Endpoint) Empty() bool {
+	return e == nil ||
+		(e.ServiceName == "" && e.Port == 0 && len(e.IPv4) == 0 && len(e.IPv6) == 0)
+}

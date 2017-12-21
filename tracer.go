@@ -33,7 +33,7 @@ func NewTracer(reporter reporter.Reporter, options ...TracerOption) (*Tracer, er
 		sampler:              alwaysSample,
 		generate:             idgenerator.NewRandom64(),
 		reporter:             reporter,
-		localEndpoint:        &model.Endpoint{},
+		localEndpoint:        nil,
 		noop:                 0,
 		sharedSpans:          true,
 		unsampledNoop:        false,
@@ -152,6 +152,9 @@ func (t *Tracer) SetNoop(noop bool) {
 // LocalEndpoint returns a copy of the currently set local endpoint of the
 // tracer instance.
 func (t *Tracer) LocalEndpoint() *model.Endpoint {
+	if t.localEndpoint == nil {
+		return nil
+	}
 	ep := *t.localEndpoint
 	return &ep
 }

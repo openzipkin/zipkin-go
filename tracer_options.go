@@ -31,9 +31,11 @@ type TracerOption func(o *Tracer) error
 func WithLocalEndpoint(e *model.Endpoint) TracerOption {
 	return func(o *Tracer) error {
 		if e == nil {
-			return ErrInvalidEndpoint
+			o.localEndpoint = nil
+			return nil
 		}
-		*o.localEndpoint = *e
+		ep := *e
+		o.localEndpoint = &ep
 		return nil
 	}
 }

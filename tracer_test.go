@@ -13,20 +13,29 @@ import (
 )
 
 func TestTracerOptionLocalEndpoint(t *testing.T) {
+	var (
+		err    error
+		wantEP *model.Endpoint
+	)
+
 	rec := recorder.NewReporter()
 	defer rec.Close()
 
 	tr, err := NewTracer(rec, WithLocalEndpoint(nil))
 
-	if want, have := ErrInvalidEndpoint, err; want != have {
-		t.Errorf("expected tracer creation failure: want %+v, have: %+v", want, have)
+	if err != nil {
+		t.Fatalf("unexpected tracer creation failure: %+v", err.Error())
 	}
 
-	if tr != nil {
-		t.Errorf("expected tracer to be nil got: %+v", tr)
+	if tr == nil {
+		t.Error("expected valid tracer, got: nil")
 	}
 
-	wantEP, err := NewEndpoint("testService", "localhost:80")
+	if want, have := wantEP, tr.LocalEndpoint(); !reflect.DeepEqual(want, have) {
+		t.Errorf("local Endpoint want %+v, have %+v", want, have)
+	}
+
+	wantEP, err = NewEndpoint("testService", "localhost:80")
 
 	if err != nil {
 		t.Fatalf("expected valid endpoint, got error: %+v", err)
@@ -76,13 +85,43 @@ func TestTracerOptionExtractFailurePolicy(t *testing.T) {
 		tr, err := NewTracer(rec, WithExtractFailurePolicy(item.policy))
 
 		if want, have := item.err, err; want != have {
-			t.Errorf("[%d] expected tracer creation failure: want %+v, have %+v", idx, item.err, err)
+			t.Fatalf("[%d] expected tracer creation failure: want %+v, have %+v", idx, item.err, err)
 		}
 
 		if err != nil && tr != nil {
-			t.Errorf("[%d] expected tracer to be nil, have: %+v", idx, tr)
+			t.Fatalf("[%d] expected tracer to be nil, have: %+v", idx, tr)
+		}
+
+		if err != nil {
+			tr, _ = NewTracer(rec)
+			tr.extractFailurePolicy = item.policy
+		}
+
+		errStr := failSpan(t, tr, idx, item.err)
+		if item.policy == ExtractFailurePolicyTagAndRestart {
+			if want, have := "dummy", errStr; want != have {
+				t.Errorf("[%d] tag[error.extract tag] want %s, have %s", idx, want, have)
+			}
 		}
 	}
+}
+
+func failSpan(t *testing.T, tr *Tracer, idx int, want error) string {
+	sc := model.SpanContext{
+		Err: errors.New("dummy"),
+	}
+
+	defer func() {
+		if err := recover(); err != nil {
+			if err != want {
+				t.Errorf("[%d] Context Error want %+v, have %+v", idx, want, err)
+			}
+		}
+	}()
+
+	sp := tr.StartSpan("test", Parent(sc))
+	sp.Finish()
+	return sp.(*spanImpl).Tags["error.extract"]
 }
 
 func TestTracerIDGeneratorOption(t *testing.T) {
@@ -666,6 +705,7 @@ func TestParentSpanInSpanPerNodeMode(t *testing.T) {
 }
 
 func TestStartSpanFromContext(t *testing.T) {
+	ctx := context.Background()
 	rec := recorder.NewReporter()
 	defer rec.Close()
 
@@ -674,9 +714,13 @@ func TestStartSpanFromContext(t *testing.T) {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
 
+	if ctxSpan := SpanFromContext(ctx); ctxSpan != nil {
+		t.Errorf("SpanFromContext want nil, have %+v", ctxSpan)
+	}
+
 	cSpan := tr.StartSpan("test", Kind(model.Client))
 
-	ctx := NewContext(context.Background(), cSpan)
+	ctx = NewContext(ctx, cSpan)
 
 	sSpan, _ := tr.StartSpanFromContext(ctx, "testChild", Kind(model.Server))
 
@@ -707,18 +751,13 @@ func TestLocalEndpoint(t *testing.T) {
 	rec := recorder.NewReporter()
 	defer rec.Close()
 
-	tracer, err := NewTracer(rec)
-	if err != nil {
-		t.Fatalf("expected valid tracer, got error: %+v", err)
-	}
-
 	ep, err := NewEndpoint("my service", "localhost:80")
 
 	if err != nil {
 		t.Fatalf("expected valid endpoint, got error: %+v", err)
 	}
 
-	tracer, err = NewTracer(rec, WithLocalEndpoint(ep))
+	tracer, err := NewTracer(rec, WithLocalEndpoint(ep))
 	if err != nil {
 		t.Fatalf("expected valid tracer, got error: %+v", err)
 	}

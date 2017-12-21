@@ -15,6 +15,14 @@ func NewEndpoint(serviceName string, hostPort string) (*model.Endpoint, error) {
 		ServiceName: serviceName,
 	}
 
+	if hostPort == "" || hostPort == ":0" {
+		if serviceName == "" {
+			// if all properties are empty we should not have an Endpoint object.
+			return nil, nil
+		}
+		return e, nil
+	}
+
 	if strings.IndexByte(hostPort, ':') < 0 {
 		hostPort += ":0"
 	}
