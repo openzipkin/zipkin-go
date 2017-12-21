@@ -10,7 +10,7 @@ type ID uint64
 
 // String outputs the 64-bit ID as hex string.
 func (i ID) String() string {
-	return fmt.Sprintf("%016s", strconv.FormatUint(uint64(i), 16))
+	return fmt.Sprintf("%016x", uint64(i))
 }
 
 // MarshalJSON serializes an ID type (SpanID, ParentSpanID) to HEX.

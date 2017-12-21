@@ -41,8 +41,8 @@ func TestSpanIsBeingReported(t *testing.T) {
 			fmt.Sprintf(
 				`{"timestamp":%d,"traceId":"%s","id":"%s","name":"%s","kind":"%s"}`,
 				span.Timestamp.Round(time.Microsecond).UnixNano()/1e3,
-				span.SpanContext.TraceID.ToHex(),
-				fmt.Sprintf("%016x", span.SpanContext.ID),
+				span.SpanContext.TraceID,
+				span.SpanContext.ID,
 				span.Name,
 				span.Kind,
 			),

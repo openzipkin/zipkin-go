@@ -20,10 +20,10 @@ func (t TraceID) Empty() bool {
 // String outputs the 128-bit traceID as hex string.
 func (t TraceID) String() string {
 	if t.High == 0 {
-		return fmt.Sprintf("%016s", strconv.FormatUint(t.Low, 16))
+		return fmt.Sprintf("%016x", t.Low)
 	}
 	return fmt.Sprintf(
-		"%016s%016s", strconv.FormatUint(t.High, 16), strconv.FormatUint(t.Low, 16),
+		"%016x%016x", t.High, t.Low,
 	)
 }
 
