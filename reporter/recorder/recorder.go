@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter"
 )
 
 // ReporterRecorder records Zipkin spans.
@@ -17,25 +16,23 @@ type ReporterRecorder struct {
 }
 
 // NewReporter returns a new recording reporter.
-func NewReporter() reporter.Reporter {
+func NewReporter() *ReporterRecorder {
 	return &ReporterRecorder{}
 }
 
 // Send adds the provided span to the span list held by the recorder.
 func (r *ReporterRecorder) Send(span model.SpanModel) {
 	r.mtx.Lock()
-	defer r.mtx.Unlock()
-
 	r.spans = append(r.spans, span)
+	r.mtx.Unlock()
 }
 
 // Flush returns all recorded spans and clears its internal span storage
 func (r *ReporterRecorder) Flush() []model.SpanModel {
 	r.mtx.Lock()
-	defer r.mtx.Unlock()
-
 	spans := r.spans
 	r.spans = nil
+	r.mtx.Unlock()
 	return spans
 }
 

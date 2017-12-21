@@ -22,9 +22,7 @@ func (t TraceID) String() string {
 	if t.High == 0 {
 		return fmt.Sprintf("%016x", t.Low)
 	}
-	return fmt.Sprintf(
-		"%016x%016x", t.High, t.Low,
-	)
+	return fmt.Sprintf("%016x%016x", t.High, t.Low)
 }
 
 // TraceIDFromHex returns the TraceID from a hex string.

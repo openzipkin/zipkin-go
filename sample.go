@@ -72,12 +72,12 @@ func NewCountingSampler(rate float64) (Sampler, error) {
 
 	return func(_ uint64) bool {
 		mtx.Lock()
-		defer mtx.Unlock()
 		result := decisions[i]
 		i++
 		if i == 100 {
 			i = 0
 		}
+		mtx.Unlock()
 		return result
 	}, nil
 }
