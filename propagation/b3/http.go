@@ -1,7 +1,6 @@
 package b3
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/openzipkin/zipkin-go/model"
@@ -47,10 +46,10 @@ func InjectHTTP(r *http.Request) propagation.Injector {
 		}
 
 		if !sc.TraceID.Empty() && sc.ID > 0 {
-			r.Header.Set(TraceID, sc.TraceID.ToHex())
-			r.Header.Set(SpanID, fmt.Sprintf("%016x", sc.ID))
+			r.Header.Set(TraceID, sc.TraceID.String())
+			r.Header.Set(SpanID, sc.ID.String())
 			if sc.ParentID != nil {
-				r.Header.Set(ParentSpanID, fmt.Sprintf("%016x", *sc.ParentID))
+				r.Header.Set(ParentSpanID, sc.ParentID.String())
 			}
 		}
 

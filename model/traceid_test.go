@@ -7,7 +7,7 @@ import (
 
 func TestTraceID(t *testing.T) {
 	traceID := TraceID{High: 1, Low: 2}
-	if len(traceID.ToHex()) != 32 {
+	if len(traceID.String()) != 32 {
 		t.Errorf("Expected zero-padded TraceID to have 32 characters")
 	}
 
@@ -21,7 +21,7 @@ func TestTraceID(t *testing.T) {
 		t.Fatalf("Expected successful json deserialization, got error: %+v", err)
 	}
 
-	have, err := TraceIDFromHex(traceID.ToHex())
+	have, err := TraceIDFromHex(traceID.String())
 	if err != nil {
 		t.Fatalf("Expected traceID got error: %+v", err)
 	}
@@ -31,11 +31,11 @@ func TestTraceID(t *testing.T) {
 
 	traceID = TraceID{High: 0, Low: 2}
 
-	if len(traceID.ToHex()) != 16 {
-		t.Errorf("Expected zero-padded TraceID to have 16 characters, got %d", len(traceID.ToHex()))
+	if len(traceID.String()) != 16 {
+		t.Errorf("Expected zero-padded TraceID to have 16 characters, got %d", len(traceID.String()))
 	}
 
-	have, err = TraceIDFromHex(traceID.ToHex())
+	have, err = TraceIDFromHex(traceID.String())
 	if err != nil {
 		t.Fatalf("Expected traceID got error: %+v", err)
 	}

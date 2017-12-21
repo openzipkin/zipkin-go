@@ -43,7 +43,7 @@ func TestSpanJSON(t *testing.T) {
 			IPv4:        net.IPv4(127, 0, 0, 1),
 			IPv6:        net.IPv6loopback,
 		},
-		RemoteEndpoint: &Endpoint{},
+		RemoteEndpoint: nil,
 		Annotations: []Annotation{
 			{time.Now().Add(-90 * time.Millisecond), "myAnnotation"},
 		},

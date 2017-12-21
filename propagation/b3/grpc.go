@@ -1,8 +1,6 @@
 package b3
 
 import (
-	"fmt"
-
 	"google.golang.org/grpc/metadata"
 
 	"github.com/openzipkin/zipkin-go/model"
@@ -49,10 +47,10 @@ func InjectGRPC(md *metadata.MD) propagation.Injector {
 
 		if !sc.TraceID.Empty() && sc.ID > 0 {
 			// set identifiers
-			setGRPCHeader(md, TraceID, sc.TraceID.ToHex())
-			setGRPCHeader(md, SpanID, fmt.Sprintf("%016x", sc.ID))
+			setGRPCHeader(md, TraceID, sc.TraceID.String())
+			setGRPCHeader(md, SpanID, sc.ID.String())
 			if sc.ParentID != nil {
-				setGRPCHeader(md, ParentSpanID, fmt.Sprintf("%016x", *sc.ParentID))
+				setGRPCHeader(md, ParentSpanID, sc.ParentID.String())
 			}
 		}
 

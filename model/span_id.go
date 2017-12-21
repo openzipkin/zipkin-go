@@ -8,9 +8,14 @@ import (
 // ID type
 type ID uint64
 
+// String outputs the 64-bit ID as hex string.
+func (i ID) String() string {
+	return fmt.Sprintf("%016s", strconv.FormatUint(uint64(i), 16))
+}
+
 // MarshalJSON serializes an ID type (SpanID, ParentSpanID) to HEX.
 func (i ID) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`"%016s"`, strconv.FormatUint(uint64(i), 16))), nil
+	return []byte(fmt.Sprintf("%q", i.String())), nil
 }
 
 // UnmarshalJSON deserializes an ID type (SpanID, ParentSpanID) from HEX.

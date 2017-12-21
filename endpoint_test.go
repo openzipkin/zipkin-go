@@ -34,8 +34,8 @@ func TestEmptyEndpoint(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %s", err.Error())
 	}
-	if want, have := &(model.Endpoint{}), ep; !reflect.DeepEqual(want, have) {
-		t.Errorf("endpoint want %+v, have: %+v", want, have)
+	if ep != nil {
+		t.Errorf("endpoint want nil, have: %+v", ep)
 	}
 }
 
