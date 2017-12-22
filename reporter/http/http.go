@@ -114,7 +114,7 @@ func (r *httpReporter) sendBatch() error {
 
 	body, err := json.Marshal(sendBatch)
 	if err != nil {
-		r.logger.Printf("failed when unmarshalling the spans batch: %s\n", err.Error())
+		r.logger.Printf("failed when marshalling the spans batch: %s\n", err.Error())
 		return err
 	}
 
@@ -188,7 +188,10 @@ func RequestCallback(rc RequestCallbackFn) ReporterOption {
 	return func(r *httpReporter) { r.reqCallback = rc }
 }
 
-// NewReporter returns a new HTTP Reporter.
+// NewReporter returns a new HTTP Reporter. endpointURL should be the the endpoint to send
+// the spans to, e.g. http://localhost:9411/api/v1/spans timeout is passed to http client.
+// queueSize control the maximum size of buffer of async queue. The logger is used to log errors,
+// such as send failures.
 func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 	r := httpReporter{
 		url:           url,
