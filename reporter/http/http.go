@@ -115,7 +115,7 @@ func (r *httpReporter) sendBatch() error {
 
 	body, err := json.Marshal(sendBatch)
 	if err != nil {
-		r.logger.Printf("failed when unmarshalling the spans batch: %s\n", err.Error())
+		r.logger.Printf("failed when marshalling the spans batch: %s\n", err.Error())
 		return err
 	}
 
@@ -190,6 +190,8 @@ func RequestCallback(rc RequestCallbackFn) ReporterOption {
 }
 
 // NewReporter returns a new HTTP Reporter.
+// url should be the endpoint to send the spans to, e.g.
+// http://localhost:9411/api/v2/spans
 func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 	r := httpReporter{
 		url:           url,
