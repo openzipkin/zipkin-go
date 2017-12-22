@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter"
 )
 
 // defaults
@@ -24,8 +23,8 @@ const (
 	defaultMaxBacklog    = 1000
 )
 
-// httpReporter will send spans to a Zipkin HTTP Collector using Zipkin V2 API.
-type httpReporter struct {
+// Reporter will send spans to a Zipkin HTTP Collector using Zipkin V2 API.
+type Reporter struct {
 	url           string
 	client        *http.Client
 	logger        *log.Logger
@@ -42,17 +41,17 @@ type httpReporter struct {
 }
 
 // Send implements reporter
-func (r *httpReporter) Send(s model.SpanModel) {
+func (r *Reporter) Send(s model.SpanModel) {
 	r.spanC <- &s
 }
 
 // Close implements reporter
-func (r *httpReporter) Close() error {
+func (r *Reporter) Close() error {
 	close(r.quit)
 	return <-r.shutdown
 }
 
-func (r *httpReporter) loop() {
+func (r *Reporter) loop() {
 	var (
 		nextSend   = time.Now().Add(r.batchInterval)
 		ticker     = time.NewTicker(r.batchInterval / 10)
@@ -84,7 +83,7 @@ func (r *httpReporter) loop() {
 	}
 }
 
-func (r *httpReporter) append(span *model.SpanModel) (newBatchSize int) {
+func (r *Reporter) append(span *model.SpanModel) (newBatchSize int) {
 	r.batchMtx.Lock()
 
 	r.batch = append(r.batch, span)
@@ -99,7 +98,7 @@ func (r *httpReporter) append(span *model.SpanModel) (newBatchSize int) {
 	return
 }
 
-func (r *httpReporter) sendBatch() error {
+func (r *Reporter) sendBatch() error {
 	// in order to prevent sending the same batch twice
 	r.sendMtx.Lock()
 	defer r.sendMtx.Unlock()
@@ -153,45 +152,45 @@ func (r *httpReporter) sendBatch() error {
 type RequestCallbackFn func(*http.Request)
 
 // ReporterOption sets a parameter for the HTTP Reporter
-type ReporterOption func(r *httpReporter)
+type ReporterOption func(r *Reporter)
 
 // Timeout sets maximum timeout for http request.
 func Timeout(duration time.Duration) ReporterOption {
-	return func(r *httpReporter) { r.client.Timeout = duration }
+	return func(r *Reporter) { r.client.Timeout = duration }
 }
 
 // BatchSize sets the maximum batch size, after which a collect will be
 // triggered. The default batch size is 100 traces.
 func BatchSize(n int) ReporterOption {
-	return func(r *httpReporter) { r.batchSize = n }
+	return func(r *Reporter) { r.batchSize = n }
 }
 
 // MaxBacklog sets the maximum backlog size. When batch size reaches this
 // threshold, spans from the beginning of the batch will be disposed.
 func MaxBacklog(n int) ReporterOption {
-	return func(r *httpReporter) { r.maxBacklog = n }
+	return func(r *Reporter) { r.maxBacklog = n }
 }
 
 // BatchInterval sets the maximum duration we will buffer traces before
 // emitting them to the collector. The default batch interval is 1 second.
 func BatchInterval(d time.Duration) ReporterOption {
-	return func(r *httpReporter) { r.batchInterval = d }
+	return func(r *Reporter) { r.batchInterval = d }
 }
 
 // Client sets a custom http client to use.
 func Client(client *http.Client) ReporterOption {
-	return func(r *httpReporter) { r.client = client }
+	return func(r *Reporter) { r.client = client }
 }
 
 // RequestCallback registers a callback function to adjust the reporter
 // *http.Request before it sends the request to Zipkin.
 func RequestCallback(rc RequestCallbackFn) ReporterOption {
-	return func(r *httpReporter) { r.reqCallback = rc }
+	return func(r *Reporter) { r.reqCallback = rc }
 }
 
 // NewReporter returns a new HTTP Reporter.
-func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
-	r := httpReporter{
+func NewReporter(url string, opts ...ReporterOption) *Reporter {
+	r := Reporter{
 		url:           url,
 		logger:        log.New(os.Stderr, "", log.LstdFlags),
 		client:        &http.Client{Timeout: defaultTimeout},
