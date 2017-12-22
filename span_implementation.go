@@ -21,10 +21,13 @@ func (s *spanImpl) Context() model.SpanContext {
 
 func (s *spanImpl) SetRemoteEndpoint(e *model.Endpoint) {
 	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
-	s.RemoteEndpoint = &model.Endpoint{}
-	*s.RemoteEndpoint = *e
+	if e == nil {
+		s.RemoteEndpoint = nil
+	} else {
+		s.RemoteEndpoint = &model.Endpoint{}
+		*s.RemoteEndpoint = *e
+	}
+	s.mtx.Unlock()
 }
 
 // Annotate adds a new Annotation to the Span.
@@ -35,9 +38,8 @@ func (s *spanImpl) Annotate(t time.Time, value string) {
 	}
 
 	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
 	s.Annotations = append(s.Annotations, a)
+	s.mtx.Unlock()
 }
 
 // Tag sets Tag with given key and value to the Span. If key already exists in
@@ -45,15 +47,16 @@ func (s *spanImpl) Annotate(t time.Time, value string) {
 // value is persisted.
 func (s *spanImpl) Tag(key, value string) {
 	s.mtx.Lock()
-	defer s.mtx.Unlock()
 
 	if key == string(TagError) {
 		if _, found := s.Tags[key]; found {
+			s.mtx.Unlock()
 			return
 		}
 	}
 
 	s.Tags[key] = value
+	s.mtx.Unlock()
 }
 
 // Finish the span and send to reporter.

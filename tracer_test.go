@@ -813,4 +813,10 @@ func TestRemoteEndpoint(t *testing.T) {
 	if !reflect.DeepEqual(span.(*spanImpl).RemoteEndpoint, ep2) {
 		t.Errorf("RemoteEndpoint want %+v, have %+v", ep1, span.(*spanImpl).RemoteEndpoint)
 	}
+
+	span.SetRemoteEndpoint(nil)
+
+	if have := span.(*spanImpl).RemoteEndpoint; have != nil {
+		t.Errorf("RemoteEndpoint want nil, have %+v", have)
+	}
 }

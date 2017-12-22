@@ -1,6 +1,6 @@
 /*
 Package log implements a reporter to send spans in V2 JSON format to the Go
-// standard Logger.
+standard Logger.
 */
 package log
 

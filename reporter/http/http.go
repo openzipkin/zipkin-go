@@ -86,7 +86,6 @@ func (r *httpReporter) loop() {
 
 func (r *httpReporter) append(span *model.SpanModel) (newBatchSize int) {
 	r.batchMtx.Lock()
-	defer r.batchMtx.Unlock()
 
 	r.batch = append(r.batch, span)
 	if len(r.batch) > r.maxBacklog {
@@ -95,6 +94,8 @@ func (r *httpReporter) append(span *model.SpanModel) (newBatchSize int) {
 		r.batch = r.batch[dispose:]
 	}
 	newBatchSize = len(r.batch)
+
+	r.batchMtx.Unlock()
 	return
 }
 
