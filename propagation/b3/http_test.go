@@ -111,7 +111,7 @@ func TestHTTPExtractFlagsErrors(t *testing.T) {
 }
 
 func TestHTTPExtractScope(t *testing.T) {
-	recorder := &recorder.ReporterRecorder{}
+	recorder := &recorder.Reporter{}
 	defer recorder.Close()
 
 	tracer, err := zipkin.NewTracer(recorder, zipkin.WithTraceID128Bit(true))

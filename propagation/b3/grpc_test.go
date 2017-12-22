@@ -100,7 +100,7 @@ func TestGRPCExtractFlagsErrors(t *testing.T) {
 }
 
 func TestGRPCExtractScope(t *testing.T) {
-	recorder := &recorder.ReporterRecorder{}
+	recorder := &recorder.Reporter{}
 	defer recorder.Close()
 
 	tracer, err := zipkin.NewTracer(recorder, zipkin.WithTraceID128Bit(true))

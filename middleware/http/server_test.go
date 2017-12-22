@@ -28,7 +28,7 @@ func httpHandler(code int, headers http.Header, body *bytes.Buffer) http.Handler
 
 func TestHTTPHandlerWrapping(t *testing.T) {
 	var (
-		spanRecorder = &recorder.ReporterRecorder{}
+		spanRecorder = &recorder.Reporter{}
 		tr, _        = zipkin.NewTracer(spanRecorder, zipkin.WithLocalEndpoint(lep))
 		httpRecorder = httptest.NewRecorder()
 		requestBuf   = bytes.NewBuffer([]byte("incoming data"))
