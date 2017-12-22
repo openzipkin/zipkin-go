@@ -1,11 +1,4 @@
-/*
-Package reporter holds the Reporter interface which is used by the Zipkin
-Tracer to send finished spans.
-
-Subpackages of package reporter contain officially supported standard
-reporter implementations.
-*/
-package reporter
+package zipkin
 
 import "github.com/openzipkin/zipkin-go/model"
 

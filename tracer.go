@@ -8,7 +8,6 @@ import (
 	"github.com/openzipkin/zipkin-go/idgenerator"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/propagation"
-	"github.com/openzipkin/zipkin-go/reporter"
 )
 
 // Tracer is our Zipkin tracer implementation.
@@ -17,7 +16,7 @@ type Tracer struct {
 	extractFailurePolicy ExtractFailurePolicy
 	sampler              Sampler
 	generate             idgenerator.IDGenerator
-	reporter             reporter.Reporter
+	reporter             Reporter
 	localEndpoint        *model.Endpoint
 	noop                 int32 // used as atomic bool (1 = true, 0 = false)
 	sharedSpans          bool
@@ -25,7 +24,7 @@ type Tracer struct {
 }
 
 // NewTracer returns a new Zipkin Tracer.
-func NewTracer(reporter reporter.Reporter, options ...TracerOption) (*Tracer, error) {
+func NewTracer(reporter Reporter, options ...TracerOption) (*Tracer, error) {
 	// set default tracer options
 	t := &Tracer{
 		defaultTags:          make(map[string]string),
