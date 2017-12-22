@@ -16,7 +16,7 @@ func TestBoundarySampler(t *testing.T) {
 		rate     float64
 		hasError bool
 	}
-	for input, want := range map[triple]bool{
+	for input, sampled := range map[triple]bool{
 		{123, 456, 1.0, false}:    true,
 		{123, 456, 999, true}:     true,
 		{123, 456, 0.0, false}:    false,
@@ -44,7 +44,7 @@ func TestBoundarySampler(t *testing.T) {
 			}
 			continue
 		}
-		if have := sampler(input.id); want != have {
+		if want, have := sampled, sampler(input.id); want != have {
 			t.Errorf("%#+v: want %v, have %v", input, want, have)
 		}
 	}

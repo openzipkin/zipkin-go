@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	zipkin "github.com/openzipkin/zipkin-go"
-	httpmiddleware "github.com/openzipkin/zipkin-go/middleware/http"
+	httpclient "github.com/openzipkin/zipkin-go/middleware/http"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
-func TestMiddleware(t *testing.T) {
+func TestHTTPClient(t *testing.T) {
 	reporter := recorder.NewReporter()
 	defer reporter.Close()
 
@@ -19,7 +19,21 @@ func TestMiddleware(t *testing.T) {
 		panic(err)
 	}
 
-	client, err := httpmiddleware.NewClient(tracer, nil, httpmiddleware.WithHTTPTrace(true))
+	clientTags := map[string]string{
+		"client": "testClient",
+	}
+
+	transportTags := map[string]string{
+		"conf.timeout": "default",
+	}
+
+	client, err := httpclient.NewClient(
+		tracer,
+		nil, // if set to nil, NewClient will use the default standard lib *http.Client configuration
+		httpclient.ClientTrace(true),
+		httpclient.ClientTags(clientTags),
+		httpclient.TransportOptions(httpclient.TransportTags(transportTags)),
+	)
 	if err != nil {
 		panic(err)
 	}

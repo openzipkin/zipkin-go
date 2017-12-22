@@ -101,7 +101,7 @@ func benchmarkInject(b *testing.B, propagationType string) {
 		md := metadata.MD{}
 		injector = b3.InjectGRPC(&md)
 	default:
-		b.Fatalf("unkown injector: %s", propagationType)
+		b.Fatalf("unknown injector: %s", propagationType)
 	}
 
 	sp := tracer.StartSpan("testing")

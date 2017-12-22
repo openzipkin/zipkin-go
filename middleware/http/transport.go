@@ -11,16 +11,17 @@ import (
 )
 
 type transport struct {
-	tracer           *zipkin.Tracer
-	rt               http.RoundTripper
-	httptraceEnabled bool
+	tracer      *zipkin.Tracer
+	rt          http.RoundTripper
+	httpTrace   bool
+	defaultTags map[string]string
 }
 
 // TransportOption allows one to configure optional transport configuration.
 type TransportOption func(*transport)
 
-// WithRoundTripper adds the Transport RoundTripper to wrap.
-func WithRoundTripper(rt http.RoundTripper) TransportOption {
+// RoundTripper adds the Transport RoundTripper to wrap.
+func RoundTripper(rt http.RoundTripper) TransportOption {
 	return func(t *transport) {
 		if rt != nil {
 			t.rt = rt
@@ -28,10 +29,17 @@ func WithRoundTripper(rt http.RoundTripper) TransportOption {
 	}
 }
 
-// WithHTTPTrace allows one to enable Go's net/http/httptrace.
-func WithHTTPTrace(enable bool) TransportOption {
+// TransportTags adds default Tags to inject into transport spans.
+func TransportTags(tags map[string]string) TransportOption {
 	return func(t *transport) {
-		t.httptraceEnabled = enable
+		t.defaultTags = tags
+	}
+}
+
+// TransportTrace allows one to enable Go's net/http/httptrace.
+func TransportTrace(enable bool) TransportOption {
+	return func(t *transport) {
+		t.httpTrace = enable
 	}
 }
 
@@ -42,9 +50,9 @@ func NewTransport(tracer *zipkin.Tracer, options ...TransportOption) (http.Round
 	}
 
 	t := &transport{
-		tracer:           tracer,
-		rt:               http.DefaultTransport,
-		httptraceEnabled: false,
+		tracer:    tracer,
+		rt:        http.DefaultTransport,
+		httpTrace: false,
 	}
 
 	for _, option := range options {
@@ -56,22 +64,15 @@ func NewTransport(tracer *zipkin.Tracer, options ...TransportOption) (http.Round
 
 // RoundTrip satisfies the RoundTripper interface.
 func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error) {
-	name := req.URL.Scheme
-	if name == "" {
-		switch req.URL.Port() {
-		case "80", "":
-			name = "HTTP"
-		case "443":
-			name = "HTTPS"
-		}
-	} else {
-		name += "/"
-	}
 	sp, _ := t.tracer.StartSpanFromContext(
-		req.Context(), name+req.Method, zipkin.Kind(model.Client),
+		req.Context(), req.URL.Scheme+"/"+req.Method, zipkin.Kind(model.Client),
 	)
 
-	if t.httptraceEnabled {
+	for k, v := range t.defaultTags {
+		sp.Tag(k, v)
+	}
+
+	if t.httpTrace {
 		sptr := spanTrace{
 			Span: sp,
 		}
@@ -101,7 +102,7 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	zipkin.TagHTTPUrl.Set(sp, req.URL.String())
 	zipkin.TagHTTPPath.Set(sp, req.URL.Path)
 
-	b3.InjectHTTP(req)(sp.Context())
+	_ = b3.InjectHTTP(req)(sp.Context())
 
 	res, err = t.rt.RoundTrip(req)
 

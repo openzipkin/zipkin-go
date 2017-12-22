@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	zipkin "github.com/openzipkin/zipkin-go"
-	middlewarehttp "github.com/openzipkin/zipkin-go/middleware/http"
+	mw "github.com/openzipkin/zipkin-go/middleware/http"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
@@ -46,7 +46,15 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 
 	httpHandlerFunc := http.HandlerFunc(httpHandler(code, headers, responseBuf))
 
-	handler := middlewarehttp.WrapHTTPHandler(tr, "wrapper_test", httpHandlerFunc)
+	tags := map[string]string{
+		"component": "testServer",
+	}
+	handler := mw.NewServerMiddleware(
+		tr,
+		"wrapper_test",
+		mw.TagResponseSize(true),
+		mw.ServerTags(tags),
+	)(httpHandlerFunc)
 
 	handler.ServeHTTP(httpRecorder, request)
 

@@ -10,23 +10,49 @@ import (
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 )
 
-type httpHandler struct {
-	tracer *zipkin.Tracer
-	name   string
-	next   http.Handler
+type handler struct {
+	tracer          *zipkin.Tracer
+	name            string
+	next            http.Handler
+	tagResponseSize bool
+	defaultTags     map[string]string
 }
 
-// WrapHTTPHandler wraps a standard http.Handler with Zipkin tracing.
-func WrapHTTPHandler(t *zipkin.Tracer, op string, h http.Handler) http.Handler {
-	return &httpHandler{
-		tracer: t,
-		next:   h,
-		name:   op,
+// ServerOption allows Middleware to be optionally configured.
+type ServerOption func(*handler)
+
+// ServerTags adds default Tags to inject into server spans.
+func ServerTags(tags map[string]string) ServerOption {
+	return func(h *handler) {
+		h.defaultTags = tags
+	}
+}
+
+// TagResponseSize will instruct the middleware to Tag the http response size
+// in the server side span.
+func TagResponseSize(enabled bool) ServerOption {
+	return func(h *handler) {
+		h.tagResponseSize = enabled
+	}
+}
+
+// NewServerMiddleware returns a http.Handler middleware with Zipkin tracing.
+func NewServerMiddleware(t *zipkin.Tracer, name string, options ...ServerOption) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		h := &handler{
+			tracer: t,
+			name:   name,
+			next:   next,
+		}
+		for _, option := range options {
+			option(h)
+		}
+		return h
 	}
 }
 
 // ServeHTTP implements http.Handler.
-func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// try to extract B3 Headers from upstream
 	sc := h.tracer.Extract(b3.ExtractHTTP(r))
 
@@ -39,7 +65,10 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		zipkin.Parent(sc),
 		zipkin.RemoteEndpoint(remoteEndpoint),
 	)
-	defer sp.Finish()
+
+	for k, v := range h.defaultTags {
+		sp.Tag(k, v)
+	}
 
 	// add our span to context
 	ctx := zipkin.NewContext(r.Context(), sp)
@@ -61,7 +90,10 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			zipkin.TagError.Set(sp, sCode)
 		}
 		zipkin.TagHTTPStatusCode.Set(sp, sCode)
-		zipkin.TagHTTPResponseSize.Set(sp, ri.getResponseSize())
+		if h.tagResponseSize {
+			zipkin.TagHTTPResponseSize.Set(sp, ri.getResponseSize())
+		}
+		sp.Finish()
 	}()
 
 	// call next http Handler func using our updated context.
