@@ -207,7 +207,7 @@ func makeNewSpan(methodName string, traceID, spanID, parentSpanID uint64, debug 
 
 	return &model.SpanModel{
 		SpanContext: model.SpanContext{
-			TraceID:  model.TraceID{High: traceID},
+			TraceID:  model.TraceID{Low: traceID},
 			ID:       model.ID(spanID),
 			ParentID: parentID,
 			Debug:    debug,

@@ -189,10 +189,9 @@ func RequestCallback(rc RequestCallbackFn) ReporterOption {
 	return func(r *httpReporter) { r.reqCallback = rc }
 }
 
-// NewReporter returns a new HTTP Reporter. endpointURL should be the the endpoint to send
-// the spans to, e.g. http://localhost:9411/api/v1/spans timeout is passed to http client.
-// queueSize control the maximum size of buffer of async queue. The logger is used to log errors,
-// such as send failures.
+// NewReporter returns a new HTTP Reporter.
+// url should be the endpoint to send the spans to, e.g.
+// http://localhost:9411/api/v2/spans
 func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 	r := httpReporter{
 		url:           url,

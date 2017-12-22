@@ -27,8 +27,7 @@ type kafkaReporter struct {
 type ReporterOption func(c *kafkaReporter)
 
 // Logger sets the logger used to report errors in the collection
-// process. By default, a no-op logger is used, i.e. no errors are logged
-// anywhere. It's important to set this option.
+// process.
 func Logger(logger *log.Logger) ReporterOption {
 	return func(c *kafkaReporter) {
 		c.logger = logger
@@ -49,8 +48,8 @@ func Topic(t string) ReporterOption {
 	}
 }
 
-// NewReporter returns a new Kafka-backed Reporter. address should be a
-// slice of TCP endpoints of the form "host:port".
+// NewReporter returns a new Kafka-backed Reporter. address should be a slice of
+// TCP endpoints of the form "host:port".
 func NewReporter(address []string, options ...ReporterOption) (reporter.Reporter, error) {
 	c := &kafkaReporter{
 		logger: log.New(os.Stderr, "", log.LstdFlags),
@@ -80,7 +79,7 @@ func (c *kafkaReporter) logErrors() {
 }
 
 func (c *kafkaReporter) Send(s model.SpanModel) {
-	m, err := c.kafkaSerialize(s)
+	m, err := json.Marshal(s)
 	if err != nil {
 		c.logger.Printf("failed when marshalling the span: %s\n", err.Error())
 		return
@@ -91,10 +90,6 @@ func (c *kafkaReporter) Send(s model.SpanModel) {
 		Key:   nil,
 		Value: sarama.ByteEncoder(m),
 	}
-}
-
-func (c *kafkaReporter) kafkaSerialize(s model.SpanModel) ([]byte, error) {
-	return json.Marshal(s)
 }
 
 func (c *kafkaReporter) Close() error {
