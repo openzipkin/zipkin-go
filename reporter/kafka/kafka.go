@@ -1,3 +1,6 @@
+/*
+Package kafka implements a Kafka reporter to send spans to Kafka server under "zipkin" topic.
+*/
 package kafka
 
 import (

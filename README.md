@@ -24,7 +24,7 @@ repository.
 This library implements the Zipkin V2 Span Model which is available in the model
 package. It contains a Go data model compatible with the Zipkin V2 API and can
 automatically sanitize, parse and (de)serialize to and from the required JSON
-representation as used by the offical Zipkin V2 Collectors.
+representation as used by the official Zipkin V2 Collectors.
 
 ### propagation
 The propagation package and B3 subpackage hold the logic for propagating
@@ -65,11 +65,12 @@ accept 3rd party Reporter implementations.
 
 #### HTTP Reporter
 Most common Reporter type used by Zipkin users transporting Spans to the Zipkin
-server using JSON over HTTP.
+server using JSON over HTTP. The reporter holds a buffer and reports to the backend
+asynchronously, you can se the default values [here](https://github.com/openzipkin/zipkin-go/blob/master/reporter/http/http.go#L20).
 
 #### Kafka Reporter
 High performance Reporter transporting Spans to the Zipkin server using a Kafka
-Producer digesting JSON V2 Spans.
+Producer digesting JSON V2 Spans. The reporter uses the [Sarama async producer](https://godoc.org/github.com/Shopify/sarama#AsyncProducer) underneath.
 
 ## usage and examples
 *todo*
