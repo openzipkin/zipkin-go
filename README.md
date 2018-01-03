@@ -65,12 +65,14 @@ accept 3rd party Reporter implementations.
 
 #### HTTP Reporter
 Most common Reporter type used by Zipkin users transporting Spans to the Zipkin
-server using JSON over HTTP. The reporter holds a buffer and reports to the backend
-asynchronously, you can se the default values [here](https://github.com/openzipkin/zipkin-go/blob/master/reporter/http/http.go#L20).
+server using JSON over HTTP. The reporter holds a buffer and reports to the
+backend asynchronously.
 
 #### Kafka Reporter
 High performance Reporter transporting Spans to the Zipkin server using a Kafka
-Producer digesting JSON V2 Spans. The reporter uses the [Sarama async producer](https://godoc.org/github.com/Shopify/sarama#AsyncProducer) underneath.
+Producer digesting JSON V2 Spans. The reporter uses the
+[Sarama async producer](https://godoc.org/github.com/Shopify/sarama#AsyncProducer)
+underneath.
 
 ## usage and examples
 *todo*
