@@ -26,12 +26,13 @@ type Span interface {
 	Tag(string, string)
 
 	// Finish the Span and send to Reporter. If DelaySend option was used at
-	// span creation time, Finish will not send the span to the reporter. It then
-	// becomes the user's responsibility to get the span reporter (by using Flush)
+	// Span creation time, Finish will not send the Span to the Reporter. It then
+	// becomes the user's responsibility to get the Span reported (by using
+	// span.Flush).
 	Finish()
 
-	// Flush the Span to the Reporter (regardless of being finished or not)
+	// Flush the Span to the Reporter (regardless of being finished or not).
 	// This can be used if the DelaySend SpanOption was set or when dealing with
-	// One-way RPC tracing where duration might not be measured.
+	// one-way RPC tracing where duration might not be measured.
 	Flush()
 }
