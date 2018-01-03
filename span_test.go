@@ -101,16 +101,26 @@ func TestTagsSpanOption(t *testing.T) {
 	}
 }
 
-func TestDelaySendSpanOption(t *testing.T) {
+func TestFlushOnFinishSpanOption(t *testing.T) {
 	rec := recorder.NewReporter()
 	defer rec.Close()
 	tracer, _ := NewTracer(rec)
 
-	span := tracer.StartSpan("test", DelaySend())
+	span := tracer.StartSpan("test")
 	time.Sleep(5 * time.Millisecond)
 	span.Finish()
 
 	spans := rec.Flush()
+
+	if want, have := 1, len(spans); want != have {
+		t.Errorf("Spans want: %d, have %d", want, have)
+	}
+
+	span = tracer.StartSpan("test", FlushOnFinish(false))
+	time.Sleep(5 * time.Millisecond)
+	span.Finish()
+
+	spans = rec.Flush()
 
 	if want, have := 0, len(spans); want != have {
 		t.Errorf("Spans want: %d, have %d", want, have)

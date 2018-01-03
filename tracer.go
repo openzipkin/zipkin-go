@@ -72,7 +72,8 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 			Annotations:   make([]model.Annotation, 0),
 			Tags:          make(map[string]string),
 		},
-		tracer: t,
+		flushOnFinish: true,
+		tracer:        t,
 	}
 
 	// add default tracer tags to span

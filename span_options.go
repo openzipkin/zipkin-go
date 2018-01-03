@@ -62,12 +62,13 @@ func Tags(tags map[string]string) SpanOption {
 	}
 }
 
-// DelaySend will disable span.Finish() to send the span to the reporter
-// automatically. This then becomes the responsibility of the user. This is
-// available if late tag data is expected to be available after the required
-// finish time of the span.
-func DelaySend() SpanOption {
+// FlushOnFinish when set to false will disable span.Finish() to send the Span
+// to the Reporter automatically (which is the default behavior). If set to
+// false, having the Span be reported becomes the responsibility of the user.
+// This is available if late tag data is expected to be only available after the
+// required finish time of the Span.
+func FlushOnFinish(b bool) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
-		s.delaySend = true
+		s.flushOnFinish = b
 	}
 }

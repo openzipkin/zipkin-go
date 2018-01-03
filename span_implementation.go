@@ -11,9 +11,9 @@ import (
 type spanImpl struct {
 	mtx sync.RWMutex
 	model.SpanModel
-	tracer      *Tracer
-	mustCollect int32 // used as atomic bool (1 = true, 0 = false)
-	delaySend   bool
+	tracer        *Tracer
+	mustCollect   int32 // used as atomic bool (1 = true, 0 = false)
+	flushOnFinish bool
 }
 
 func (s *spanImpl) Context() model.SpanContext {
@@ -65,7 +65,7 @@ func (s *spanImpl) Tag(key, value string) {
 func (s *spanImpl) Finish() {
 	if atomic.CompareAndSwapInt32(&s.mustCollect, 1, 0) {
 		s.Duration = time.Since(s.Timestamp)
-		if !s.delaySend {
+		if s.flushOnFinish {
 			s.tracer.reporter.Send(s.SpanModel)
 		}
 	}
