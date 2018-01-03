@@ -69,3 +69,33 @@ func TestRemoteEndpoint(t *testing.T) {
 		t.Errorf("RemoteEndpoint want nil, have %+v", have)
 	}
 }
+
+func TestTagsSpanOption(t *testing.T) {
+	rec := recorder.NewReporter()
+	defer rec.Close()
+	tracerTags := map[string]string{
+		"key1": "value1",
+		"key2": "will_be_overwritten",
+	}
+	tracer, err := NewTracer(rec, WithTags(tracerTags))
+	if err != nil {
+		t.Fatalf("expected valid tracer, got error: %+v", err)
+	}
+
+	spanTags := map[string]string{
+		"key2": "value2",
+		"key3": "value3",
+	}
+	span := tracer.StartSpan("test", Tags(spanTags))
+	defer span.Finish()
+
+	allTags := map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+		"key3": "value3",
+	}
+
+	if want, have := allTags, span.(*spanImpl).Tags; !reflect.DeepEqual(want, have) {
+		t.Errorf("Tags want: %+v, have: %+v", want, have)
+	}
+}

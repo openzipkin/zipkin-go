@@ -51,3 +51,13 @@ func RemoteEndpoint(e *model.Endpoint) SpanOption {
 		s.RemoteEndpoint = e
 	}
 }
+
+// Tags sets initial tags for the span being created. If default tracer tags
+// are present they will be overwritten on key collisions.
+func Tags(tags map[string]string) SpanOption {
+	return func(t *Tracer, s *spanImpl) {
+		for k, v := range tags {
+			s.Tags[k] = v
+		}
+	}
+}
