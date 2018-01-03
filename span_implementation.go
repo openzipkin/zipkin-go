@@ -13,6 +13,7 @@ type spanImpl struct {
 	model.SpanModel
 	tracer      *Tracer
 	mustCollect int32 // used as atomic bool (1 = true, 0 = false)
+	delaySend   bool
 }
 
 func (s *spanImpl) Context() model.SpanContext {
@@ -64,6 +65,14 @@ func (s *spanImpl) Tag(key, value string) {
 func (s *spanImpl) Finish() {
 	if atomic.CompareAndSwapInt32(&s.mustCollect, 1, 0) {
 		s.Duration = time.Since(s.Timestamp)
+		if !s.delaySend {
+			s.tracer.reporter.Send(s.SpanModel)
+		}
+	}
+}
+
+func (s *spanImpl) Flush() {
+	if s.SpanModel.Debug || (s.SpanModel.Sampled != nil && *s.SpanModel.Sampled) {
 		s.tracer.reporter.Send(s.SpanModel)
 	}
 }

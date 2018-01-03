@@ -3,6 +3,7 @@ package zipkin
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
@@ -98,4 +99,34 @@ func TestTagsSpanOption(t *testing.T) {
 	if want, have := allTags, span.(*spanImpl).Tags; !reflect.DeepEqual(want, have) {
 		t.Errorf("Tags want: %+v, have: %+v", want, have)
 	}
+}
+
+func TestDelaySendSpanOption(t *testing.T) {
+	rec := recorder.NewReporter()
+	defer rec.Close()
+	tracer, _ := NewTracer(rec)
+
+	span := tracer.StartSpan("test", DelaySend())
+	time.Sleep(5 * time.Millisecond)
+	span.Finish()
+
+	spans := rec.Flush()
+
+	if want, have := 0, len(spans); want != have {
+		t.Errorf("Spans want: %d, have %d", want, have)
+	}
+
+	span.Tag("post", "finish")
+	span.Flush()
+
+	spans = rec.Flush()
+
+	if want, have := 1, len(spans); want != have {
+		t.Errorf("Spans want: %d, have %d", want, have)
+	}
+
+	if want, have := map[string]string{"post": "finish"}, spans[0].Tags; !reflect.DeepEqual(want, have) {
+		t.Errorf("Tags want: %+v, have: %+v", want, have)
+	}
+
 }

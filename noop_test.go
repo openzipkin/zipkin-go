@@ -47,4 +47,5 @@ func TestNoopContext(t *testing.T) {
 	span.Annotate(time.Now(), "dummy")
 	span.SetName("dummy")
 	span.SetRemoteEndpoint(nil)
+	span.Flush()
 }

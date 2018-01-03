@@ -61,3 +61,13 @@ func Tags(tags map[string]string) SpanOption {
 		}
 	}
 }
+
+// DelaySend will disable span.Finish() to send the span to the reporter
+// automatically. This then becomes the responsibility of the user. This is
+// available if late tag data is expected to be available after the required
+// finish time of the span.
+func DelaySend() SpanOption {
+	return func(t *Tracer, s *spanImpl) {
+		s.delaySend = true
+	}
+}
