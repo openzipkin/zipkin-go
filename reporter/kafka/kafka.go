@@ -1,3 +1,6 @@
+/*
+Package kafka implements a Kafka reporter to send spans to a Kafka server/cluster.
+*/
 package kafka
 
 import (
