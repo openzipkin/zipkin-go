@@ -68,14 +68,20 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 		SpanModel: model.SpanModel{
 			Kind:          model.Undetermined,
 			Name:          name,
-			Timestamp:     time.Now(),
 			LocalEndpoint: t.localEndpoint,
 			Annotations:   make([]model.Annotation, 0),
 			Tags:          make(map[string]string),
 		},
-		tracer: t,
+		flushOnFinish: true,
+		tracer:        t,
 	}
 
+	// add default tracer tags to span
+	for k, v := range t.defaultTags {
+		s.Tag(k, v)
+	}
+
+	// handle provided functional options
 	for _, option := range options {
 		option(t, s)
 	}
@@ -117,9 +123,9 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 		}
 	}
 
-	// add default tags to span
-	for k, v := range t.defaultTags {
-		s.Tag(k, v)
+	// add start time
+	if s.Timestamp.IsZero() {
+		s.Timestamp = time.Now()
 	}
 
 	return s

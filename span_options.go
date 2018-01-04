@@ -51,3 +51,24 @@ func RemoteEndpoint(e *model.Endpoint) SpanOption {
 		s.RemoteEndpoint = e
 	}
 }
+
+// Tags sets initial tags for the span being created. If default tracer tags
+// are present they will be overwritten on key collisions.
+func Tags(tags map[string]string) SpanOption {
+	return func(t *Tracer, s *spanImpl) {
+		for k, v := range tags {
+			s.Tags[k] = v
+		}
+	}
+}
+
+// FlushOnFinish when set to false will disable span.Finish() to send the Span
+// to the Reporter automatically (which is the default behavior). If set to
+// false, having the Span be reported becomes the responsibility of the user.
+// This is available if late tag data is expected to be only available after the
+// required finish time of the Span.
+func FlushOnFinish(b bool) SpanOption {
+	return func(t *Tracer, s *spanImpl) {
+		s.flushOnFinish = b
+	}
+}

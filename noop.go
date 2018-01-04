@@ -21,3 +21,5 @@ func (*noopSpan) Annotate(time.Time, string) {}
 func (*noopSpan) Tag(string, string) {}
 
 func (*noopSpan) Finish() {}
+
+func (*noopSpan) Flush() {}
