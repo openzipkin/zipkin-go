@@ -11,6 +11,7 @@ const (
 	TagHTTPStatusCode   Tag = "http.status_code"
 	TagHTTPRequestSize  Tag = "http.request.size"
 	TagHTTPResponseSize Tag = "http.response.size"
+	TagGRPCStatusCode   Tag = "grpc.status_code"
 	TagError            Tag = "error"
 )
 

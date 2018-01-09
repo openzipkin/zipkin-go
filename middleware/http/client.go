@@ -100,11 +100,15 @@ func (c *Client) DoWithTrace(req *http.Request, name string) (res *http.Response
 		appSpan.Annotate(time.Now(), "wr")
 	}
 
-	statusCode := strconv.FormatInt(int64(res.StatusCode), 10)
-	zipkin.TagHTTPStatusCode.Set(appSpan, statusCode)
-	zipkin.TagHTTPResponseSize.Set(appSpan, strconv.FormatInt(res.ContentLength, 10))
-	if res.StatusCode > 399 {
-		zipkin.TagError.Set(appSpan, statusCode)
+	if res.ContentLength > 0 {
+		zipkin.TagHTTPResponseSize.Set(appSpan, strconv.FormatInt(res.ContentLength, 10))
+	}
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		statusCode := strconv.FormatInt(int64(res.StatusCode), 10)
+		zipkin.TagHTTPStatusCode.Set(appSpan, statusCode)
+		if res.StatusCode > 399 {
+			zipkin.TagError.Set(appSpan, statusCode)
+		}
 	}
 
 	res.Body = &spanCloser{
