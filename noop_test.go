@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter/recorder"
+	"github.com/openzipkin/zipkin-go/reporter"
 )
 
 func TestNoopContext(t *testing.T) {
 	var (
 		span     Span
 		sc       model.SpanContext
-		rec      = recorder.NewReporter()
+		rec      = reporter.NewNoopReporter()
 		parentID = model.ID(3)
 		tr, _    = NewTracer(
 			rec,

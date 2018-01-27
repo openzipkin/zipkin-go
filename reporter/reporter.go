@@ -15,3 +15,13 @@ type Reporter interface {
 	Send(model.SpanModel) // Send Span data to the reporter
 	Close() error         // Close the reporter
 }
+
+type noopReporter struct {}
+
+func (r *noopReporter) Send(model.SpanModel) {}
+func (r *noopReporter) Close() error { return nil }
+
+// NewNoopReporter returns a no-op Reporter implementation.
+func NewNoopReporter() Reporter {
+	return &noopReporter{}
+}
