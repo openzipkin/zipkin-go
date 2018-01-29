@@ -8,7 +8,10 @@ import (
 
 type noopSpan struct {
 	model.SpanContext
+	tracer *Tracer
 }
+
+func (n *noopSpan) Tracer() *Tracer { return n.tracer }
 
 func (n *noopSpan) Context() model.SpanContext { return n.SpanContext }
 

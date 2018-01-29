@@ -7,7 +7,9 @@ import (
 	"github.com/openzipkin/zipkin-go/model"
 )
 
-func parseHeaders(
+// ParseHeaders takes values found from B3 Headers and tries to reconstruct a
+// SpanContext.
+func ParseHeaders(
 	hdrTraceID, hdrSpanID, hdrParentSpanID, hdrSampled, hdrFlags string,
 ) (*model.SpanContext, error) {
 	var (

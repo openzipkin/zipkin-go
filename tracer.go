@@ -11,7 +11,8 @@ import (
 	"github.com/openzipkin/zipkin-go/reporter"
 )
 
-// Tracer is our Zipkin tracer implementation.
+// Tracer is our Zipkin tracer implementation. It should be initialized using
+// the NewTracer method.
 type Tracer struct {
 	defaultTags          map[string]string
 	extractFailurePolicy ExtractFailurePolicy
@@ -120,6 +121,7 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 		// trace not being sampled and noop requested
 		return &noopSpan{
 			SpanContext: s.SpanContext,
+			tracer:      t,
 		}
 	}
 

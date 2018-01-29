@@ -36,12 +36,21 @@ func TagResponseSize(enabled bool) ServerOption {
 	}
 }
 
+// SpanName sets the name of the spans the middleware creates. Use this if
+// wrapping each endpoint with its own Middleware.
+// If omitting the SpanName option, the middleware will use the http request
+// method as span name.
+func SpanName(name string) ServerOption {
+	return func(h *handler) {
+		h.name = name
+	}
+}
+
 // NewServerMiddleware returns a http.Handler middleware with Zipkin tracing.
-func NewServerMiddleware(t *zipkin.Tracer, name string, options ...ServerOption) func(http.Handler) http.Handler {
+func NewServerMiddleware(t *zipkin.Tracer, options ...ServerOption) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		h := &handler{
 			tracer: t,
-			name:   name,
 			next:   next,
 		}
 		for _, option := range options {
@@ -53,14 +62,22 @@ func NewServerMiddleware(t *zipkin.Tracer, name string, options ...ServerOption)
 
 // ServeHTTP implements http.Handler.
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var spanName string
+
 	// try to extract B3 Headers from upstream
 	sc := h.tracer.Extract(b3.ExtractHTTP(r))
 
 	remoteEndpoint, _ := zipkin.NewEndpoint("", r.RemoteAddr)
 
+	if len(h.name) == 0 {
+		spanName = r.Method
+	} else {
+		spanName = h.name
+	}
+
 	// create Span using SpanContext if found
 	sp := h.tracer.StartSpan(
-		h.name,
+		spanName,
 		zipkin.Kind(model.Server),
 		zipkin.Parent(sc),
 		zipkin.RemoteEndpoint(remoteEndpoint),

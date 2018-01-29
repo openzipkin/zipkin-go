@@ -16,6 +16,10 @@ type spanImpl struct {
 	flushOnFinish bool
 }
 
+func (s *spanImpl) Tracer() *Tracer {
+	return s.tracer
+}
+
 func (s *spanImpl) Context() model.SpanContext {
 	return s.SpanContext
 }
