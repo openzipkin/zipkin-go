@@ -19,7 +19,7 @@ func ExtractHTTP(r *http.Request) propagation.Extractor {
 			flagsHeader        = r.Header.Get(Flags)
 		)
 
-		return parseHeaders(
+		return ParseHeaders(
 			traceIDHeader, spanIDHeader, parentSpanIDHeader, sampledHeader,
 			flagsHeader,
 		)
