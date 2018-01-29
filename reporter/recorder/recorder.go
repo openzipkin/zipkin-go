@@ -38,6 +38,6 @@ func (r *ReporterRecorder) Flush() []model.SpanModel {
 
 // Close flushes the reporter
 func (r *ReporterRecorder) Close() error {
-	_ = r.Flush
+	r.Flush()
 	return nil
 }

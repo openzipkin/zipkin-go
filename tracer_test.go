@@ -9,7 +9,7 @@ import (
 
 	"github.com/openzipkin/zipkin-go/idgenerator"
 	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter/recorder"
+	"github.com/openzipkin/zipkin-go/reporter"
 )
 
 func TestTracerOptionLocalEndpoint(t *testing.T) {
@@ -18,10 +18,10 @@ func TestTracerOptionLocalEndpoint(t *testing.T) {
 		wantEP *model.Endpoint
 	)
 
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec, WithLocalEndpoint(nil))
+	tr, err := NewTracer(rep, WithLocalEndpoint(nil))
 
 	if err != nil {
 		t.Fatalf("unexpected tracer creation failure: %+v", err.Error())
@@ -41,7 +41,7 @@ func TestTracerOptionLocalEndpoint(t *testing.T) {
 		t.Fatalf("expected valid endpoint, got error: %+v", err)
 	}
 
-	tr, err = NewTracer(rec, WithLocalEndpoint(wantEP))
+	tr, err = NewTracer(rep, WithLocalEndpoint(wantEP))
 
 	if err != nil {
 		t.Fatalf("expected valid tracer, got error: %+v", err)
@@ -67,8 +67,8 @@ func TestTracerOptionLocalEndpoint(t *testing.T) {
 }
 
 func TestTracerOptionExtractFailurePolicy(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
 	policies := []struct {
 		policy ExtractFailurePolicy
@@ -82,7 +82,7 @@ func TestTracerOptionExtractFailurePolicy(t *testing.T) {
 	}
 
 	for idx, item := range policies {
-		tr, err := NewTracer(rec, WithExtractFailurePolicy(item.policy))
+		tr, err := NewTracer(rep, WithExtractFailurePolicy(item.policy))
 
 		if want, have := item.err, err; want != have {
 			t.Fatalf("[%d] expected tracer creation failure: want %+v, have %+v", idx, item.err, err)
@@ -93,7 +93,7 @@ func TestTracerOptionExtractFailurePolicy(t *testing.T) {
 		}
 
 		if err != nil {
-			tr, _ = NewTracer(rec)
+			tr, _ = NewTracer(rep)
 			tr.extractFailurePolicy = item.policy
 		}
 
@@ -125,12 +125,12 @@ func failSpan(t *testing.T, tr *Tracer, idx int, want error) string {
 }
 
 func TestTracerIDGeneratorOption(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
 	gen := idgenerator.NewRandomTimestamped()
 
-	tr, err := NewTracer(rec, WithIDGenerator(gen))
+	tr, err := NewTracer(rep, WithIDGenerator(gen))
 
 	if err != nil {
 		t.Fatalf("expected valid tracer, got error: %+v", err)
@@ -142,10 +142,10 @@ func TestTracerIDGeneratorOption(t *testing.T) {
 }
 
 func TestTracerWithTraceID128BitOption(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec, WithTraceID128Bit(false))
+	tr, err := NewTracer(rep, WithTraceID128Bit(false))
 
 	if err != nil {
 		t.Fatalf("expected valid tracer, got error: %+v", err)
@@ -155,7 +155,7 @@ func TestTracerWithTraceID128BitOption(t *testing.T) {
 		t.Errorf("id generator want %+v, have %+v", want, have)
 	}
 
-	tr, err = NewTracer(rec, WithTraceID128Bit(true))
+	tr, err = NewTracer(rep, WithTraceID128Bit(true))
 
 	if err != nil {
 		t.Fatalf("expected valid tracer, got error: %+v", err)
@@ -167,10 +167,10 @@ func TestTracerWithTraceID128BitOption(t *testing.T) {
 }
 
 func TestTracerExtractor(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec)
+	tr, err := NewTracer(rep)
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -203,10 +203,10 @@ func TestTracerExtractor(t *testing.T) {
 }
 
 func TestNoopTracer(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec)
+	tr, err := NewTracer(rep)
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -258,7 +258,7 @@ func TestNoopTracer(t *testing.T) {
 
 	span.Finish()
 
-	tr, err = NewTracer(rec, WithNoopTracer(true))
+	tr, err = NewTracer(rep, WithNoopTracer(true))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -280,7 +280,7 @@ func TestNoopTracer(t *testing.T) {
 		t.Errorf("span implementation type want %+v, have %+v", want, have)
 	}
 
-	tr, err = NewTracer(rec, WithNoopTracer(false))
+	tr, err = NewTracer(rep, WithNoopTracer(false))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -293,10 +293,10 @@ func TestNoopTracer(t *testing.T) {
 }
 
 func TestNoopSpan(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec, WithNoopSpan(true))
+	tr, err := NewTracer(rep, WithNoopSpan(true))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -321,10 +321,10 @@ func TestNoopSpan(t *testing.T) {
 }
 
 func TestUnsampledSpan(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec, WithTraceID128Bit(false))
+	tr, err := NewTracer(rep, WithTraceID128Bit(false))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -391,10 +391,10 @@ func TestDefaultTags(t *testing.T) {
 	tags["platform"] = "zipkin_test"
 	tags["version"] = "1.0"
 
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec, WithTags(tags), WithTraceID128Bit(true))
+	tr, err := NewTracer(rep, WithTags(tags), WithTraceID128Bit(true))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -437,10 +437,10 @@ func TestTagOverwriteRules(t *testing.T) {
 		k2      = string(TagError)
 	)
 
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec, WithIDGenerator(idgenerator.NewRandomTimestamped()))
+	tr, err := NewTracer(rep, WithIDGenerator(idgenerator.NewRandomTimestamped()))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -480,10 +480,10 @@ func TestTagOverwriteRules(t *testing.T) {
 }
 
 func TestAnnotations(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec)
+	tr, err := NewTracer(rep)
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -524,10 +524,10 @@ func TestAnnotations(t *testing.T) {
 }
 
 func TestExplicitStartTime(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec, WithSampler(NewModuloSampler(2)))
+	tr, err := NewTracer(rep, WithSampler(NewModuloSampler(2)))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -548,10 +548,10 @@ func TestDebugFlagWithoutParentTrace(t *testing.T) {
 	/*
 	   Test handling of a single Debug flag without an existing trace
 	*/
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec, WithSharedSpans(true))
+	tr, err := NewTracer(rep, WithSharedSpans(true))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -594,10 +594,10 @@ func TestDebugFlagWithoutParentTrace(t *testing.T) {
 }
 
 func TestParentSpanInSharedMode(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec, WithSharedSpans(true))
+	tr, err := NewTracer(rep, WithSharedSpans(true))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -651,10 +651,10 @@ func TestParentSpanInSharedMode(t *testing.T) {
 }
 
 func TestParentSpanInSpanPerNodeMode(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec, WithSharedSpans(false))
+	tr, err := NewTracer(rep, WithSharedSpans(false))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -706,10 +706,10 @@ func TestParentSpanInSpanPerNodeMode(t *testing.T) {
 
 func TestStartSpanFromContext(t *testing.T) {
 	ctx := context.Background()
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tr, err := NewTracer(rec, WithSharedSpans(true))
+	tr, err := NewTracer(rep, WithSharedSpans(true))
 	if err != nil {
 		t.Fatalf("unable to create tracer instance: %+v", err)
 	}
@@ -748,8 +748,8 @@ func TestStartSpanFromContext(t *testing.T) {
 }
 
 func TestLocalEndpoint(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
 	ep, err := NewEndpoint("my service", "localhost:80")
 
@@ -757,7 +757,7 @@ func TestLocalEndpoint(t *testing.T) {
 		t.Fatalf("expected valid endpoint, got error: %+v", err)
 	}
 
-	tracer, err := NewTracer(rec, WithLocalEndpoint(ep))
+	tracer, err := NewTracer(rep, WithLocalEndpoint(ep))
 	if err != nil {
 		t.Fatalf("expected valid tracer, got error: %+v", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/openzipkin/zipkin-go/reporter"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
@@ -13,10 +14,10 @@ func TestSpanNameUpdate(t *testing.T) {
 		oldName = "oldName"
 		newName = "newName"
 	)
-	reporter := recorder.NewReporter()
-	defer reporter.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
-	tracer, _ := NewTracer(reporter)
+	tracer, _ := NewTracer(rep)
 
 	span := tracer.StartSpan(oldName)
 
@@ -32,7 +33,7 @@ func TestSpanNameUpdate(t *testing.T) {
 }
 
 func TestRemoteEndpoint(t *testing.T) {
-	rec := recorder.NewReporter()
+	rec := reporter.NewNoopReporter()
 	defer rec.Close()
 
 	tracer, err := NewTracer(rec)
@@ -72,13 +73,13 @@ func TestRemoteEndpoint(t *testing.T) {
 }
 
 func TestTagsSpanOption(t *testing.T) {
-	rec := recorder.NewReporter()
-	defer rec.Close()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 	tracerTags := map[string]string{
 		"key1": "value1",
 		"key2": "will_be_overwritten",
 	}
-	tracer, err := NewTracer(rec, WithTags(tracerTags))
+	tracer, err := NewTracer(rep, WithTags(tracerTags))
 	if err != nil {
 		t.Fatalf("expected valid tracer, got error: %+v", err)
 	}
