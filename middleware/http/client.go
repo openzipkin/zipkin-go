@@ -81,7 +81,15 @@ func NewClient(tracer *zipkin.Tracer, client *http.Client, options ...ClientOpti
 
 // DoWithTrace wraps http.Client's Do with tracing using an application span.
 func (c *Client) DoWithTrace(req *http.Request, name string) (res *http.Response, err error) {
-	appSpan := c.tracer.StartSpan(name, zipkin.Kind(model.Client))
+	var parentContext model.SpanContext
+
+	if span := zipkin.SpanFromContext(req.Context()); span != nil {
+		parentContext = span.Context()
+	}
+
+	appSpan := c.tracer.StartSpan(
+		name, zipkin.Kind(model.Client), zipkin.Parent(parentContext),
+	)
 
 	zipkin.TagHTTPMethod.Set(appSpan, req.Method)
 	zipkin.TagHTTPUrl.Set(appSpan, req.URL.String())

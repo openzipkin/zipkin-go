@@ -35,14 +35,14 @@ func TestHTTPClient(t *testing.T) {
 		httpclient.TransportOptions(httpclient.TransportTags(transportTags)),
 	)
 	if err != nil {
-		panic(err)
+		t.Fatalf("unable to create request: %+v", err)
 	}
 
 	req, _ := http.NewRequest("GET", "https://www.google.com", nil)
 
 	res, err := client.DoWithTrace(req, "Get Google")
 	if err != nil {
-		panic(err)
+		t.Fatalf("unable to execute client request: %+v", err)
 	}
 	res.Body.Close()
 
@@ -55,7 +55,7 @@ func TestHTTPClient(t *testing.T) {
 
 	res, err = client.Do(req)
 	if err != nil {
-		panic(err)
+		t.Fatalf("unable to execute client request: %+v", err)
 	}
 	res.Body.Close()
 
@@ -63,4 +63,19 @@ func TestHTTPClient(t *testing.T) {
 	if len(spans) == 0 {
 		t.Errorf("Span Count want 1+, have 0")
 	}
+
+	span := tracer.StartSpan("ParentSpan")
+
+	req, _ = http.NewRequest("GET", "http://www.google.com", nil)
+
+	ctx := zipkin.NewContext(req.Context(), span)
+
+	req = req.WithContext(ctx)
+
+	res, err = client.DoWithTrace(req, "ChildSpan")
+	if err != nil {
+		t.Fatalf("unable to execute client request: %+v", err)
+	}
+	res.Body.Close()
+
 }
