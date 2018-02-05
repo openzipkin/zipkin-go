@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -79,8 +78,8 @@ func NewClient(tracer *zipkin.Tracer, client *http.Client, options ...ClientOpti
 	return c, nil
 }
 
-// DoWithTrace wraps http.Client's Do with tracing using an application span.
-func (c *Client) DoWithTrace(req *http.Request, name string) (res *http.Response, err error) {
+// DoWithAppSpan wraps http.Client's Do with tracing using an application span.
+func (c *Client) DoWithAppSpan(req *http.Request, name string) (res *http.Response, err error) {
 	var parentContext model.SpanContext
 
 	if span := zipkin.SpanFromContext(req.Context()); span != nil {
@@ -96,7 +95,7 @@ func (c *Client) DoWithTrace(req *http.Request, name string) (res *http.Response
 	zipkin.TagHTTPPath.Set(appSpan, req.URL.Path)
 
 	res, err = c.Client.Do(
-		req.WithContext(zipkin.NewContext(context.Background(), appSpan)),
+		req.WithContext(zipkin.NewContext(req.Context(), appSpan)),
 	)
 	if err != nil {
 		zipkin.TagError.Set(appSpan, err.Error())

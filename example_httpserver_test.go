@@ -3,6 +3,7 @@ package zipkin_test
 import (
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"time"
 
@@ -19,7 +20,7 @@ func Example() {
 	defer reporter.Close()
 
 	// create our local service endpoint
-	endpoint, err := zipkin.NewEndpoint("myService", "localhost:8123")
+	endpoint, err := zipkin.NewEndpoint("myService", "localhost:0")
 	if err != nil {
 		log.Fatalf("unable to create local endpoint: %+v\n", err)
 	}
@@ -41,23 +42,24 @@ func Example() {
 		log.Fatalf("unable to create client: %+v\n", err)
 	}
 
-	// set-up router and endpoint handlers
+	// initialize router
 	router := mux.NewRouter()
-	router.Methods("GET").Path("/some_function").HandlerFunc(someFunc(client))
-	router.Methods("POST").Path("/other_function").HandlerFunc(otherFunc(client))
 
 	// start web service with zipkin http server middleware
-	go func() {
-		http.ListenAndServe("localhost:8123", serverMiddleware(router))
-	}()
+	ts := httptest.NewServer(serverMiddleware(router))
+	defer ts.Close()
+
+	// set-up handlers
+	router.Methods("GET").Path("/some_function").HandlerFunc(someFunc(client, ts.URL))
+	router.Methods("POST").Path("/other_function").HandlerFunc(otherFunc(client))
 
 	// initiate a call to some_func
-	req, err := http.NewRequest("GET", "http://localhost:8123/some_function", nil)
+	req, err := http.NewRequest("GET", ts.URL+"/some_function", nil)
 	if err != nil {
 		log.Fatalf("unable to create http request: %+v\n", err)
 	}
 
-	res, err := client.DoWithTrace(req, "some_function")
+	res, err := client.DoWithAppSpan(req, "some_function")
 	if err != nil {
 		log.Fatalf("unable to do http request: %+v\n", err)
 	}
@@ -66,7 +68,7 @@ func Example() {
 	// Output:
 }
 
-func someFunc(client *zipkinhttp.Client) http.HandlerFunc {
+func someFunc(client *zipkinhttp.Client, url string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("some_function called with method: %s\n", r.Method)
 
@@ -78,9 +80,7 @@ func someFunc(client *zipkinhttp.Client) http.HandlerFunc {
 		time.Sleep(25 * time.Millisecond)
 		span.Annotate(time.Now(), "expensive_calc_done")
 
-		newRequest, err := http.NewRequest(
-			"POST", "http://localhost:8123/other_function", nil,
-		)
+		newRequest, err := http.NewRequest("POST", url+"/other_function", nil)
 		if err != nil {
 			log.Printf("unable to create client: %+v\n", err)
 			http.Error(w, err.Error(), 500)
@@ -91,7 +91,7 @@ func someFunc(client *zipkinhttp.Client) http.HandlerFunc {
 
 		newRequest = newRequest.WithContext(ctx)
 
-		res, err := client.DoWithTrace(newRequest, "other_function")
+		res, err := client.DoWithAppSpan(newRequest, "other_function")
 		if err != nil {
 			log.Printf("call to other_function returned error: %+v\n", err)
 			http.Error(w, err.Error(), 500)

@@ -40,7 +40,7 @@ func TestHTTPClient(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", "https://www.google.com", nil)
 
-	res, err := client.DoWithTrace(req, "Get Google")
+	res, err := client.DoWithAppSpan(req, "Get Google")
 	if err != nil {
 		t.Fatalf("unable to execute client request: %+v", err)
 	}
@@ -72,7 +72,7 @@ func TestHTTPClient(t *testing.T) {
 
 	req = req.WithContext(ctx)
 
-	res, err = client.DoWithTrace(req, "ChildSpan")
+	res, err = client.DoWithAppSpan(req, "ChildSpan")
 	if err != nil {
 		t.Fatalf("unable to execute client request: %+v", err)
 	}
