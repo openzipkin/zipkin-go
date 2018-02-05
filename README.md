@@ -2,7 +2,7 @@
 
 [![Travis CI](https://travis-ci.org/openzipkin/zipkin-go.svg?branch=master)](https://travis-ci.org/openzipkin/zipkin-go)
 [![CircleCI](https://circleci.com/gh/openzipkin/zipkin-go.svg?style=shield)](https://circleci.com/gh/openzipkin/zipkin-go)
-[![Appveyor CI](https://ci.appveyor.com/api/projects/status/1d0e5k96g10ajl63/branch/master?svg=true)](https://ci.appveyor.com/api/projects/status/1d0e5k96g10ajl63/branch/master)
+[![Appveyor CI](https://ci.appveyor.com/api/projects/status/1d0e5k96g10ajl63/branch/master?svg=true)](https://ci.appveyor.com/project/basvanbeek/zipkin-go)
 [![Coverage Status](https://img.shields.io/coveralls/github/openzipkin/zipkin-go.svg)](https://coveralls.io/github/openzipkin/zipkin-go?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/openzipkin/zipkin-go)](https://goreportcard.com/report/github.com/openzipkin/zipkin-go)
 [![GoDoc](https://godoc.org/github.com/openzipkin/zipkin-go?status.svg)](https://godoc.org/github.com/openzipkin/zipkin-go)
@@ -52,7 +52,7 @@ level.
 
 For convenience `NewClient` is provided which returns a HTTP Client which embeds
 `*http.Client` and provides an `application span` around the HTTP calls when
-calling the `DoWithTrace()` method.
+calling the `DoWithAppSpan()` method.
 
 #### grpc
 gRPC middleware / interceptors are planned for the near future.
@@ -76,4 +76,4 @@ Producer digesting JSON V2 Spans. The reporter uses the
 underneath.
 
 ## usage and examples
-*todo*
+[HTTP Server Example](example_httpserver_test.go)
