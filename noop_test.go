@@ -13,16 +13,14 @@ func TestNoopContext(t *testing.T) {
 	var (
 		span     Span
 		sc       model.SpanContext
-		rec      = reporter.NewNoopReporter()
 		parentID = model.ID(3)
 		tr, _    = NewTracer(
-			rec,
+			reporter.NewNoopReporter(),
 			WithNoopSpan(true),
 			WithSampler(neverSample),
 			WithSharedSpans(true),
 		)
 	)
-	defer rec.Close()
 
 	sc = model.SpanContext{
 		TraceID:  model.TraceID{High: 1, Low: 2},

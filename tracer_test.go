@@ -18,10 +18,7 @@ func TestTracerOptionLocalEndpoint(t *testing.T) {
 		wantEP *model.Endpoint
 	)
 
-	rep := reporter.NewNoopReporter()
-	defer rep.Close()
-
-	tr, err := NewTracer(rep, WithLocalEndpoint(nil))
+	tr, err := NewTracer(nil, WithLocalEndpoint(nil))
 
 	if err != nil {
 		t.Fatalf("unexpected tracer creation failure: %+v", err.Error())
@@ -40,6 +37,9 @@ func TestTracerOptionLocalEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected valid endpoint, got error: %+v", err)
 	}
+
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
 
 	tr, err = NewTracer(rep, WithLocalEndpoint(wantEP))
 

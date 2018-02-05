@@ -11,7 +11,8 @@ import (
 	"github.com/openzipkin/zipkin-go/reporter"
 )
 
-// Tracer is our Zipkin tracer implementation.
+// Tracer is our Zipkin tracer implementation. It should be initialized using
+// the NewTracer method.
 type Tracer struct {
 	defaultTags          map[string]string
 	extractFailurePolicy ExtractFailurePolicy
@@ -25,23 +26,29 @@ type Tracer struct {
 }
 
 // NewTracer returns a new Zipkin Tracer.
-func NewTracer(reporter reporter.Reporter, options ...TracerOption) (*Tracer, error) {
+func NewTracer(rep reporter.Reporter, opts ...TracerOption) (*Tracer, error) {
 	// set default tracer options
 	t := &Tracer{
 		defaultTags:          make(map[string]string),
 		extractFailurePolicy: ExtractFailurePolicyRestart,
 		sampler:              alwaysSample,
 		generate:             idgenerator.NewRandom64(),
-		reporter:             reporter,
+		reporter:             rep,
 		localEndpoint:        nil,
 		noop:                 0,
 		sharedSpans:          true,
 		unsampledNoop:        false,
 	}
 
+	// if no reporter was provided we default to noop implementation.
+	if t.reporter == nil {
+		t.reporter = reporter.NewNoopReporter()
+		t.noop = 1
+	}
+
 	// process functional options
-	for _, option := range options {
-		if err := option(t); err != nil {
+	for _, opt := range opts {
+		if err := opt(t); err != nil {
 			return nil, err
 		}
 	}

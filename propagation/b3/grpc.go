@@ -19,7 +19,7 @@ func ExtractGRPC(md *metadata.MD) propagation.Extractor {
 			flagsHeader        = GetGRPCHeader(md, Flags)
 		)
 
-		return parseHeaders(
+		return ParseHeaders(
 			traceIDHeader, spanIDHeader, parentSpanIDHeader, sampledHeader,
 			flagsHeader,
 		)

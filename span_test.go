@@ -14,10 +14,8 @@ func TestSpanNameUpdate(t *testing.T) {
 		oldName = "oldName"
 		newName = "newName"
 	)
-	rep := reporter.NewNoopReporter()
-	defer rep.Close()
 
-	tracer, _ := NewTracer(rep)
+	tracer, _ := NewTracer(reporter.NewNoopReporter())
 
 	span := tracer.StartSpan(oldName)
 
@@ -33,10 +31,7 @@ func TestSpanNameUpdate(t *testing.T) {
 }
 
 func TestRemoteEndpoint(t *testing.T) {
-	rec := reporter.NewNoopReporter()
-	defer rec.Close()
-
-	tracer, err := NewTracer(rec)
+	tracer, err := NewTracer(reporter.NewNoopReporter())
 	if err != nil {
 		t.Fatalf("expected valid tracer, got error: %+v", err)
 	}
@@ -73,13 +68,11 @@ func TestRemoteEndpoint(t *testing.T) {
 }
 
 func TestTagsSpanOption(t *testing.T) {
-	rep := reporter.NewNoopReporter()
-	defer rep.Close()
 	tracerTags := map[string]string{
 		"key1": "value1",
 		"key2": "will_be_overwritten",
 	}
-	tracer, err := NewTracer(rep, WithTags(tracerTags))
+	tracer, err := NewTracer(reporter.NewNoopReporter(), WithTags(tracerTags))
 	if err != nil {
 		t.Fatalf("expected valid tracer, got error: %+v", err)
 	}
@@ -105,6 +98,7 @@ func TestTagsSpanOption(t *testing.T) {
 func TestFlushOnFinishSpanOption(t *testing.T) {
 	rec := recorder.NewReporter()
 	defer rec.Close()
+
 	tracer, _ := NewTracer(rec)
 
 	span := tracer.StartSpan("test")

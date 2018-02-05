@@ -31,9 +31,10 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 		spanRecorder = &recorder.ReporterRecorder{}
 		tr, _        = zipkin.NewTracer(spanRecorder, zipkin.WithLocalEndpoint(lep))
 		httpRecorder = httptest.NewRecorder()
-		requestBuf   = bytes.NewBuffer([]byte("incoming data"))
-		responseBuf  = bytes.NewBuffer([]byte("oh oh we have a 404"))
+		requestBuf   = bytes.NewBufferString("incoming data")
+		responseBuf  = bytes.NewBufferString("oh oh we have a 404")
 		headers      = make(http.Header)
+		spanName     = "wrapper_test"
 		code         = 404
 	)
 	headers.Add("some-key", "some-value")
@@ -51,7 +52,7 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 	}
 	handler := mw.NewServerMiddleware(
 		tr,
-		"wrapper_test",
+		mw.SpanName(spanName),
 		mw.TagResponseSize(true),
 		mw.ServerTags(tags),
 	)(httpHandlerFunc)
@@ -65,6 +66,10 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 	}
 
 	span := spans[0]
+
+	if want, have := spanName, span.Name; want != have {
+		t.Errorf("Expected span name %s, got %s", want, have)
+	}
 
 	if want, have := strconv.Itoa(requestBuf.Len()), span.Tags["http.request.size"]; want != have {
 		t.Errorf("Expected span request size %s, got %s", want, have)
@@ -99,5 +104,38 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 
 	if want, have := responseBuf.String(), httpRecorder.Body.String(); want != have {
 		t.Errorf("Expected body value %q, got %q", want, have)
+	}
+}
+
+func TestHTTPDefaultSpanName(t *testing.T) {
+	var (
+		spanRecorder = &recorder.ReporterRecorder{}
+		tr, _        = zipkin.NewTracer(spanRecorder, zipkin.WithLocalEndpoint(lep))
+		httpRecorder = httptest.NewRecorder()
+		requestBuf   = bytes.NewBufferString("incoming data")
+		methodType   = "POST"
+	)
+
+	request, err := http.NewRequest(methodType, "/test", requestBuf)
+	if err != nil {
+		t.Fatalf("unable to create request")
+	}
+
+	httpHandlerFunc := http.HandlerFunc(httpHandler(200, nil, bytes.NewBufferString("")))
+
+	handler := mw.NewServerMiddleware(tr)(httpHandlerFunc)
+
+	handler.ServeHTTP(httpRecorder, request)
+
+	spans := spanRecorder.Flush()
+
+	if want, have := 1, len(spans); want != have {
+		t.Errorf("Expected %d spans, got %d", want, have)
+	}
+
+	span := spans[0]
+
+	if want, have := methodType, span.Name; want != have {
+		t.Errorf("Expected span name %s, got %s", want, have)
 	}
 }
