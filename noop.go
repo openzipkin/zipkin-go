@@ -11,8 +11,6 @@ type noopSpan struct {
 	tracer *Tracer
 }
 
-func (n *noopSpan) Tracer() *Tracer { return n.tracer }
-
 func (n *noopSpan) Context() model.SpanContext { return n.SpanContext }
 
 func (n *noopSpan) SetName(string) {}

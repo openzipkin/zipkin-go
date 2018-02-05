@@ -32,10 +32,6 @@ func TestNoopContext(t *testing.T) {
 
 	span = tr.StartSpan("testNoop", Parent(sc), Kind(model.Server))
 
-	if want, have := tr, span.Tracer(); want != have {
-		t.Errorf("Tracer want %p, have %p", want, have)
-	}
-
 	noop, ok := span.(*noopSpan)
 	if !ok {
 		t.Fatalf("Span type want %s, have %s", reflect.TypeOf(&spanImpl{}), reflect.TypeOf(span))

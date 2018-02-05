@@ -8,9 +8,6 @@ import (
 
 // Span interface as returned by Tracer.StartSpan()
 type Span interface {
-	// Tracer returns the tracer which created the span.
-	Tracer() *Tracer
-
 	// Context returns the Span's SpanContext.
 	Context() model.SpanContext
 

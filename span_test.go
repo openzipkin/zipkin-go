@@ -9,17 +9,6 @@ import (
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
-func TestTracerFromSpan(t *testing.T) {
-
-	tracer, _ := NewTracer(reporter.NewNoopReporter())
-
-	span := tracer.StartSpan("dummy")
-
-	if want, have := tracer, span.Tracer(); want != have {
-		t.Errorf("Tracer want %p, have %p", want, have)
-	}
-}
-
 func TestSpanNameUpdate(t *testing.T) {
 	var (
 		oldName = "oldName"
