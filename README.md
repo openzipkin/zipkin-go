@@ -52,7 +52,7 @@ level.
 
 For convenience `NewClient` is provided which returns a HTTP Client which embeds
 `*http.Client` and provides an `application span` around the HTTP calls when
-calling the `DoWithTrace()` method.
+calling the `DoWithAppSpan()` method.
 
 #### grpc
 gRPC middleware / interceptors are planned for the near future.
@@ -76,4 +76,4 @@ Producer digesting JSON V2 Spans. The reporter uses the
 underneath.
 
 ## usage and examples
-*todo*
+[HTTP Server Example](example_httpserver_test.go)
