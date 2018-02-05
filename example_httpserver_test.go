@@ -37,7 +37,7 @@ func Example() {
 	)
 
 	// create global zipkin traced http client
-	client, err := zipkinhttp.NewClient(tracer, nil, zipkinhttp.ClientTrace(true))
+	client, err := zipkinhttp.NewClient(tracer, zipkinhttp.ClientTrace(true))
 	if err != nil {
 		log.Fatalf("unable to create client: %+v\n", err)
 	}

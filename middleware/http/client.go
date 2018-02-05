@@ -25,6 +25,16 @@ type Client struct {
 // ClientOption allows optional configuration of Client.
 type ClientOption func(*Client)
 
+// WithClient allows one to add a custom configured http.Client to use.
+func WithClient(client *http.Client) ClientOption {
+	return func(c *Client) {
+		if client == nil {
+			client = &http.Client{}
+		}
+		c.Client = client
+	}
+}
+
 // ClientTrace allows one to enable Go's net/http/httptrace.
 func ClientTrace(enabled bool) ClientOption {
 	return func(c *Client) {
@@ -49,16 +59,12 @@ func TransportOptions(options ...TransportOption) ClientOption {
 
 // NewClient returns an HTTP Client adding Zipkin instrumentation around an
 // embedded standard Go http.Client.
-func NewClient(tracer *zipkin.Tracer, client *http.Client, options ...ClientOption) (*Client, error) {
+func NewClient(tracer *zipkin.Tracer, options ...ClientOption) (*Client, error) {
 	if tracer == nil {
 		return nil, ErrValidTracerRequired
 	}
 
-	if client == nil {
-		client = &http.Client{}
-	}
-
-	c := &Client{tracer: tracer, Client: client}
+	c := &Client{tracer: tracer, Client: &http.Client{}}
 	for _, option := range options {
 		option(c)
 	}
@@ -66,14 +72,14 @@ func NewClient(tracer *zipkin.Tracer, client *http.Client, options ...ClientOpti
 	c.transportOptions = append(
 		c.transportOptions,
 		// the following Client settings override provided transport settings.
-		RoundTripper(client.Transport),
+		RoundTripper(c.Client.Transport),
 		TransportTrace(c.httpTrace),
 	)
 	transport, err := NewTransport(tracer, c.transportOptions...)
 	if err != nil {
 		return nil, err
 	}
-	client.Transport = transport
+	c.Client.Transport = transport
 
 	return c, nil
 }

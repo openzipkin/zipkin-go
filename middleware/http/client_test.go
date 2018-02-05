@@ -29,7 +29,7 @@ func TestHTTPClient(t *testing.T) {
 
 	client, err := httpclient.NewClient(
 		tracer,
-		nil, // if set to nil, NewClient will use the default standard lib *http.Client configuration
+		httpclient.WithClient(&http.Client{}),
 		httpclient.ClientTrace(true),
 		httpclient.ClientTags(clientTags),
 		httpclient.TransportOptions(httpclient.TransportTags(transportTags)),
