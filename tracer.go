@@ -127,7 +127,6 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 		// trace not being sampled and noop requested
 		return &noopSpan{
 			SpanContext: s.SpanContext,
-			tracer:      t,
 		}
 	}
 
