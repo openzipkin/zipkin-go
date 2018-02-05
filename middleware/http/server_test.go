@@ -107,7 +107,7 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 	}
 }
 
-func TestHTTPMethodAsSpanName(t *testing.T) {
+func TestHTTPDefaultSpanName(t *testing.T) {
 	var (
 		spanRecorder = &recorder.ReporterRecorder{}
 		tr, _        = zipkin.NewTracer(spanRecorder, zipkin.WithLocalEndpoint(lep))
