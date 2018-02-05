@@ -16,7 +16,7 @@ func TestHTTPClient(t *testing.T) {
 	ep, _ := zipkin.NewEndpoint("httpClient", "")
 	tracer, err := zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(ep))
 	if err != nil {
-		panic(err)
+		t.Fatalf("unable to create tracer: %+v", err)
 	}
 
 	clientTags := map[string]string{
@@ -35,7 +35,7 @@ func TestHTTPClient(t *testing.T) {
 		httpclient.TransportOptions(httpclient.TransportTags(transportTags)),
 	)
 	if err != nil {
-		t.Fatalf("unable to create request: %+v", err)
+		t.Fatalf("unable to create http client: %+v", err)
 	}
 
 	req, _ := http.NewRequest("GET", "https://www.google.com", nil)
