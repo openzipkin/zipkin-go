@@ -92,9 +92,7 @@ func (c *Client) DoWithAppSpan(req *http.Request, name string) (res *http.Respon
 		parentContext = span.Context()
 	}
 
-	appSpan := c.tracer.StartSpan(
-		name, zipkin.Kind(model.Client), zipkin.Parent(parentContext),
-	)
+	appSpan := c.tracer.StartSpan(name, zipkin.Parent(parentContext))
 
 	zipkin.TagHTTPMethod.Set(appSpan, req.Method)
 	zipkin.TagHTTPUrl.Set(appSpan, req.URL.String())
