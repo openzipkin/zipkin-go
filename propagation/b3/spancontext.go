@@ -39,9 +39,7 @@ func ParseHeaders(
 	// other values and omission of header will be ignored.
 	if hdrFlags == "1" {
 		sc.Debug = true
-		if sc.Sampled != nil {
-			sc.Sampled = nil
-		}
+		sc.Sampled = nil
 	}
 
 	if hdrTraceID != "" {
