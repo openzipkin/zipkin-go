@@ -99,14 +99,24 @@ func TestHTTPExtractSampledErrors(t *testing.T) {
 }
 
 func TestHTTPExtractFlagsErrors(t *testing.T) {
-	r := newHTTPRequest(t)
-
-	r.Header.Set(b3.Flags, "2")
-
-	_, err := b3.ExtractHTTP(r)()
-
-	if want, have := b3.ErrInvalidFlagsHeader, err; want != have {
-		t.Errorf("SpanContext Error want %+v, have %+v", want, have)
+	values := map[string]bool{
+		"1":    true,  // only acceptable Flags value, debug switches to true
+		"true": false, // true is not a valid value for Flags
+		"3":    false, // Flags is not a bitset
+		"6":    false, // Flags is not a bitset
+		"7":    false, // Flags is not a bitset
+	}
+	for value, debug := range values {
+		r := newHTTPRequest(t)
+		r.Header.Set(b3.Flags, value)
+		spanContext, err := b3.ExtractHTTP(r)()
+		if err != nil {
+			// Flags should not trigger failed extraction
+			t.Fatalf("ExtractHTTP failed: %+v", err)
+		}
+		if want, have := debug, spanContext.Debug; want != have {
+			t.Errorf("SpanContext Error want %t, have %t", want, have)
+		}
 	}
 }
 
