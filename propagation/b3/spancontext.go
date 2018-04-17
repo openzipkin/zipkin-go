@@ -35,16 +35,13 @@ func ParseHeaders(
 		return nil, ErrInvalidSampledHeader
 	}
 
-	switch hdrFlags {
-	case "", "0":
-		// sc.Debug = false
-	case "1":
+	// The only accepted value for Flags is "1". This will set Debug to true. All
+	// other values and omission of header will be ignored.
+	if hdrFlags == "1" {
 		sc.Debug = true
 		if sc.Sampled != nil {
 			sc.Sampled = nil
 		}
-	default:
-		return nil, ErrInvalidFlagsHeader
 	}
 
 	if hdrTraceID != "" {
