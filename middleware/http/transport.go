@@ -100,7 +100,6 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	}
 
 	zipkin.TagHTTPMethod.Set(sp, req.Method)
-	zipkin.TagHTTPUrl.Set(sp, req.URL.String())
 	zipkin.TagHTTPPath.Set(sp, req.URL.Path)
 
 	_ = b3.InjectHTTP(req)(sp.Context())
