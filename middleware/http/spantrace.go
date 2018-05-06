@@ -2,8 +2,8 @@ package http
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net/http/httptrace"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,8 +22,8 @@ func (s *spanTrace) getConn(hostPort string) {
 
 func (s *spanTrace) gotConn(info httptrace.GotConnInfo) {
 	s.Annotate(time.Now(), "Connected")
-	s.Tag("httptrace.got_connection.reused", fmt.Sprintf("%t", info.Reused))
-	s.Tag("httptrace.got_connection.was_idle", fmt.Sprintf("%t", info.WasIdle))
+	s.Tag("httptrace.got_connection.reused", strconv.FormatBool(info.Reused))
+	s.Tag("httptrace.got_connection.was_idle", strconv.FormatBool(info.WasIdle))
 	if info.WasIdle {
 		s.Tag("httptrace.got_connection.idle_time", info.IdleTime.String())
 	}
