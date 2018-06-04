@@ -51,7 +51,8 @@ var spans = []*model.SpanModel{
 func TestKafkaProduce(t *testing.T) {
 	p := newStubProducer(false)
 	c, err := kafka.NewReporter(
-		[]string{"192.0.2.10:9092"}, kafka.Producer(p),
+		[]string{"192.0.2.10:9092"},
+		kafka.Producer(p),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -60,20 +61,20 @@ func TestKafkaProduce(t *testing.T) {
 	for _, want := range spans {
 		m := sendSpan(t, c, p, *want)
 		testMetadata(t, m)
-		got := deserializeSpan(t, m.Value)
-		testEqual(t, want, got)
+		have := deserializeSpan(t, m.Value)
+		testEqual(t, want, have)
 	}
 }
 
 func TestKafkaClose(t *testing.T) {
 	p := newStubProducer(false)
-	c, err := kafka.NewReporter(
+	r, err := kafka.NewReporter(
 		[]string{"192.0.2.10:9092"}, kafka.Producer(p),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = c.Close(); err != nil {
+	if err = r.Close(); err != nil {
 		t.Fatal(err)
 	}
 	if !p.closed {
@@ -116,26 +117,35 @@ func TestKafkaErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	var have []model.SpanModel
 	for _, want := range spans {
-		_ = sendSpan(t, c, p, *want)
+		message := sendSpan(t, c, p, *want)
+		messageBody, err := message.Value.Encode()
+		if err != nil {
+			t.Errorf("unexpected error: %s", err.Error())
+		}
+
+		json.Unmarshal(messageBody, &have)
+		testEqual(t, want, &have[0])
 	}
 
 	for i := 0; i < len(spans); i++ {
 		select {
 		case <-errs:
 		case <-time.After(100 * time.Millisecond):
-			t.Fatalf("errors not logged. got %d, wanted %d", i, len(spans))
+			t.Fatalf("errors not logged. have %d, wanted %d", i, len(spans))
 		}
 	}
 }
 
-func sendSpan(t *testing.T, c reporter.Reporter, p *stubProducer, s model.SpanModel) *sarama.ProducerMessage {
+func sendSpan(t *testing.T, r reporter.Reporter, p *stubProducer, s model.SpanModel) *sarama.ProducerMessage {
 	var m *sarama.ProducerMessage
-	rcvd := make(chan bool, 1)
+	received := make(chan bool, 1)
 	go func() {
 		select {
 		case m = <-p.in:
-			rcvd <- true
+			received <- true
 			if p.kafkaDown {
 				p.err <- &sarama.ProducerError{
 					Msg: m,
@@ -143,63 +153,62 @@ func sendSpan(t *testing.T, c reporter.Reporter, p *stubProducer, s model.SpanMo
 				}
 			}
 		case <-time.After(100 * time.Millisecond):
-			rcvd <- false
+			received <- false
 		}
 	}()
 
-	c.Send(s)
+	r.Send(s)
 
-	if !<-rcvd {
-		t.Fatal("span message was not produced")
+	if !<-received {
+		t.Fatal("expected message to be received")
 	}
 	return m
 }
 
 func testMetadata(t *testing.T, m *sarama.ProducerMessage) {
 	if m.Topic != "zipkin" {
-		t.Errorf("produced to topic %q, want %q", m.Topic, "zipkin")
+		t.Errorf("unexpected topic. have %q, want %q", m.Topic, "zipkin")
 	}
 	if m.Key != nil {
-		t.Errorf("produced with key %q, want nil", m.Key)
+		t.Errorf("unexpected key. have %q, want nil", m.Key)
 	}
 }
 
 func deserializeSpan(t *testing.T, e sarama.Encoder) *model.SpanModel {
 	bytes, err := e.Encode()
 	if err != nil {
-		t.Errorf("error in encoding: %v", err)
+		t.Errorf("unexpected error in encoding: %v", err)
 	}
 
-	var s model.SpanModel
+	var s []model.SpanModel
 
 	err = json.Unmarshal(bytes, &s)
 	if err != nil {
-		t.Errorf("error in decoding: %v", err)
+		t.Errorf("unexpected error in decoding: %v", err)
 		return nil
 	}
 
-	return &s
+	return &s[0]
 }
 
-func testEqual(t *testing.T, want *model.SpanModel, got *model.SpanModel) {
-	if got.TraceID != want.TraceID {
-		t.Errorf("trace_id %d, want %d", got.TraceID, want.TraceID)
+func testEqual(t *testing.T, want *model.SpanModel, have *model.SpanModel) {
+	if have.TraceID != want.TraceID {
+		t.Errorf("incorrect trace_id. have %d, want %d", have.TraceID, want.TraceID)
 	}
-	if got.ID != want.ID {
-		t.Errorf("id %d, want %d", got.ID, want.ID)
+	if have.ID != want.ID {
+		t.Errorf("incorrect id. have %d, want %d", have.ID, want.ID)
 	}
-	if got.ParentID == nil {
+	if have.ParentID == nil {
 		if want.ParentID != nil {
-			t.Errorf("parent_id %d, want %d", got.ParentID, want.ParentID)
+			t.Errorf("incorrect parent_id. have %d, want %d", have.ParentID, want.ParentID)
 		}
-	} else if *got.ParentID != *want.ParentID {
-		t.Errorf("parent_id %d, want %d", got.ParentID, want.ParentID)
+	} else if *have.ParentID != *want.ParentID {
+		t.Errorf("incorrect parent_id. have %d, want %d", have.ParentID, want.ParentID)
 	}
 }
 
 func makeNewSpan(methodName string, traceID, spanID, parentSpanID uint64, debug bool) *model.SpanModel {
 	timestamp := time.Now()
-
 	var parentID = new(model.ID)
 	if parentSpanID != 0 {
 		*parentID = model.ID(parentSpanID)
