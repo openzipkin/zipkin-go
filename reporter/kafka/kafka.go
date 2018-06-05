@@ -54,47 +54,49 @@ func Topic(t string) ReporterOption {
 // NewReporter returns a new Kafka-backed Reporter. address should be a slice of
 // TCP endpoints of the form "host:port".
 func NewReporter(address []string, options ...ReporterOption) (reporter.Reporter, error) {
-	c := &kafkaReporter{
+	r := &kafkaReporter{
 		logger: log.New(os.Stderr, "", log.LstdFlags),
 		topic:  defaultKafkaTopic,
 	}
 
 	for _, option := range options {
-		option(c)
+		option(r)
 	}
-	if c.producer == nil {
+	if r.producer == nil {
 		p, err := sarama.NewAsyncProducer(address, nil)
 		if err != nil {
 			return nil, err
 		}
-		c.producer = p
+		r.producer = p
 	}
 
-	go c.logErrors()
+	go r.logErrors()
 
-	return c, nil
+	return r, nil
 }
 
-func (c *kafkaReporter) logErrors() {
-	for pe := range c.producer.Errors() {
-		c.logger.Print("msg", pe.Msg, "err", pe.Err, "result", "failed to produce msg")
+func (r *kafkaReporter) logErrors() {
+	for pe := range r.producer.Errors() {
+		r.logger.Print("msg", pe.Msg, "err", pe.Err, "result", "failed to produce msg")
 	}
 }
 
-func (c *kafkaReporter) Send(s model.SpanModel) {
-	m, err := json.Marshal(s)
+func (r *kafkaReporter) Send(s model.SpanModel) {
+	// Zipkin expects the message to be wrapped in an array
+	ss := []model.SpanModel{s}
+	m, err := json.Marshal(ss)
 	if err != nil {
-		c.logger.Printf("failed when marshalling the span: %s\n", err.Error())
+		r.logger.Printf("failed when marshalling the span: %s\n", err.Error())
 		return
 	}
 
-	c.producer.Input() <- &sarama.ProducerMessage{
-		Topic: c.topic,
+	r.producer.Input() <- &sarama.ProducerMessage{
+		Topic: r.topic,
 		Key:   nil,
 		Value: sarama.ByteEncoder(m),
 	}
 }
 
-func (c *kafkaReporter) Close() error {
-	return c.producer.Close()
+func (r *kafkaReporter) Close() error {
+	return r.producer.Close()
 }
