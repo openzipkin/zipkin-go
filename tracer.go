@@ -56,6 +56,15 @@ func NewTracer(rep reporter.Reporter, opts ...TracerOption) (*Tracer, error) {
 	return t, nil
 }
 
+// NewNoopTracer returns a new No-op Zipkin Tracer.
+func NewNoopTracer() *Tracer {
+	return &Tracer{
+		reporter: reporter.NewNoopReporter(),
+		noop:     1,
+		sampler:  neverSample,
+	}
+}
+
 // StartSpanFromContext creates and starts a span using the span found in
 // context as parent. If no parent span is found a root span is created.
 func (t *Tracer) StartSpanFromContext(ctx context.Context, name string, options ...SpanOption) (Span, context.Context) {
