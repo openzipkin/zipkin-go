@@ -8,4 +8,4 @@ jobs:
     steps:
       - checkout
       - run: go get -t -v -d ./...
-      - run: make all
+      - run: make vet test bench
