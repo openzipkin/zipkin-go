@@ -11,7 +11,8 @@ import (
 	httpreporter "github.com/openzipkin/zipkin-go/reporter/http"
 )
 
-func doSomeWork(context.Context) {}
+func doSomeWork(context.Context)   {}
+func newRepository(*zipkin.Tracer) {}
 
 func ExampleNewTracer() {
 	// create a reporter to be used by the tracer
@@ -44,6 +45,16 @@ func ExampleNewTracer() {
 	span := tracer.StartSpan("some_operation")
 	// ... do some work ...
 	span.Finish()
+
+	// Output:
+}
+
+func ExampleNewTracer_tests() {
+	// initialize the tracer with no reporter
+	tracer, _ := zipkin.NewTracer(nil)
+
+	// inject the tracer as usual
+	newRepository(tracer)
 
 	// Output:
 }
