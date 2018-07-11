@@ -12,14 +12,17 @@ import (
 // traceID.
 type Sampler func(id uint64) bool
 
-func neverSample(_ uint64) bool { return false }
+// NeverSample samples no traces
+func NeverSample(_ uint64) bool { return false }
 
-func alwaysSample(_ uint64) bool { return true }
+// AlwaysSample samples all traces, it is appropriate for easy prototyping but not
+// meant to be used in production.
+func AlwaysSample(_ uint64) bool { return true }
 
 // NewModuloSampler provides a generic type Sampler.
 func NewModuloSampler(mod uint64) Sampler {
 	if mod < 2 {
-		return alwaysSample
+		return AlwaysSample
 	}
 	return func(id uint64) bool {
 		return (id % mod) == 0
@@ -31,10 +34,10 @@ func NewModuloSampler(mod uint64) Sampler {
 // It defends against nodes in the cluster selecting exactly the same ids.
 func NewBoundarySampler(rate float64, salt int64) (Sampler, error) {
 	if rate == 0.0 {
-		return neverSample, nil
+		return NeverSample, nil
 	}
 	if rate == 1.0 {
-		return alwaysSample, nil
+		return AlwaysSample, nil
 	}
 	if rate < 0.0001 || rate > 1 {
 		return nil, fmt.Errorf("rate should be 0.0 or between 0.0001 and 1: was %f", rate)
@@ -55,10 +58,10 @@ func NewBoundarySampler(rate float64, salt int64) (Sampler, error) {
 // on trace id).
 func NewCountingSampler(rate float64) (Sampler, error) {
 	if rate == 0.0 {
-		return neverSample, nil
+		return NeverSample, nil
 	}
 	if rate == 1.0 {
-		return alwaysSample, nil
+		return AlwaysSample, nil
 	}
 	if rate < 0.01 || rate > 1 {
 		return nil, fmt.Errorf("rate should be 0.0 or between 0.01 and 1: was %f", rate)

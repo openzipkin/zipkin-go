@@ -17,7 +17,7 @@ func TestNoopContext(t *testing.T) {
 		tr, _    = NewTracer(
 			reporter.NewNoopReporter(),
 			WithNoopSpan(true),
-			WithSampler(neverSample),
+			WithSampler(NeverSample),
 			WithSharedSpans(true),
 		)
 	)

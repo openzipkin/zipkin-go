@@ -31,7 +31,7 @@ func NewTracer(rep reporter.Reporter, opts ...TracerOption) (*Tracer, error) {
 	t := &Tracer{
 		defaultTags:          make(map[string]string),
 		extractFailurePolicy: ExtractFailurePolicyRestart,
-		sampler:              alwaysSample,
+		sampler:              AlwaysSample,
 		generate:             idgenerator.NewRandom64(),
 		reporter:             rep,
 		localEndpoint:        nil,
