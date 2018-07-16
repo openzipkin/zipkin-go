@@ -12,11 +12,14 @@ import (
 // traceID.
 type Sampler func(id uint64) bool
 
-// NeverSample samples no traces
+// NeverSample will always return false. If used by a service it will not allow
+// the service to start traces but will still allow the service to participate 
+// in traces started upstream.
 func NeverSample(_ uint64) bool { return false }
 
-// AlwaysSample samples all traces, it is appropriate for easy prototyping but not
-// meant to be used in production.
+// AlwaysSample will always return true. If used by a service it will always start
+// traces if no upstream trace has been propagated. If an incoming upstream trace 
+// is not sampled the service will adhere to this and only propagate the context.
 func AlwaysSample(_ uint64) bool { return true }
 
 // NewModuloSampler provides a generic type Sampler.
