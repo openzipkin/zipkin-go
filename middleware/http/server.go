@@ -1,6 +1,7 @@
 package http
 
 import (
+	"io"
 	"net/http"
 	"strconv"
 	"sync/atomic"
@@ -16,6 +17,7 @@ type handler struct {
 	next            http.Handler
 	tagResponseSize bool
 	defaultTags     map[string]string
+	requestSampler  func(r *http.Request) bool
 }
 
 // ServerOption allows Middleware to be optionally configured.
@@ -46,6 +48,14 @@ func SpanName(name string) ServerOption {
 	}
 }
 
+// RequestSampler allows one to set the sampling decision based on the details
+// found in the http.Request.
+func RequestSampler(sampleFunc func(r *http.Request) bool) ServerOption {
+	return func(h *handler) {
+		h.requestSampler = sampleFunc
+	}
+}
+
 // NewServerMiddleware returns a http.Handler middleware with Zipkin tracing.
 func NewServerMiddleware(t *zipkin.Tracer, options ...ServerOption) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -66,6 +76,11 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// try to extract B3 Headers from upstream
 	sc := h.tracer.Extract(b3.ExtractHTTP(r))
+
+	if h.requestSampler != nil && sc.Sampled == nil {
+		sample := h.requestSampler(r)
+		sc.Sampled = &sample
+	}
 
 	remoteEndpoint, _ := zipkin.NewEndpoint("", r.RemoteAddr)
 
@@ -114,7 +129,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// call next http Handler func using our updated context.
-	h.next.ServeHTTP(ri, r.WithContext(ctx))
+	h.next.ServeHTTP(ri.wrap(), r.WithContext(ctx))
 }
 
 // rwInterceptor intercepts the ResponseWriter so it can track response size
@@ -146,4 +161,229 @@ func (r *rwInterceptor) getStatusCode() int {
 
 func (r *rwInterceptor) getResponseSize() string {
 	return strconv.FormatUint(atomic.LoadUint64(&r.size), 10)
+}
+
+func (r *rwInterceptor) wrap() http.ResponseWriter {
+	var (
+		hj, i0 = r.w.(http.Hijacker)
+		cn, i1 = r.w.(http.CloseNotifier)
+		pu, i2 = r.w.(http.Pusher)
+		fl, i3 = r.w.(http.Flusher)
+		rf, i4 = r.w.(io.ReaderFrom)
+	)
+
+	switch {
+	case !i0 && !i1 && !i2 && !i3 && !i4:
+		return struct {
+			http.ResponseWriter
+		}{r}
+	case !i0 && !i1 && !i2 && !i3 && i4:
+		return struct {
+			http.ResponseWriter
+			io.ReaderFrom
+		}{r, rf}
+	case !i0 && !i1 && !i2 && i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.Flusher
+		}{r, fl}
+	case !i0 && !i1 && !i2 && i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.Flusher
+			io.ReaderFrom
+		}{r, fl, rf}
+	case !i0 && !i1 && i2 && !i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.Pusher
+		}{r, pu}
+	case !i0 && !i1 && i2 && !i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.Pusher
+			io.ReaderFrom
+		}{r, pu, rf}
+	case !i0 && !i1 && i2 && i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.Pusher
+			http.Flusher
+		}{r, pu, fl}
+	case !i0 && !i1 && i2 && i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.Pusher
+			http.Flusher
+			io.ReaderFrom
+		}{r, pu, fl, rf}
+	case !i0 && i1 && !i2 && !i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.CloseNotifier
+		}{r, cn}
+	case !i0 && i1 && !i2 && !i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.CloseNotifier
+			io.ReaderFrom
+		}{r, cn, rf}
+	case !i0 && i1 && !i2 && i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.CloseNotifier
+			http.Flusher
+		}{r, cn, fl}
+	case !i0 && i1 && !i2 && i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.CloseNotifier
+			http.Flusher
+			io.ReaderFrom
+		}{r, cn, fl, rf}
+	case !i0 && i1 && i2 && !i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.CloseNotifier
+			http.Pusher
+		}{r, cn, pu}
+	case !i0 && i1 && i2 && !i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.CloseNotifier
+			http.Pusher
+			io.ReaderFrom
+		}{r, cn, pu, rf}
+	case !i0 && i1 && i2 && i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.CloseNotifier
+			http.Pusher
+			http.Flusher
+		}{r, cn, pu, fl}
+	case !i0 && i1 && i2 && i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.CloseNotifier
+			http.Pusher
+			http.Flusher
+			io.ReaderFrom
+		}{r, cn, pu, fl, rf}
+	case i0 && !i1 && !i2 && !i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+		}{r, hj}
+	case i0 && !i1 && !i2 && !i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			io.ReaderFrom
+		}{r, hj, rf}
+	case i0 && !i1 && !i2 && i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.Flusher
+		}{r, hj, fl}
+	case i0 && !i1 && !i2 && i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.Flusher
+			io.ReaderFrom
+		}{r, hj, fl, rf}
+	case i0 && !i1 && i2 && !i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.Pusher
+		}{r, hj, pu}
+	case i0 && !i1 && i2 && !i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.Pusher
+			io.ReaderFrom
+		}{r, hj, pu, rf}
+	case i0 && !i1 && i2 && i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.Pusher
+			http.Flusher
+		}{r, hj, pu, fl}
+	case i0 && !i1 && i2 && i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.Pusher
+			http.Flusher
+			io.ReaderFrom
+		}{r, hj, pu, fl, rf}
+	case i0 && i1 && !i2 && !i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.CloseNotifier
+		}{r, hj, cn}
+	case i0 && i1 && !i2 && !i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.CloseNotifier
+			io.ReaderFrom
+		}{r, hj, cn, rf}
+	case i0 && i1 && !i2 && i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.CloseNotifier
+			http.Flusher
+		}{r, hj, cn, fl}
+	case i0 && i1 && !i2 && i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.CloseNotifier
+			http.Flusher
+			io.ReaderFrom
+		}{r, hj, cn, fl, rf}
+	case i0 && i1 && i2 && !i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.CloseNotifier
+			http.Pusher
+		}{r, hj, cn, pu}
+	case i0 && i1 && i2 && !i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.CloseNotifier
+			http.Pusher
+			io.ReaderFrom
+		}{r, hj, cn, pu, rf}
+	case i0 && i1 && i2 && i3 && !i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.CloseNotifier
+			http.Pusher
+			http.Flusher
+		}{r, hj, cn, pu, fl}
+	case i0 && i1 && i2 && i3 && i4:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.CloseNotifier
+			http.Pusher
+			http.Flusher
+			io.ReaderFrom
+		}{r, hj, cn, pu, fl, rf}
+	default:
+		return struct {
+			http.ResponseWriter
+		}{r}
+	}
 }
