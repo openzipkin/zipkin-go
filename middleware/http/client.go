@@ -113,10 +113,10 @@ func (c *Client) DoWithAppSpan(req *http.Request, name string) (res *http.Respon
 	if res.ContentLength > 0 {
 		zipkin.TagHTTPResponseSize.Set(appSpan, strconv.FormatInt(res.ContentLength, 10))
 	}
-	if res.StatusCode < 200 || res.StatusCode > 299 {
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		statusCode := strconv.FormatInt(int64(res.StatusCode), 10)
 		zipkin.TagHTTPStatusCode.Set(appSpan, statusCode)
-		if res.StatusCode > 399 {
+		if res.StatusCode >= http.StatusBadRequest {
 			zipkin.TagError.Set(appSpan, statusCode)
 		}
 	}
