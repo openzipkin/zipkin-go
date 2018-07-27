@@ -17,6 +17,7 @@ type handler struct {
 	next            http.Handler
 	tagResponseSize bool
 	defaultTags     map[string]string
+	requestSampler  func(r *http.Request) bool
 }
 
 // ServerOption allows Middleware to be optionally configured.
@@ -47,6 +48,14 @@ func SpanName(name string) ServerOption {
 	}
 }
 
+// RequestSampler allows one to set the sampling decision based on the details
+// found in the http.Request.
+func RequestSampler(sampleFunc func(r *http.Request) bool) ServerOption {
+	return func(h *handler) {
+		h.requestSampler = sampleFunc
+	}
+}
+
 // NewServerMiddleware returns a http.Handler middleware with Zipkin tracing.
 func NewServerMiddleware(t *zipkin.Tracer, options ...ServerOption) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -67,6 +76,11 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// try to extract B3 Headers from upstream
 	sc := h.tracer.Extract(b3.ExtractHTTP(r))
+
+	if h.requestSampler != nil && sc.Sampled == nil {
+		sample := h.requestSampler(r)
+		sc.Sampled = &sample
+	}
 
 	remoteEndpoint, _ := zipkin.NewEndpoint("", r.RemoteAddr)
 
