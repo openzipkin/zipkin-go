@@ -139,3 +139,48 @@ func TestHTTPDefaultSpanName(t *testing.T) {
 		t.Errorf("Expected span name %s, got %s", want, have)
 	}
 }
+
+func TestBlackListOption(t *testing.T) {
+	var (
+		spanRecorder = &recorder.ReporterRecorder{}
+		tr, _        = zipkin.NewTracer(spanRecorder, zipkin.WithLocalEndpoint(lep))
+		httpRecorder = httptest.NewRecorder()
+		requestBuf   = bytes.NewBufferString("incoming data")
+	)
+
+	httpHandlerFunc := http.HandlerFunc(httpHandler(200, nil, bytes.NewBufferString("")))
+	handler := mw.NewServerMiddleware(
+		tr,
+		mw.Blacklist(func(r *http.Request) bool {
+			return r.Method == "POST"
+		}),
+	)(httpHandlerFunc)
+
+	// Blacklist case.
+	request1, err1 := http.NewRequest("POST", "/test", requestBuf)
+	if err1 != nil {
+		t.Fatalf("unable to create request")
+	}
+
+	handler.ServeHTTP(httpRecorder, request1)
+
+	spans1 := spanRecorder.Flush()
+
+	if want, have := 0, len(spans1); want != have {
+		t.Errorf("Expected %d spans, got %d", want, have)
+	}
+
+	// Whitelist case.
+	request2, err := http.NewRequest("GET", "/test", requestBuf)
+	if err != nil {
+		t.Fatalf("unable to create request")
+	}
+
+	handler.ServeHTTP(httpRecorder, request2)
+
+	spans2 := spanRecorder.Flush()
+
+	if want, have := 1, len(spans2); want != have {
+		t.Errorf("Expected %d spans, got %d", want, have)
+	}
+}

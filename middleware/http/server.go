@@ -16,6 +16,7 @@ type handler struct {
 	next            http.Handler
 	tagResponseSize bool
 	defaultTags     map[string]string
+	blacklist       func(*http.Request) bool
 }
 
 // ServerOption allows Middleware to be optionally configured.
@@ -46,12 +47,23 @@ func SpanName(name string) ServerOption {
 	}
 }
 
+// Blacklist sets a function that evaluates if a request should be traced.
+// By omiting the Blacklist option all requests will be traced.
+func Blacklist(blacklist func(r *http.Request) bool) ServerOption {
+	return func(h *handler) {
+		h.blacklist = blacklist
+	}
+}
+
 // NewServerMiddleware returns a http.Handler middleware with Zipkin tracing.
 func NewServerMiddleware(t *zipkin.Tracer, options ...ServerOption) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		h := &handler{
 			tracer: t,
 			next:   next,
+			blacklist: func(_ *http.Request) bool {
+				return false
+			},
 		}
 		for _, option := range options {
 			option(h)
@@ -62,6 +74,11 @@ func NewServerMiddleware(t *zipkin.Tracer, options ...ServerOption) func(http.Ha
 
 // ServeHTTP implements http.Handler.
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if h.blacklist(r) {
+		h.next.ServeHTTP(w, r)
+		return
+	}
+
 	var spanName string
 
 	// try to extract B3 Headers from upstream
