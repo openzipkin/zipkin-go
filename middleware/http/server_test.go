@@ -139,3 +139,68 @@ func TestHTTPDefaultSpanName(t *testing.T) {
 		t.Errorf("Expected span name %s, got %s", want, have)
 	}
 }
+
+func TestHTTPRequestSampler(t *testing.T) {
+	var (
+		spanRecorder    = &recorder.ReporterRecorder{}
+		httpRecorder    = httptest.NewRecorder()
+		requestBuf      = bytes.NewBufferString("incoming data")
+		methodType      = "POST"
+		httpHandlerFunc = http.HandlerFunc(httpHandler(200, nil, bytes.NewBufferString("")))
+	)
+
+	samplers := [](func(r *http.Request) bool){
+		nil,
+		func(r *http.Request) bool { return true },
+		func(r *http.Request) bool { return false },
+	}
+
+	for _, sampler := range samplers {
+		tr, _ := zipkin.NewTracer(spanRecorder, zipkin.WithLocalEndpoint(lep), zipkin.WithSampler(zipkin.AlwaysSample))
+
+		request, err := http.NewRequest(methodType, "/test", requestBuf)
+		if err != nil {
+			t.Fatalf("unable to create request")
+		}
+
+		handler := mw.NewServerMiddleware(tr, mw.RequestSampler(sampler))(httpHandlerFunc)
+
+		handler.ServeHTTP(httpRecorder, request)
+
+		spans := spanRecorder.Flush()
+
+		sampledSpans := 0
+		if sampler == nil || sampler(request) {
+			sampledSpans = 1
+		}
+
+		if want, have := sampledSpans, len(spans); want != have {
+			t.Errorf("Expected %d spans, got %d", want, have)
+		}
+	}
+
+	for _, sampler := range samplers {
+		tr, _ := zipkin.NewTracer(spanRecorder, zipkin.WithLocalEndpoint(lep), zipkin.WithSampler(zipkin.NeverSample))
+
+		request, err := http.NewRequest(methodType, "/test", requestBuf)
+		if err != nil {
+			t.Fatalf("unable to create request")
+		}
+
+		handler := mw.NewServerMiddleware(tr, mw.RequestSampler(sampler))(httpHandlerFunc)
+
+		handler.ServeHTTP(httpRecorder, request)
+
+		spans := spanRecorder.Flush()
+
+		sampledSpans := 0
+		if sampler != nil && sampler(request) {
+			sampledSpans = 1
+		}
+
+		if want, have := sampledSpans, len(spans); want != have {
+			t.Errorf("Expected %d spans, got %d", want, have)
+		}
+	}
+
+}
