@@ -112,13 +112,13 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// create http.ResponseWriter interceptor for tracking response size and
 	// status code.
-	ri := &rwInterceptor{w: w, statusCode: 200}
+	ri := &rwInterceptor{w: w, statusCode: http.StatusOK}
 
 	// tag found response size and status code on exit
 	defer func() {
 		code := ri.getStatusCode()
 		sCode := strconv.Itoa(code)
-		if code > 399 {
+		if code >= http.StatusBadRequest {
 			zipkin.TagError.Set(sp, sCode)
 		}
 		zipkin.TagHTTPStatusCode.Set(sp, sCode)

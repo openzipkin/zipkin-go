@@ -115,10 +115,10 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	if res.ContentLength > 0 {
 		zipkin.TagHTTPResponseSize.Set(sp, strconv.FormatInt(res.ContentLength, 10))
 	}
-	if res.StatusCode < 200 || res.StatusCode > 299 {
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		statusCode := strconv.FormatInt(int64(res.StatusCode), 10)
 		zipkin.TagHTTPStatusCode.Set(sp, statusCode)
-		if res.StatusCode > 399 {
+		if res.StatusCode >= http.StatusBadRequest {
 			zipkin.TagError.Set(sp, statusCode)
 		}
 	}

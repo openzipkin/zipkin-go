@@ -35,7 +35,7 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 		responseBuf  = bytes.NewBufferString("oh oh we have a 404")
 		headers      = make(http.Header)
 		spanName     = "wrapper_test"
-		code         = 404
+		code         = http.StatusNotFound
 	)
 	headers.Add("some-key", "some-value")
 	headers.Add("other-key", "other-value")
@@ -121,7 +121,7 @@ func TestHTTPDefaultSpanName(t *testing.T) {
 		t.Fatalf("unable to create request")
 	}
 
-	httpHandlerFunc := http.HandlerFunc(httpHandler(200, nil, bytes.NewBufferString("")))
+	httpHandlerFunc := http.HandlerFunc(httpHandler(http.StatusOK, nil, bytes.NewBufferString("")))
 
 	handler := mw.NewServerMiddleware(tr)(httpHandlerFunc)
 
@@ -146,7 +146,7 @@ func TestHTTPRequestSampler(t *testing.T) {
 		httpRecorder    = httptest.NewRecorder()
 		requestBuf      = bytes.NewBufferString("incoming data")
 		methodType      = "POST"
-		httpHandlerFunc = http.HandlerFunc(httpHandler(200, nil, bytes.NewBufferString("")))
+		httpHandlerFunc = http.HandlerFunc(httpHandler(http.StatusOK, nil, bytes.NewBufferString("")))
 	)
 
 	samplers := [](func(r *http.Request) bool){
