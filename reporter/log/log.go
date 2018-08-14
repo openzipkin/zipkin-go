@@ -10,8 +10,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter"
+	"github.com/qutoutiao/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/reporter"
 )
 
 // logReporter will send spans to the default Go Logger.

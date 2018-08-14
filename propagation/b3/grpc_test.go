@@ -3,10 +3,10 @@ package b3_test
 import (
 	"testing"
 
-	zipkin "github.com/openzipkin/zipkin-go"
-	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/propagation/b3"
-	"github.com/openzipkin/zipkin-go/reporter/recorder"
+	zipkin "github.com/qutoutiao/zipkin-go"
+	"github.com/qutoutiao/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/propagation/b3"
+	"github.com/qutoutiao/zipkin-go/reporter/recorder"
 	"google.golang.org/grpc/metadata"
 )
 

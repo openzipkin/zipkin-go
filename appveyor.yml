@@ -2,7 +2,7 @@ version: v1.0.0.{build}
 
 platform: x64
 
-clone_folder: c:\gopath\src\github.com\openzipkin\zipkin-go
+clone_folder: c:\gopath\src\github.com\qutoutiao\zipkin-go
 
 environment:
   GOPATH: c:\gopath

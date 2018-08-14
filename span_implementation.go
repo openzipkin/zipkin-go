@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/openzipkin/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/model"
 )
 
 type spanImpl struct {

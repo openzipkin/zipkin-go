@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	zipkin "github.com/openzipkin/zipkin-go"
+	zipkin "github.com/qutoutiao/zipkin-go"
 )
 
 func TestBoundarySampler(t *testing.T) {

@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"testing"
 
-	zipkin "github.com/openzipkin/zipkin-go"
-	mw "github.com/openzipkin/zipkin-go/middleware/http"
-	"github.com/openzipkin/zipkin-go/reporter/recorder"
+	zipkin "github.com/qutoutiao/zipkin-go"
+	mw "github.com/qutoutiao/zipkin-go/middleware/http"
+	"github.com/qutoutiao/zipkin-go/reporter/recorder"
 )
 
 var (

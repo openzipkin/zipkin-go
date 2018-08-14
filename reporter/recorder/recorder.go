@@ -6,7 +6,7 @@ package recorder
 import (
 	"sync"
 
-	"github.com/openzipkin/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/model"
 )
 
 // ReporterRecorder records Zipkin spans.

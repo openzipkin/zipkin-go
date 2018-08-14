@@ -11,9 +11,9 @@ import (
 
 	"strings"
 
-	"github.com/openzipkin/zipkin-go/idgenerator"
-	"github.com/openzipkin/zipkin-go/model"
-	zipkinhttp "github.com/openzipkin/zipkin-go/reporter/http"
+	"github.com/qutoutiao/zipkin-go/idgenerator"
+	"github.com/qutoutiao/zipkin-go/model"
+	zipkinhttp "github.com/qutoutiao/zipkin-go/reporter/http"
 )
 
 func TestSpanIsBeingReported(t *testing.T) {

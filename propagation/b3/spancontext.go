@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/openzipkin/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/model"
 )
 
 // ParseHeaders takes values found from B3 Headers and tries to reconstruct a

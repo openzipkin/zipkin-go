@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/openzipkin/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/model"
 )
 
 func TestEmptyEndpoint(t *testing.T) {

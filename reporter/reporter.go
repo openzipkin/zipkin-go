@@ -7,7 +7,7 @@ reporter implementations.
 */
 package reporter
 
-import "github.com/openzipkin/zipkin-go/model"
+import "github.com/qutoutiao/zipkin-go/model"
 
 // Reporter interface can be used to provide the Zipkin Tracer with custom
 // implementations to publish Zipkin Span data.

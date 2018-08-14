@@ -3,7 +3,7 @@ package zipkin
 import (
 	"time"
 
-	"github.com/openzipkin/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/model"
 )
 
 type noopSpan struct {

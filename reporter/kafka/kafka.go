@@ -9,8 +9,8 @@ import (
 	"os"
 
 	"github.com/Shopify/sarama"
-	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter"
+	"github.com/qutoutiao/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/reporter"
 )
 
 // defaultKafkaTopic sets the standard Kafka topic our Reporter will publish

@@ -3,7 +3,7 @@ package recorder
 import (
 	"testing"
 
-	"github.com/openzipkin/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/model"
 )
 
 func TestFlushInRecorderSuccess(t *testing.T) {

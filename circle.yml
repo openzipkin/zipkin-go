@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: /go/src/github.com/openzipkin/zipkin-go
+    working_directory: /go/src/github.com/qutoutiao/zipkin-go
     parallelism: 1
     docker:
       - image: circleci/golang

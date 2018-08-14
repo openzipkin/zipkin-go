@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/openzipkin/zipkin-go/reporter"
-	"github.com/openzipkin/zipkin-go/reporter/recorder"
+	"github.com/qutoutiao/zipkin-go/reporter"
+	"github.com/qutoutiao/zipkin-go/reporter/recorder"
 )
 
 func TestSpanNameUpdate(t *testing.T) {

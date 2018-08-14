@@ -9,9 +9,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	zipkin "github.com/openzipkin/zipkin-go"
-	zipkinhttp "github.com/openzipkin/zipkin-go/middleware/http"
-	logreporter "github.com/openzipkin/zipkin-go/reporter/log"
+	zipkin "github.com/qutoutiao/zipkin-go"
+	zipkinhttp "github.com/qutoutiao/zipkin-go/middleware/http"
+	logreporter "github.com/qutoutiao/zipkin-go/reporter/log"
 )
 
 func Example() {

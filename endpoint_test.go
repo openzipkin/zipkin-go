@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/openzipkin/zipkin-go"
-	"github.com/openzipkin/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go"
+	"github.com/qutoutiao/zipkin-go/model"
 )
 
 const (

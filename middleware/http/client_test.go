@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
-	zipkin "github.com/openzipkin/zipkin-go"
-	httpclient "github.com/openzipkin/zipkin-go/middleware/http"
-	"github.com/openzipkin/zipkin-go/reporter/recorder"
+	zipkin "github.com/qutoutiao/zipkin-go"
+	httpclient "github.com/qutoutiao/zipkin-go/middleware/http"
+	"github.com/qutoutiao/zipkin-go/reporter/recorder"
 )
 
 func TestHTTPClient(t *testing.T) {
