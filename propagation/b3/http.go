@@ -3,8 +3,8 @@ package b3
 import (
 	"net/http"
 
-	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/propagation"
+	"github.com/qutoutiao/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/propagation"
 )
 
 // ExtractHTTP will extract a span.Context from the HTTP Request if found in
