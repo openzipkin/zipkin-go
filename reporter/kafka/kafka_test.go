@@ -9,9 +9,9 @@ import (
 	"log"
 
 	"github.com/Shopify/sarama"
-	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter"
-	"github.com/openzipkin/zipkin-go/reporter/kafka"
+	"github.com/qutoutiao/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/reporter"
+	"github.com/qutoutiao/zipkin-go/reporter/kafka"
 )
 
 type stubProducer struct {

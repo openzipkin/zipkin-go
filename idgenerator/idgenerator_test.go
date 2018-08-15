@@ -3,8 +3,8 @@ package idgenerator_test
 import (
 	"testing"
 
-	"github.com/openzipkin/zipkin-go/idgenerator"
-	"github.com/openzipkin/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/idgenerator"
+	"github.com/qutoutiao/zipkin-go/model"
 )
 
 func TestRandom64(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	zipkin "github.com/openzipkin/zipkin-go"
-	"github.com/openzipkin/zipkin-go/model"
+	zipkin "github.com/qutoutiao/zipkin-go"
+	"github.com/qutoutiao/zipkin-go/model"
 )
 
 // ErrValidTracerRequired error

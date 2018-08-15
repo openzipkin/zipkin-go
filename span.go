@@ -3,7 +3,7 @@ package zipkin
 import (
 	"time"
 
-	"github.com/openzipkin/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/model"
 )
 
 // Span interface as returned by Tracer.StartSpan()

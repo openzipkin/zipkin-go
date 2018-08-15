@@ -3,8 +3,8 @@ package b3
 import (
 	"google.golang.org/grpc/metadata"
 
-	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/propagation"
+	"github.com/qutoutiao/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/propagation"
 )
 
 // ExtractGRPC will extract a span.Context from the gRPC Request metadata if

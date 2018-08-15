@@ -7,7 +7,7 @@ implementations.
 */
 package propagation
 
-import "github.com/openzipkin/zipkin-go/model"
+import "github.com/qutoutiao/zipkin-go/model"
 
 // Extractor function signature
 type Extractor func() (*model.SpanContext, error)

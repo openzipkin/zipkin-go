@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/openzipkin/zipkin-go/idgenerator"
-	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter"
+	"github.com/qutoutiao/zipkin-go/idgenerator"
+	"github.com/qutoutiao/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/reporter"
 )
 
 func TestTracerOptionLocalEndpoint(t *testing.T) {

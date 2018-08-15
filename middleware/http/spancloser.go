@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	zipkin "github.com/openzipkin/zipkin-go"
+	zipkin "github.com/qutoutiao/zipkin-go"
 )
 
 type spanCloser struct {

@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	zipkin "github.com/openzipkin/zipkin-go"
-	"github.com/openzipkin/zipkin-go/idgenerator"
-	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/propagation"
-	"github.com/openzipkin/zipkin-go/propagation/b3"
+	zipkin "github.com/qutoutiao/zipkin-go"
+	"github.com/qutoutiao/zipkin-go/idgenerator"
+	"github.com/qutoutiao/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/propagation"
+	"github.com/qutoutiao/zipkin-go/propagation/b3"
 	"google.golang.org/grpc/metadata"
 )
 

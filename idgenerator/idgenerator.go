@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openzipkin/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/model"
 )
 
 var (

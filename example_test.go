@@ -5,10 +5,10 @@ import (
 	"log"
 	"time"
 
-	zipkin "github.com/openzipkin/zipkin-go"
-	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter"
-	httpreporter "github.com/openzipkin/zipkin-go/reporter/http"
+	zipkin "github.com/qutoutiao/zipkin-go"
+	"github.com/qutoutiao/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/reporter"
+	httpreporter "github.com/qutoutiao/zipkin-go/reporter/http"
 )
 
 func doSomeWork(context.Context) {}

@@ -5,10 +5,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/openzipkin/zipkin-go/idgenerator"
-	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/propagation"
-	"github.com/openzipkin/zipkin-go/reporter"
+	"github.com/qutoutiao/zipkin-go/idgenerator"
+	"github.com/qutoutiao/zipkin-go/model"
+	"github.com/qutoutiao/zipkin-go/propagation"
+	"github.com/qutoutiao/zipkin-go/reporter"
 )
 
 // Tracer is our Zipkin tracer implementation. It should be initialized using
