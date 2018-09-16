@@ -16,9 +16,17 @@ func TestTraceID(t *testing.T) {
 		t.Fatalf("Expected successful json serialization, got error: %+v", err)
 	}
 
+	if want, have := string(b), `"00000000000000010000000000000002"`; want != have {
+		t.Fatalf("Expected json serialization, want %q, have %q", want, have)
+	}
+
 	var traceID2 TraceID
 	if err = json.Unmarshal(b, &traceID2); err != nil {
 		t.Fatalf("Expected successful json deserialization, got error: %+v", err)
+	}
+
+	if traceID2.High != traceID.High || traceID2.Low != traceID.Low {
+		t.Fatalf("Unexpected traceID2, want: %#v, have %#v", traceID, traceID2)
 	}
 
 	have, err := TraceIDFromHex(traceID.String())
@@ -56,5 +64,4 @@ func TestTraceID(t *testing.T) {
 	if err = json.Unmarshal([]byte(`"12345678901234zz12345678901234zz"`), &traceID); err == nil {
 		t.Errorf("Expected error got nil")
 	}
-
 }
