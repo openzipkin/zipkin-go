@@ -40,30 +40,49 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 	headers.Add("other-key", "other-value")
 
 	testCases := []struct {
-		method         string
-		body           *bytes.Buffer
-		hasRequestSize bool
+		method          string
+		requestBody     *bytes.Buffer
+		responseBody    *bytes.Buffer
+		hasRequestSize  bool
+		hasResponseSize bool
 	}{
-		{method: "POST", body: bytes.NewBufferString("incoming data"), hasRequestSize: true},
-		{method: "POST", body: bytes.NewBufferString(""), hasRequestSize: false},
-		{method: "GET", body: nil, hasRequestSize: false},
+		{
+			method:          "POST",
+			requestBody:     bytes.NewBufferString("incoming data"),
+			responseBody:    bytes.NewBufferString("oh oh we have a 404"),
+			hasRequestSize:  true,
+			hasResponseSize: true,
+		},
+		{
+			method:          "POST",
+			requestBody:     bytes.NewBufferString(""),
+			responseBody:    bytes.NewBufferString("oh oh we have a 404"),
+			hasRequestSize:  false,
+			hasResponseSize: true,
+		},
+		{
+			method:          "GET",
+			requestBody:     nil,
+			responseBody:    bytes.NewBufferString(""),
+			hasRequestSize:  false,
+			hasResponseSize: false,
+		},
 	}
 
 	for _, c := range testCases {
 		httpRecorder := httptest.NewRecorder()
-		responseBuf := bytes.NewBufferString("oh oh we have a 404")
 
 		var err error
-		if c.body == nil {
+		if c.requestBody == nil {
 			request, err = http.NewRequest(c.method, "/test", nil)
 		} else {
-			request, err = http.NewRequest(c.method, "/test", c.body)
+			request, err = http.NewRequest(c.method, "/test", c.requestBody)
 		}
 		if err != nil {
 			t.Fatalf("unable to create request")
 		}
 
-		httpHandlerFunc := http.HandlerFunc(httpHandler(code, headers, responseBuf))
+		httpHandlerFunc := http.HandlerFunc(httpHandler(code, headers, c.responseBody))
 
 		tags := map[string]string{
 			"component": "testServer",
@@ -90,7 +109,7 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 		}
 
 		if c.hasRequestSize {
-			if want, have := strconv.Itoa(c.body.Len()), span.Tags["http.request.size"]; want != have {
+			if want, have := strconv.Itoa(c.requestBody.Len()), span.Tags["http.request.size"]; want != have {
 				t.Errorf("Expected span request size %s, got %s", want, have)
 			}
 		} else {
@@ -100,8 +119,15 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 			}
 		}
 
-		if want, have := strconv.Itoa(responseBuf.Len()), span.Tags["http.response.size"]; want != have {
-			t.Errorf("Expected span response size %s, got %s", want, have)
+		if c.hasResponseSize {
+			if want, have := strconv.Itoa(c.responseBody.Len()), span.Tags["http.response.size"]; want != have {
+				t.Errorf("Expected span response size %s, got %s", want, have)
+			}
+		} else {
+			// http.response.size should not be present as request body is empty.
+			if _, ok := span.Tags["http.response.size"]; ok {
+				t.Errorf("Unexpected span response size")
+			}
 		}
 
 		if want, have := strconv.Itoa(code), span.Tags["http.status_code"]; want != have {
@@ -126,7 +152,7 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 			}
 		}
 
-		if want, have := responseBuf.String(), httpRecorder.Body.String(); want != have {
+		if want, have := c.responseBody.String(), httpRecorder.Body.String(); want != have {
 			t.Errorf("Expected body value %q, got %q", want, have)
 		}
 	}
