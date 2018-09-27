@@ -108,7 +108,9 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// tag typical HTTP request items
 	zipkin.TagHTTPMethod.Set(sp, r.Method)
 	zipkin.TagHTTPPath.Set(sp, r.URL.Path)
-	zipkin.TagHTTPRequestSize.Set(sp, strconv.FormatInt(r.ContentLength, 10))
+	if r.ContentLength > 0 {
+		zipkin.TagHTTPRequestSize.Set(sp, strconv.FormatInt(r.ContentLength, 10))
+	}
 
 	// create http.ResponseWriter interceptor for tracking response size and
 	// status code.

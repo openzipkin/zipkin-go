@@ -30,80 +30,105 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 	var (
 		spanRecorder = &recorder.ReporterRecorder{}
 		tr, _        = zipkin.NewTracer(spanRecorder, zipkin.WithLocalEndpoint(lep))
-		httpRecorder = httptest.NewRecorder()
-		requestBuf   = bytes.NewBufferString("incoming data")
-		responseBuf  = bytes.NewBufferString("oh oh we have a 404")
 		headers      = make(http.Header)
 		spanName     = "wrapper_test"
 		code         = 404
+		request      *http.Request
 	)
+
 	headers.Add("some-key", "some-value")
 	headers.Add("other-key", "other-value")
 
-	request, err := http.NewRequest("POST", "/test", requestBuf)
-	if err != nil {
-		t.Fatalf("unable to create request")
+	testCases := []struct {
+		method         string
+		body           *bytes.Buffer
+		hasRequestSize bool
+	}{
+		{method: "POST", body: bytes.NewBufferString("incoming data"), hasRequestSize: true},
+		{method: "POST", body: bytes.NewBufferString(""), hasRequestSize: false},
+		{method: "GET", body: nil, hasRequestSize: false},
 	}
 
-	httpHandlerFunc := http.HandlerFunc(httpHandler(code, headers, responseBuf))
+	for _, c := range testCases {
+		httpRecorder := httptest.NewRecorder()
+		responseBuf := bytes.NewBufferString("oh oh we have a 404")
 
-	tags := map[string]string{
-		"component": "testServer",
-	}
-	handler := mw.NewServerMiddleware(
-		tr,
-		mw.SpanName(spanName),
-		mw.TagResponseSize(true),
-		mw.ServerTags(tags),
-	)(httpHandlerFunc)
-
-	handler.ServeHTTP(httpRecorder, request)
-
-	spans := spanRecorder.Flush()
-
-	if want, have := 1, len(spans); want != have {
-		t.Errorf("Expected %d spans, got %d", want, have)
-	}
-
-	span := spans[0]
-
-	if want, have := spanName, span.Name; want != have {
-		t.Errorf("Expected span name %s, got %s", want, have)
-	}
-
-	if want, have := strconv.Itoa(requestBuf.Len()), span.Tags["http.request.size"]; want != have {
-		t.Errorf("Expected span request size %s, got %s", want, have)
-	}
-
-	if want, have := strconv.Itoa(responseBuf.Len()), span.Tags["http.response.size"]; want != have {
-		t.Errorf("Expected span response size %s, got %s", want, have)
-
-	}
-
-	if want, have := strconv.Itoa(code), span.Tags["http.status_code"]; want != have {
-		t.Errorf("Expected span status code %s, got %s", want, have)
-	}
-
-	if want, have := strconv.Itoa(code), span.Tags["error"]; want != have {
-		t.Errorf("Expected span error %q, got %q", want, have)
-	}
-
-	if want, have := len(headers), len(httpRecorder.HeaderMap); want != have {
-		t.Errorf("Expected http header count %d, got %d", want, have)
-	}
-
-	if want, have := code, httpRecorder.Code; want != have {
-		t.Errorf("Expected http status code %d, got %d", want, have)
-	}
-
-	for key, value := range headers {
-		if want, have := value, httpRecorder.HeaderMap.Get(key); want[0] != have {
-			t.Errorf("Expected header %s value %s, got %s", key, want, have)
+		var err error
+		if c.body == nil {
+			request, err = http.NewRequest(c.method, "/test", nil)
+		} else {
+			request, err = http.NewRequest(c.method, "/test", c.body)
 		}
-	}
+		if err != nil {
+			t.Fatalf("unable to create request")
+		}
 
-	if want, have := responseBuf.String(), httpRecorder.Body.String(); want != have {
-		t.Errorf("Expected body value %q, got %q", want, have)
+		httpHandlerFunc := http.HandlerFunc(httpHandler(code, headers, responseBuf))
+
+		tags := map[string]string{
+			"component": "testServer",
+		}
+		handler := mw.NewServerMiddleware(
+			tr,
+			mw.SpanName(spanName),
+			mw.TagResponseSize(true),
+			mw.ServerTags(tags),
+		)(httpHandlerFunc)
+
+		handler.ServeHTTP(httpRecorder, request)
+
+		spans := spanRecorder.Flush()
+
+		if want, have := 1, len(spans); want != have {
+			t.Errorf("Expected %d spans, got %d", want, have)
+		}
+
+		span := spans[0]
+
+		if want, have := spanName, span.Name; want != have {
+			t.Errorf("Expected span name %s, got %s", want, have)
+		}
+
+		if c.hasRequestSize {
+			if want, have := strconv.Itoa(c.body.Len()), span.Tags["http.request.size"]; want != have {
+				t.Errorf("Expected span request size %s, got %s", want, have)
+			}
+		} else {
+			// http.request.size should not be present as request body is empty.
+			if _, ok := span.Tags["http.request.size"]; ok {
+				t.Errorf("Unexpected span request size")
+			}
+		}
+
+		if want, have := strconv.Itoa(responseBuf.Len()), span.Tags["http.response.size"]; want != have {
+			t.Errorf("Expected span response size %s, got %s", want, have)
+		}
+
+		if want, have := strconv.Itoa(code), span.Tags["http.status_code"]; want != have {
+			t.Errorf("Expected span status code %s, got %s", want, have)
+		}
+
+		if want, have := strconv.Itoa(code), span.Tags["error"]; want != have {
+			t.Errorf("Expected span error %q, got %q", want, have)
+		}
+
+		if want, have := len(headers), len(httpRecorder.HeaderMap); want != have {
+			t.Errorf("Expected http header count %d, got %d", want, have)
+		}
+
+		if want, have := code, httpRecorder.Code; want != have {
+			t.Errorf("Expected http status code %d, got %d", want, have)
+		}
+
+		for key, value := range headers {
+			if want, have := value, httpRecorder.HeaderMap.Get(key); want[0] != have {
+				t.Errorf("Expected header %s value %s, got %s", key, want, have)
+			}
+		}
+
+		if want, have := responseBuf.String(), httpRecorder.Body.String(); want != have {
+			t.Errorf("Expected body value %q, got %q", want, have)
+		}
 	}
 }
 
