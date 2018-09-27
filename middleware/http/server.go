@@ -124,7 +124,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			zipkin.TagError.Set(sp, sCode)
 		}
 		zipkin.TagHTTPStatusCode.Set(sp, sCode)
-		if h.tagResponseSize {
+		if h.tagResponseSize && ri.size > 0 {
 			zipkin.TagHTTPResponseSize.Set(sp, ri.getResponseSize())
 		}
 		sp.Finish()
