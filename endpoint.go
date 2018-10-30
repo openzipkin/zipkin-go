@@ -62,10 +62,5 @@ func NewEndpoint(serviceName string, hostPort string) (*model.Endpoint, error) {
 		}
 	}
 
-	// default to 0 filled 4 byte array for IPv4 if IPv6 only host was found
-	if e.IPv4 == nil {
-		e.IPv4 = make([]byte, 4)
-	}
-
 	return e, nil
 }
