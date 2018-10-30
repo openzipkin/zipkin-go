@@ -12,9 +12,7 @@ bench:
 .PHONY: lint
 lint:
 	# Ignore grep's exit code since no match returns 1.
-	-golint ./... | grep --invert-match -E '^.*\.pb\.go|^thrift'
-	@
-	@! (golint ./... | grep --invert-match -E '^.*\.pb\.go|^thrift' | read dummy)
+	-if [[ ! $TRAVIS_GO_VERSION = 1.8* ]]; then echo 'linting...' ; golint ./... ; fi
 
 .PHONY: vet
 vet:

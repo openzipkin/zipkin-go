@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	ipv4HostPort    = "localhost:" + fmt.Sprintf("%d", port)
+	ipv4HostPort    = "127.0.0.1:" + fmt.Sprintf("%d", port)
 	ipv6HostPort    = "[2001:db8::68]:" + fmt.Sprintf("%d", port)
 	ipv4ForHostPort = net.IPv4(127, 0, 0, 1)
 	ipv6ForHostPort = net.ParseIP("2001:db8::68")
@@ -128,6 +128,10 @@ func TestNewEndpointIpv4Success(t *testing.T) {
 	if port != endpoint.Port {
 		t.Fatalf("expected port %d, got %d", port, endpoint.Port)
 	}
+
+	if endpoint.IPv6 != nil {
+		t.Fatalf("expected empty IPv6 got %+v", endpoint.IPv6)
+	}
 }
 
 func TestNewEndpointIpv6Success(t *testing.T) {
@@ -147,5 +151,9 @@ func TestNewEndpointIpv6Success(t *testing.T) {
 
 	if port != endpoint.Port {
 		t.Fatalf("expected port %d, got %d", port, endpoint.Port)
+	}
+
+	if endpoint.IPv4 != nil {
+		t.Fatalf("expected empty IPv4 got %+v", endpoint.IPv4)
 	}
 }
