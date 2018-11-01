@@ -39,10 +39,10 @@ func ParseSpans(protoBlob []byte, debugWasSet bool) (zss []*zipkinmodel.SpanMode
 	}
 	for _, zps := range listOfSpans.Spans {
 		zms, err := protoSpanToModelSpan(zps, debugWasSet)
-		if err == nil && zms != nil {
-			// TODO: perhaps record or combine these errors?
-			zss = append(zss, zms)
+		if err != nil {
+			return zss, err
 		}
+		zss = append(zss, zms)
 	}
 	return zss, nil
 }
@@ -54,20 +54,20 @@ var errNilZipkinSpan = errors.New("expecting a non-nil Span")
 // as was done during Zipkin-Go SpanModel JSON deserialization
 // instead of reimplementing zipkin_proto3 --> opencensusProto.Span.
 // This conversion shouldn't cause any loss of fidelity.
-func protoSpanToModelSpan(zps *Span, debugWasSet bool) (*zipkinmodel.SpanModel, error) {
-	if zps == nil {
+func protoSpanToModelSpan(s *Span, debugWasSet bool) (*zipkinmodel.SpanModel, error) {
+	if s == nil {
 		return nil, errNilZipkinSpan
 	}
-	traceID, err := zipkinmodel.TraceIDFromHex(fmt.Sprintf("%x", zps.TraceId))
+	traceID, err := zipkinmodel.TraceIDFromHex(fmt.Sprintf("%x", s.TraceId))
 	if err != nil {
-		return nil, fmt.Errorf("TraceID: %v", err)
+		return nil, fmt.Errorf("invalid TraceID: %v", err)
 	}
 
-	parentSpanID, _, err := protoSpanIDToModelSpanID(zps.ParentId)
+	parentSpanID, _, err := protoSpanIDToModelSpanID(s.ParentId)
 	if err != nil {
-		return nil, fmt.Errorf("ParentID: %v", err)
+		return nil, fmt.Errorf("invalid ParentID: %v", err)
 	}
-	spanIDPtr, spanIDBlank, err := protoSpanIDToModelSpanID(zps.Id)
+	spanIDPtr, spanIDBlank, err := protoSpanIDToModelSpanID(s.Id)
 	if err != nil {
 		return nil, fmt.Errorf("SpanID: %v", err)
 	}
@@ -84,15 +84,15 @@ func protoSpanToModelSpan(zps *Span, debugWasSet bool) (*zipkinmodel.SpanModel, 
 	}
 	zms := &zipkinmodel.SpanModel{
 		SpanContext:    zmsc,
-		Name:           zps.Name,
-		Kind:           zipkinmodel.Kind(zps.Kind.String()),
-		Timestamp:      microsToTime(zps.Timestamp),
-		Tags:           zps.Tags,
-		Duration:       microsToDuration(zps.Duration),
-		LocalEndpoint:  protoEndpointToModelEndpoint(zps.LocalEndpoint),
-		RemoteEndpoint: protoEndpointToModelEndpoint(zps.RemoteEndpoint),
-		Shared:         zps.Shared,
-		Annotations:    protoAnnotationToModelAnnotations(zps.Annotations),
+		Name:           s.Name,
+		Kind:           zipkinmodel.Kind(s.Kind.String()),
+		Timestamp:      microsToTime(s.Timestamp),
+		Tags:           s.Tags,
+		Duration:       microsToDuration(s.Duration),
+		LocalEndpoint:  protoEndpointToModelEndpoint(s.LocalEndpoint),
+		RemoteEndpoint: protoEndpointToModelEndpoint(s.RemoteEndpoint),
+		Shared:         s.Shared,
+		Annotations:    protoAnnotationToModelAnnotations(s.Annotations),
 	}
 
 	return zms, nil
