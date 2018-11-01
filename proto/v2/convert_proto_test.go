@@ -29,63 +29,7 @@ import (
 )
 
 func TestParseSpans(t *testing.T) {
-	now := time.Date(2018, 10, 31, 19, 43, 35, 789, time.UTC).Round(time.Microsecond)
-	minus10hr5ms := now.Add(-(10*time.Hour + 5*time.Millisecond)).Round(time.Microsecond)
-
 	// 1. Generate some spans then serialize them with protobuf
-	payloadFromWild := &zipkin_proto3.ListOfSpans{
-		Spans: []*zipkin_proto3.Span{
-			{
-				TraceId:   []byte{0x7F, 0x6F, 0x5F, 0x4F, 0x3F, 0x2F, 0x1F, 0x0F, 0xF7, 0xF6, 0xF5, 0xF4, 0xF3, 0xF2, 0xF1, 0xF0},
-				Id:        []byte{0xF7, 0xF6, 0xF5, 0xF4, 0xF3, 0xF2, 0xF1, 0xF0},
-				ParentId:  []byte{0xF7, 0xF6, 0xF5, 0xF4, 0xF3, 0xF2, 0xF1, 0xF0},
-				Name:      "ProtoSpan1",
-				Kind:      zipkin_proto3.Span_CONSUMER,
-				Timestamp: uint64(now.UnixNano() / 1e3),
-				Duration:  12e6,
-				LocalEndpoint: &zipkin_proto3.Endpoint{
-					ServiceName: "svc-1",
-					Ipv4:        []byte{0xC0, 0xA8, 0x00, 0x01},
-					Port:        8009,
-				},
-				RemoteEndpoint: &zipkin_proto3.Endpoint{
-					ServiceName: "memcached",
-					Ipv6:        []byte{0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x53, 0xa7, 0x7c, 0xda, 0x4d, 0xd2, 0x1b},
-					Port:        11211,
-				},
-			},
-			{
-				TraceId:   []byte{0x7A, 0x6A, 0x5A, 0x4A, 0x3A, 0x2A, 0x1A, 0x0A, 0xC7, 0xC6, 0xC5, 0xC4, 0xC3, 0xC2, 0xC1, 0xC0},
-				Id:        []byte{0x67, 0x66, 0x65, 0x64, 0x63, 0x62, 0x61, 0x60},
-				ParentId:  []byte{0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10},
-				Name:      "CacheWarmUp",
-				Kind:      zipkin_proto3.Span_PRODUCER,
-				Timestamp: uint64(minus10hr5ms.UnixNano() / 1e3),
-				Duration:  7e6,
-				LocalEndpoint: &zipkin_proto3.Endpoint{
-					ServiceName: "search",
-					Ipv4:        []byte{0x0A, 0x00, 0x00, 0x0D},
-					Port:        8009,
-				},
-				RemoteEndpoint: &zipkin_proto3.Endpoint{
-					ServiceName: "redis",
-					Ipv6:        []byte{0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x53, 0xa7, 0x7c, 0xda, 0x4d, 0xd2, 0x1b},
-					Port:        6379,
-				},
-				Annotations: []*zipkin_proto3.Annotation{
-					{
-						Timestamp: uint64(minus10hr5ms.UnixNano() / 1e3),
-						Value:     "DB reset",
-					},
-					{
-						Timestamp: uint64(minus10hr5ms.UnixNano() / 1e3),
-						Value:     "GC Cycle 39",
-					},
-				},
-			},
-		},
-	}
-
 	protoBlob, err := proto.Marshal(payloadFromWild)
 	if err != nil {
 		t.Fatalf("Failed to parse payload from wild: %v", err)
@@ -177,3 +121,61 @@ func TestParseSpans(t *testing.T) {
 }
 
 func idPtr(id zipkinmodel.ID) *zipkinmodel.ID { return &id }
+
+var (
+	now          = time.Date(2018, 10, 31, 19, 43, 35, 789, time.UTC).Round(time.Microsecond)
+	minus10hr5ms = now.Add(-(10*time.Hour + 5*time.Millisecond)).Round(time.Microsecond)
+)
+
+var payloadFromWild = &zipkin_proto3.ListOfSpans{
+	Spans: []*zipkin_proto3.Span{
+		{
+			TraceId:   []byte{0x7F, 0x6F, 0x5F, 0x4F, 0x3F, 0x2F, 0x1F, 0x0F, 0xF7, 0xF6, 0xF5, 0xF4, 0xF3, 0xF2, 0xF1, 0xF0},
+			Id:        []byte{0xF7, 0xF6, 0xF5, 0xF4, 0xF3, 0xF2, 0xF1, 0xF0},
+			ParentId:  []byte{0xF7, 0xF6, 0xF5, 0xF4, 0xF3, 0xF2, 0xF1, 0xF0},
+			Name:      "ProtoSpan1",
+			Kind:      zipkin_proto3.Span_CONSUMER,
+			Timestamp: uint64(now.UnixNano() / 1e3),
+			Duration:  12e6,
+			LocalEndpoint: &zipkin_proto3.Endpoint{
+				ServiceName: "svc-1",
+				Ipv4:        []byte{0xC0, 0xA8, 0x00, 0x01},
+				Port:        8009,
+			},
+			RemoteEndpoint: &zipkin_proto3.Endpoint{
+				ServiceName: "memcached",
+				Ipv6:        []byte{0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x53, 0xa7, 0x7c, 0xda, 0x4d, 0xd2, 0x1b},
+				Port:        11211,
+			},
+		},
+		{
+			TraceId:   []byte{0x7A, 0x6A, 0x5A, 0x4A, 0x3A, 0x2A, 0x1A, 0x0A, 0xC7, 0xC6, 0xC5, 0xC4, 0xC3, 0xC2, 0xC1, 0xC0},
+			Id:        []byte{0x67, 0x66, 0x65, 0x64, 0x63, 0x62, 0x61, 0x60},
+			ParentId:  []byte{0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10},
+			Name:      "CacheWarmUp",
+			Kind:      zipkin_proto3.Span_PRODUCER,
+			Timestamp: uint64(minus10hr5ms.UnixNano() / 1e3),
+			Duration:  7e6,
+			LocalEndpoint: &zipkin_proto3.Endpoint{
+				ServiceName: "search",
+				Ipv4:        []byte{0x0A, 0x00, 0x00, 0x0D},
+				Port:        8009,
+			},
+			RemoteEndpoint: &zipkin_proto3.Endpoint{
+				ServiceName: "redis",
+				Ipv6:        []byte{0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x53, 0xa7, 0x7c, 0xda, 0x4d, 0xd2, 0x1b},
+				Port:        6379,
+			},
+			Annotations: []*zipkin_proto3.Annotation{
+				{
+					Timestamp: uint64(minus10hr5ms.UnixNano() / 1e3),
+					Value:     "DB reset",
+				},
+				{
+					Timestamp: uint64(minus10hr5ms.UnixNano() / 1e3),
+					Value:     "GC Cycle 39",
+				},
+			},
+		},
+	},
+}
