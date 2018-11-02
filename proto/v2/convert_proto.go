@@ -69,7 +69,7 @@ func protoSpanToModelSpan(s *Span, debugWasSet bool) (*zipkinmodel.SpanModel, er
 	}
 	spanIDPtr, spanIDBlank, err := protoSpanIDToModelSpanID(s.Id)
 	if err != nil {
-		return nil, fmt.Errorf("SpanID: %v", err)
+		return nil, fmt.Errorf("invalid SpanID: %v", err)
 	}
 	if spanIDBlank || spanIDPtr == nil {
 		// This is a logical error
@@ -120,7 +120,7 @@ func protoSpanIDToModelSpanID(spanId []byte) (zid *zipkinmodel.ID, blank bool, e
 		return nil, true, nil
 	}
 	if len(spanId) != 8 {
-		return nil, true, fmt.Errorf("length(%d) != 8", len(spanId))
+		return nil, true, fmt.Errorf("invalid spanId length(%d) != 8", len(spanId))
 	}
 
 	// Converting [8]byte --> uint64
