@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -116,6 +117,93 @@ func TestParseSpans(t *testing.T) {
 		}
 		if !bytes.Equal(gj, wj) {
 			t.Errorf("Failed to get roundtripped spans\nGot: %s\nWant:%s\n", gj, wj)
+		}
+	}
+}
+
+func TestParseSpans_failures(t *testing.T) {
+	tests := []struct {
+		spans   []*zipkin_proto3.Span
+		wantErr string
+	}{
+		{
+			spans: []*zipkin_proto3.Span{
+				{TraceId: nil},
+			},
+			wantErr: "invalid TraceID: has length 0 yet wanted length 16",
+		},
+		{
+			spans: []*zipkin_proto3.Span{
+				{TraceId: []byte{0x01, 0x02}},
+			},
+			wantErr: "invalid TraceID: has length 2 yet wanted length 16",
+		},
+		{
+			spans: []*zipkin_proto3.Span{
+				{
+					TraceId: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0X0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10},
+					Id:      nil,
+				},
+			},
+			wantErr: "expected a non-nil SpanID",
+		},
+		{
+			spans: []*zipkin_proto3.Span{
+				{
+					TraceId: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0X0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10},
+					Id:      []byte{0x01, 0x02},
+				},
+			},
+			wantErr: "invalid SpanID: has length 2 yet wanted length 8",
+		},
+		{
+			spans: []*zipkin_proto3.Span{
+				{
+					TraceId:  []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0X0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10},
+					ParentId: []byte{0x01, 0x02},
+				},
+			},
+			wantErr: "invalid ParentID: has length 2 yet wanted length 8",
+		},
+		{
+			spans: []*zipkin_proto3.Span{
+				{
+					TraceId:  []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0X0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10},
+					ParentId: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
+				},
+			},
+			wantErr: "expected a non-nil SpanID",
+		},
+		{
+			spans: []*zipkin_proto3.Span{
+				{
+					TraceId:  []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0X0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10},
+					ParentId: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
+					Id:       []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
+				},
+			},
+			wantErr: "invalid SpanID: has length 7 yet wanted length 8",
+		},
+	}
+
+	for i, tt := range tests {
+		payload := &zipkin_proto3.ListOfSpans{Spans: tt.spans}
+		protoBlob, err := proto.Marshal(payload)
+		if err != nil {
+			t.Errorf("Test #%d: Failed to serialize ProtoPayload: %v", i, err)
+			continue
+		}
+
+		zms, err := zipkin_proto3.ParseSpans(protoBlob, true)
+		if err == nil {
+			t.Errorf("#%d: unexpectedly passed and got span\n%#v", i, zms)
+			continue
+		}
+		if zms != nil {
+			t.Errorf("#%d: inconsistency, ParseSpan is non-nil and so is the error", i)
+		}
+		if !strings.Contains(err.Error(), tt.wantErr) {
+			t.Errorf("#%d: Mismatched errors\nGot: (%q)\nWant:(%q)", i, err, tt.wantErr)
 		}
 	}
 }

@@ -49,14 +49,12 @@ func ParseSpans(protoBlob []byte, debugWasSet bool) (zss []*zipkinmodel.SpanMode
 
 var errNilZipkinSpan = errors.New("expecting a non-nil Span")
 
-// This conversion is done so that we can reuse the logic for converting from
-//      Zipkin-Go SpanModel --> opencensusProto.Span
-// as was done during Zipkin-Go SpanModel JSON deserialization
-// instead of reimplementing zipkin_proto3 --> opencensusProto.Span.
-// This conversion shouldn't cause any loss of fidelity.
 func protoSpanToModelSpan(s *Span, debugWasSet bool) (*zipkinmodel.SpanModel, error) {
 	if s == nil {
 		return nil, errNilZipkinSpan
+	}
+	if len(s.TraceId) != 16 {
+		return nil, fmt.Errorf("invalid TraceID: has length %d yet wanted length 16", len(s.TraceId))
 	}
 	traceID, err := zipkinmodel.TraceIDFromHex(fmt.Sprintf("%x", s.TraceId))
 	if err != nil {
@@ -73,7 +71,7 @@ func protoSpanToModelSpan(s *Span, debugWasSet bool) (*zipkinmodel.SpanModel, er
 	}
 	if spanIDBlank || spanIDPtr == nil {
 		// This is a logical error
-		return nil, errors.New("SpanID: expected a non-nil spanID")
+		return nil, errors.New("expected a non-nil SpanID")
 	}
 
 	zmsc := zipkinmodel.SpanContext{
@@ -120,7 +118,7 @@ func protoSpanIDToModelSpanID(spanId []byte) (zid *zipkinmodel.ID, blank bool, e
 		return nil, true, nil
 	}
 	if len(spanId) != 8 {
-		return nil, true, fmt.Errorf("invalid spanId length(%d) != 8", len(spanId))
+		return nil, true, fmt.Errorf("has length %d yet wanted length 8", len(spanId))
 	}
 
 	// Converting [8]byte --> uint64
