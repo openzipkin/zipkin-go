@@ -9,6 +9,10 @@ test:
 bench:
 	go test -v -run - -bench . -benchmem ./...
 
+.PHONY: protoc
+protoc:
+	protoc --go_out=. proto/v2/zipkin.proto
+
 .PHONY: lint
 lint:
 	# Ignore grep's exit code since no match returns 1.
