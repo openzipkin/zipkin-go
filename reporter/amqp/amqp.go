@@ -6,9 +6,10 @@ package amqp
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/streadway/amqp"
 	"log"
 	"os"
+
+	"github.com/streadway/amqp"
 
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
@@ -58,6 +59,20 @@ func Queue(t string) ReporterOption {
 	}
 }
 
+// Channel sets the Channel used to send messages
+func Channel(ch *amqp.Channel) ReporterOption {
+	return func(c *rmqReporter) {
+		c.channel = ch
+	}
+}
+
+// Connection sets the Connection used to send messages
+func Connection(conn *amqp.Connection) ReporterOption {
+	return func(c *rmqReporter) {
+		c.conn = conn
+	}
+}
+
 // NewReporter returns a new RabbitMq-backed Reporter. address should be as described here: https://www.rabbitmq.com/uri-spec.html
 func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, error) {
 	r := &rmqReporter{
@@ -78,14 +93,19 @@ func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, 
 	}
 
 	var err error
-	r.conn, err = amqp.Dial(address)
-	if err != nil {
-		return nil, err
+
+	if r.conn == nil {
+		r.conn, err = amqp.Dial(address)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	r.channel, err = r.conn.Channel()
-	if err != nil {
-		return nil, err
+	if r.channel == nil {
+		r.channel, err = r.conn.Channel()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for i := 0; i < len(checks); i++ {
