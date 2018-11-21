@@ -1,11 +1,12 @@
-package zipkin
+package amqp
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/streadway/amqp"
 	"log"
 	"os"
+
+	"github.com/streadway/amqp"
 
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
@@ -46,13 +47,25 @@ func Queue(t string) ReporterOption {
 	}
 }
 
+func Channel(ch *amqp.Channel) ReporterOption {
+	return func(c *rmqReporter) {
+		c.channel = ch
+	}
+}
+
+func Connection(conn *amqp.Connection) ReporterOption {
+	return func(c *rmqReporter) {
+		c.conn = conn
+	}
+}
+
 func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, error) {
 	r := &rmqReporter{
 		logger:   log.New(os.Stderr, "", log.LstdFlags),
 		Queue:    defaultRmqRoutingKey,
 		Exchange: defaultRmqExchange,
 		// add severity ?
-		e:        make(chan error),
+		e: make(chan error),
 	}
 
 	for _, option := range options {
@@ -66,14 +79,19 @@ func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, 
 	}
 
 	var err error
-	r.conn, err = amqp.Dial(address)
-	if err != nil {
-		return nil, err
+
+	if r.conn == nil {
+		r.conn, err = amqp.Dial(address)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	r.channel, err = r.conn.Channel()
-	if err != nil {
-		return nil, err
+	if r.channel == nil {
+		r.channel, err = r.conn.Channel()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for i := 0; i < len(checks); i++ {
@@ -89,7 +107,7 @@ func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, 
 
 func (r *rmqReporter) logErrors() {
 	for err := range r.e {
-		r.logger.Print("msg", err.Error(), )
+		r.logger.Print("msg", err.Error())
 	}
 }
 
