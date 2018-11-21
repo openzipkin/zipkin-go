@@ -1,4 +1,4 @@
-package zipkin
+package amqp
 
 import (
 	"encoding/json"
@@ -52,7 +52,7 @@ func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, 
 		Queue:    defaultRmqRoutingKey,
 		Exchange: defaultRmqExchange,
 		// add severity ?
-		e:        make(chan error),
+		e: make(chan error),
 	}
 
 	for _, option := range options {
@@ -89,7 +89,7 @@ func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, 
 
 func (r *rmqReporter) logErrors() {
 	for err := range r.e {
-		r.logger.Print("msg", err.Error(), )
+		r.logger.Print("msg", err.Error())
 	}
 }
 

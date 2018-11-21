@@ -1,42 +1,13 @@
-package zipkin
+package amqp_test
 
 import (
-	"errors"
+	"encoding/json"
 	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter"
+	zipkinamqp "github.com/openzipkin/zipkin-go/reporter/amqp"
 	"github.com/streadway/amqp"
 	"testing"
 	"time"
 )
-
-type stubProducer struct {
-	//in        chan *sarama.ProducerMessage
-	//err       chan *sarama.ProducerError
-
-	kafkaDown bool
-	closed    bool
-}
-
-func (p *stubProducer) AsyncClose() {}
-func (p *stubProducer) Close() error {
-	if p.kafkaDown {
-		return errors.New("rmq is down")
-	}
-	p.closed = true
-	return nil
-}
-//func (p *stubProducer) Input() chan<- *sarama.ProducerMessage     { return p.in }
-//func (p *stubProducer) Successes() <-chan *sarama.ProducerMessage { return nil }
-//func (p *stubProducer) Errors() <-chan *sarama.ProducerError      { return p.err }
-
-//func newStubProducer(kafkaDown bool) *stubProducer {
-//	return &stubProducer{
-//		make(chan *sarama.ProducerMessage),
-//		make(chan *sarama.ProducerError),
-//		kafkaDown,
-//		false,
-//	}
-//}
 
 var spans = []*model.SpanModel{
 	makeNewSpan("avg", 123, 456, 0, true),
@@ -44,22 +15,29 @@ var spans = []*model.SpanModel{
 	makeNewSpan("div", 123, 101112, 456, true),
 }
 
-func TestRmqProduce(t *testing.T) {
-	//p := newStubProducer(false)
-
-	c, err := NewReporter("amqp://guest:guest@localhost:5672/",)
-
-
+func TestRabbitProduce(t *testing.T) {
+	address := "amqp://guest:guest@localhost:5672/"
+	c, err := zipkinamqp.NewReporter(address)
 	if err != nil {
 		t.Fatal(err)
 	}
+	msgs, closeCh := setupRabbit(t, address)
+	defer closeCh()
 
-	for _, want := range spans {
-		c.Send(*want)
-		//m := sendSpan(t, c, *want)
-		//testMetadata(t,)
-		//have := deserializeSpan(t, m.Value)
-		//testEqual(t, want, have)
+	for _, s := range spans {
+		c.Send(*s)
+	}
+
+	for _, s := range spans {
+		msg := <-msgs
+		ds := decodeSpan(t, msg.Body)
+		testEqual(t, s, ds)
+	}
+}
+
+func failOnError(t *testing.T, err error, msg string) {
+	if err != nil {
+		t.Fatalf("%s: %s", msg, err)
 	}
 }
 
@@ -92,19 +70,11 @@ func TestRmqProduce(t *testing.T) {
 //	}
 //}
 
-type chanWriter struct {
-	errs chan []interface{}
-}
-
-func (cw *chanWriter) Write(p []byte) (n int, err error) {
-	cw.errs <- []interface{}{p}
-
-	return 1, nil
-}
-
 //func TestKafkaErrors(t *testing.T) {
 //	p := newStubProducer(true)
 //	errs := make(chan []interface{}, len(spans))
+//
+//	NewReporter()
 //
 //	c, err := kafka.NewReporter(
 //		[]string{"192.0.2.10:9092"},
@@ -136,58 +106,39 @@ func (cw *chanWriter) Write(p []byte) (n int, err error) {
 //	}
 //}
 
-func sendSpan(t *testing.T, r reporter.Reporter, s model.SpanModel) *amqp.Publishing {
-	var m *amqp.Publishing
-	//received := make(chan bool, 1)
-	//go func() {
-	//	select {
-	//	case m = <-p.in:
-	//		received <- true
-	//		//if p.kafkaDown {
-	//		//	p.err <- &sarama.ProducerError{
-	//		//		Msg: m,
-	//		//		Err: errors.New("kafka is down"),
-	//		//	}
-	//		//}
-	//	case <-time.After(100 * time.Millisecond):
-	//		received <- false
-	//	}
-	//}()
+func setupRabbit(t *testing.T, address string) (csm <-chan amqp.Delivery, close func()) {
+	conn, err := amqp.Dial(address)
+	failOnError(t, err, "Failed to connect to RabbitMQ")
 
-	r.Send(s)
+	ch, err := conn.Channel()
+	failOnError(t, err, "Failed to open a channel")
 
-	//if !<-received {
-	//	t.Fatal("expected message to be received")
-	//}
-	return m
+	close = func() {
+		conn.Close()
+		ch.Close()
+	}
+
+	csm, err = ch.Consume(
+		"zipkin", // queue
+		"",       // consumer
+		true,     // auto-ack
+		false,    // exclusive
+		false,    // no-local
+		false,    // no-wait
+		nil,      // args
+	)
+	failOnError(t, err, "Failed to register a consumer")
+	return
 }
 
-func testMetadata(t *testing.T,) {
-
-	//if m.Topic != "zipkin" {
-	//	t.Errorf("unexpected topic. have %q, want %q", m.Topic, "zipkin")
-	//}
-	//if m.Key != nil {
-	//	t.Errorf("unexpected key. have %q, want nil", m.Key)
-	//}
+func decodeSpan(t *testing.T, data []byte) *model.SpanModel {
+	var receivedSpans []model.SpanModel
+	err := json.Unmarshal(data, &receivedSpans)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &receivedSpans[0]
 }
-
-//func deserializeSpan(t *testing.T, e sarama.Encoder) *model.SpanModel {
-//	bytes, err := e.Encode()
-//	if err != nil {
-//		t.Errorf("unexpected error in encoding: %v", err)
-//	}
-//
-//	var s []model.SpanModel
-//
-//	err = json.Unmarshal(bytes, &s)
-//	if err != nil {
-//		t.Errorf("unexpected error in decoding: %v", err)
-//		return nil
-//	}
-//
-//	return &s[0]
-//}
 
 func testEqual(t *testing.T, want *model.SpanModel, have *model.SpanModel) {
 	if have.TraceID != want.TraceID {
@@ -200,7 +151,7 @@ func testEqual(t *testing.T, want *model.SpanModel, have *model.SpanModel) {
 		if want.ParentID != nil {
 			t.Errorf("incorrect parent_id. have %d, want %d", have.ParentID, want.ParentID)
 		}
-	} else if *have.ParentID != *want.ParentID {
+	} else if have.ParentID != want.ParentID {
 		t.Errorf("incorrect parent_id. have %d, want %d", have.ParentID, want.ParentID)
 	}
 }
