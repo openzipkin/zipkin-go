@@ -1,4 +1,4 @@
-package zipkin
+package amqp
 
 import (
 	"errors"
@@ -25,6 +25,7 @@ func (p *stubProducer) Close() error {
 	p.closed = true
 	return nil
 }
+
 //func (p *stubProducer) Input() chan<- *sarama.ProducerMessage     { return p.in }
 //func (p *stubProducer) Successes() <-chan *sarama.ProducerMessage { return nil }
 //func (p *stubProducer) Errors() <-chan *sarama.ProducerError      { return p.err }
@@ -47,8 +48,7 @@ var spans = []*model.SpanModel{
 func TestRmqProduce(t *testing.T) {
 	//p := newStubProducer(false)
 
-	c, err := NewReporter("amqp://guest:guest@localhost:5672/",)
-
+	c, err := NewReporter("amqp://guest:guest@localhost:5672/")
 
 	if err != nil {
 		t.Fatal(err)
@@ -162,7 +162,7 @@ func sendSpan(t *testing.T, r reporter.Reporter, s model.SpanModel) *amqp.Publis
 	return m
 }
 
-func testMetadata(t *testing.T,) {
+func testMetadata(t *testing.T) {
 
 	//if m.Topic != "zipkin" {
 	//	t.Errorf("unexpected topic. have %q, want %q", m.Topic, "zipkin")

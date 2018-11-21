@@ -202,7 +202,7 @@ func testEqual(t *testing.T, want *model.SpanModel, have *model.SpanModel) {
 		if want.ParentID != nil {
 			t.Errorf("incorrect parent_id. have %d, want %d", have.ParentID, want.ParentID)
 		}
-	} else if *have.ParentID != *want.ParentID {
+	} else if have.ParentID != want.ParentID {
 		t.Errorf("incorrect parent_id. have %d, want %d", have.ParentID, want.ParentID)
 	}
 }

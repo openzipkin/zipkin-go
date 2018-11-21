@@ -1,4 +1,7 @@
-package zipkin
+/*
+Package amqp implements a RabbitMq reporter to send spans to a Rabbit server/cluster.
+*/
+package amqp
 
 import (
 	"encoding/json"
@@ -11,12 +14,14 @@ import (
 	"github.com/openzipkin/zipkin-go/reporter"
 )
 
+// defaultRmqRoutingKey/Exchange/Kind sets the standard RabbitMQ queue our Reporter will publish on.
 const (
 	defaultRmqRoutingKey = "zipkin"
 	defaultRmqExchange   = "zipkin"
 	defaultExchangeKind  = "direct"
 )
 
+// rmqReporter implements Reporter by publishing spans to a RabbitMQ exchange
 type rmqReporter struct {
 	e        chan error
 	channel  *amqp.Channel
@@ -26,32 +31,39 @@ type rmqReporter struct {
 	logger   *log.Logger
 }
 
+// ReporterOption sets a parameter for the rmqReporter
 type ReporterOption func(c *rmqReporter)
 
+// Logger sets the logger used to report errors in the collection
+// process.
 func Logger(logger *log.Logger) ReporterOption {
 	return func(c *rmqReporter) {
 		c.logger = logger
 	}
 }
 
+// Exchange sets the Exchange used to send messages (
+// see https://github.com/openzipkin/zipkin/tree/master/zipkin-collector/rabbitmq
+// if want to change default routing key or exchange
 func Exchange(e string) ReporterOption {
 	return func(c *rmqReporter) {
 		c.Exchange = e
 	}
 }
 
+// Queue sets the Queue used to send messages
 func Queue(t string) ReporterOption {
 	return func(c *rmqReporter) {
 		c.Queue = t
 	}
 }
 
+// NewReporter returns a new RabbitMq-backed Reporter. address should be as described here: https://www.rabbitmq.com/uri-spec.html
 func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, error) {
 	r := &rmqReporter{
 		logger:   log.New(os.Stderr, "", log.LstdFlags),
 		Queue:    defaultRmqRoutingKey,
 		Exchange: defaultRmqExchange,
-		// add severity ?
 		e:        make(chan error),
 	}
 
@@ -89,7 +101,7 @@ func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, 
 
 func (r *rmqReporter) logErrors() {
 	for err := range r.e {
-		r.logger.Print("msg", err.Error(), )
+		r.logger.Print("msg", err.Error())
 	}
 }
 
