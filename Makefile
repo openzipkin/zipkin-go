@@ -12,6 +12,7 @@ bench:
 .PHONY: protoc
 protoc:
 	protoc --go_out=. proto/v2/zipkin.proto
+	protoc --go_out=plugins=grpc:. proto/testing/service.proto
 
 .PHONY: lint
 lint:
