@@ -27,8 +27,8 @@ type rmqReporter struct {
 	e        chan error
 	channel  *amqp.Channel
 	conn     *amqp.Connection
-	Exchange string
-	Queue    string
+	exchange string
+	queue    string
 	logger   *log.Logger
 }
 
@@ -46,16 +46,16 @@ func Logger(logger *log.Logger) ReporterOption {
 // Exchange sets the Exchange used to send messages (
 // see https://github.com/openzipkin/zipkin/tree/master/zipkin-collector/rabbitmq
 // if want to change default routing key or exchange
-func Exchange(e string) ReporterOption {
+func Exchange(exchange string) ReporterOption {
 	return func(c *rmqReporter) {
-		c.Exchange = e
+		c.exchange = exchange
 	}
 }
 
 // Queue sets the Queue used to send messages
-func Queue(t string) ReporterOption {
+func Queue(queue string) ReporterOption {
 	return func(c *rmqReporter) {
-		c.Queue = t
+		c.queue = queue
 	}
 }
 
@@ -77,8 +77,8 @@ func Connection(conn *amqp.Connection) ReporterOption {
 func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, error) {
 	r := &rmqReporter{
 		logger:   log.New(os.Stderr, "", log.LstdFlags),
-		Queue:    defaultRmqRoutingKey,
-		Exchange: defaultRmqExchange,
+		queue:    defaultRmqRoutingKey,
+		exchange: defaultRmqExchange,
 		e:        make(chan error),
 	}
 
