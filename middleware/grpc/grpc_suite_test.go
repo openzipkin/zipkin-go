@@ -19,8 +19,10 @@ import (
 	service "github.com/openzipkin/zipkin-go/proto/testing"
 )
 
-var server *grpc.Server
-var serverAddr string
+var (
+	server     *grpc.Server
+	serverAddr string
+)
 
 func TestGrpc(t *testing.T) {
 	RegisterFailHandler(Fail)
