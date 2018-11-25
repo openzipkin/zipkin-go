@@ -84,7 +84,7 @@ func (s *TestHelloService) Hello(ctx context.Context, req *service.HelloRequest)
 		Metadata: map[string]string{},
 	}
 
-	for k, _ := range md {
+	for k := range md {
 		// Just append the first value for a key for simplicity since we don't use multi-value headers.
 		resp.GetMetadata()[k] = md[k][0]
 	}
