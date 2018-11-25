@@ -30,7 +30,7 @@ var _ = Describe("gRPC Client", func() {
 		var err error
 
 		reporter = recorder.NewReporter()
-		ep, _ := zipkin.NewEndpoint("httpClient", "")
+		ep, _ := zipkin.NewEndpoint("grpcClient", "")
 		tracer, err = zipkin.NewTracer(
 			reporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(newSequentialIdGenerator()))
 		Expect(tracer, err).ToNot(BeNil())
