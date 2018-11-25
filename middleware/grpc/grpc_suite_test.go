@@ -60,8 +60,8 @@ func (g *sequentialIdGenerator) SpanID(traceID model.TraceID) model.ID {
 
 func (g *sequentialIdGenerator) TraceID() model.TraceID {
 	id := model.TraceID{
-		0,
-		g.nextTraceId,
+		High: 0,
+		Low:  g.nextTraceId,
 	}
 	g.nextTraceId++
 	return id
