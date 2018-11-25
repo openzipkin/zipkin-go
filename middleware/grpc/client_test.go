@@ -56,6 +56,7 @@ var _ = Describe("gRPC Client", func() {
 
 			spans := reporter.Flush()
 			Expect(spans).To(HaveLen(1))
+			Expect(spans[0].Name).To(Equal("zipkin.testing.HelloService.Hello"))
 			Expect(spans[0].Tags).To(BeEmpty())
 		})
 
