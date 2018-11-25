@@ -22,6 +22,8 @@ message HelloRequest {
 
 message HelloResponse {
   string payload = 1;
+
+  map<string, string> metadata = 2;
 }
 
 service HelloService {

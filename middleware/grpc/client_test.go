@@ -1,70 +1,113 @@
-package grpc
+// +build go1.9
+
+package grpc_test
 
 import (
 	"context"
-	"github.com/openzipkin/zipkin-go"
-	"github.com/openzipkin/zipkin-go/reporter/recorder"
-	"net"
-	"testing"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/stats"
 
+	"github.com/openzipkin/zipkin-go"
+	. "github.com/openzipkin/zipkin-go/middleware/grpc"
+	"github.com/openzipkin/zipkin-go/propagation/b3"
 	service "github.com/openzipkin/zipkin-go/proto/testing"
+	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
-type testHelloService struct{}
+var _ = Describe("gRPC Client", func() {
+	var (
+		reporter *recorder.ReporterRecorder
+		tracer   *zipkin.Tracer
+		conn     *grpc.ClientConn
+		client   service.HelloServiceClient
+	)
 
-func (s *testHelloService) Hello(context.Context, *service.HelloRequest) (*service.HelloResponse, error) {
-	return &service.HelloResponse{
-		Payload: "World",
-	}, nil
-}
+	BeforeEach(func() {
+		var err error
 
-func TestGRPCClient(t *testing.T) {
-	lis, err := net.Listen("tcp", ":0")
-	if err != nil {
-		t.Fatalf("failed to listen: %v", err)
-	}
-	grpcServer := grpc.NewServer()
-	service.RegisterHelloServiceServer(grpcServer, &testHelloService{})
-	go func() {
-		grpcServer.Serve(lis)
-	}()
-	defer grpcServer.Stop()
+		reporter = recorder.NewReporter()
+		ep, _ := zipkin.NewEndpoint("httpClient", "")
+		tracer, err = zipkin.NewTracer(
+			reporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(newSequentialIdGenerator()))
+		Expect(tracer, err).ToNot(BeNil())
+	})
 
-	reporter := recorder.NewReporter()
-	defer reporter.Close()
+	AfterEach(func() {
+		_ = reporter.Close()
+		_ = conn.Close()
+	})
 
-	ep, _ := zipkin.NewEndpoint("httpClient", "")
-	tracer, err := zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(ep))
-	if err != nil {
-		t.Fatalf("unable to create tracer: %+v", err)
-	}
+	Context("with defaults", func() {
+		BeforeEach(func() {
+			var err error
 
-	conn, err := grpc.Dial(lis.Addr().String(), grpc.WithInsecure(), grpc.WithStatsHandler(NewClientHandler(tracer)))
-	if err != nil {
-		t.Fatalf("Could not connect to gRPC server: %v", err)
-	}
-	defer conn.Close()
+			conn, err = grpc.Dial(serverAddr, grpc.WithInsecure(), grpc.WithStatsHandler(NewClientHandler(tracer)))
+			Expect(conn, err).ToNot(BeNil())
+			client = service.NewHelloServiceClient(conn)
+		})
 
-	client := service.NewHelloServiceClient(conn)
+		It("creates a span", func() {
+			resp, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
+			Expect(resp, err).ToNot(BeNil())
 
-	_, err = client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
-	if err != nil {
-		t.Fatalf("Error from gRPC server: %v", err)
-	}
+			spans := reporter.Flush()
+			Expect(spans).To(HaveLen(1))
+			Expect(spans[0].Tags).To(BeEmpty())
+		})
 
-	spans := reporter.Flush()
-	if len(spans) == 0 {
-		t.Errorf("Span Count want 1+, have 0")
-	}
+		It("propagates trace context", func() {
+			resp, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
+			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue(b3.TraceID, "0000000000000001"))
+			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue(b3.SpanID, "0000000000000001"))
+			Expect(resp.GetMetadata(), err).ToNot(HaveKey(b3.ParentSpanID))
+		})
 
-	span := tracer.StartSpan("ParentSpan")
-	ctx := zipkin.NewContext(context.Background(), span)
-	client.Hello(ctx, &service.HelloRequest{Payload: "Hello"})
+		It("propagates parent span", func() {
+			_, ctx := tracer.StartSpanFromContext(context.Background(), "parent")
+			resp, err := client.Hello(ctx, &service.HelloRequest{Payload: "Hello"})
+			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue(b3.TraceID, "0000000000000001"))
+			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue(b3.SpanID, "0000000000000002"))
+			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue(b3.ParentSpanID, "0000000000000001"))
+		})
 
-	spans = reporter.Flush()
-	if len(spans) == 0 {
-		t.Errorf("Span Count want 1+, have 0")
-	}
-}
+		It("tags with error code", func() {
+			_, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "fail"})
+			Expect(err).To(HaveOccurred())
+
+			spans := reporter.Flush()
+			Expect(spans).To(HaveLen(1))
+			Expect(spans[0].Tags).To(HaveLen(2))
+			Expect(spans[0].Tags).To(HaveKeyWithValue("grpc.status_code", codes.Aborted.String()))
+			Expect(spans[0].Tags).To(HaveKeyWithValue(string(zipkin.TagError), codes.Aborted.String()))
+		})
+	})
+
+	Context("with custom RPCHandler", func() {
+		BeforeEach(func() {
+			var err error
+
+			conn, err = grpc.Dial(
+				serverAddr,
+				grpc.WithInsecure(),
+				grpc.WithStatsHandler(NewClientHandler(tracer, WithRPCHandler(func(span zipkin.Span, rpcStats stats.RPCStats) {
+					span.Tag("custom", "tag")
+				}))))
+			Expect(conn, err).ToNot(BeNil())
+			client = service.NewHelloServiceClient(conn)
+		})
+
+		It("calls custom RPCHandler", func() {
+			resp, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
+			Expect(resp, err).ToNot(BeNil())
+
+			spans := reporter.Flush()
+			Expect(spans).To(HaveLen(1))
+			Expect(spans[0].Tags).To(HaveLen(1))
+			Expect(spans[0].Tags).To(HaveKeyWithValue("custom", "tag"))
+		})
+	})
+})
