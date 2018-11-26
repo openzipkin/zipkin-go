@@ -4,6 +4,7 @@ package grpc
 
 import (
 	"context"
+	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -71,17 +72,17 @@ func (c *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 
 	switch rs := rs.(type) {
 	case *stats.End:
-		if rs.Error != nil {
-			s, ok := status.FromError(rs.Error)
-			if ok {
-				if s.Code() != codes.OK {
-					c := s.Code().String()
-					span.Tag("grpc.status_code", c)
-					zipkin.TagError.Set(span, c)
-				}
-			} else {
-				zipkin.TagError.Set(span, rs.Error.Error())
+		s, ok := status.FromError(rs.Error)
+		// rs.Error should always be convertable to a status, this is just a defensive check.
+		if ok {
+			if s.Code() != codes.OK {
+				// Uppercase for consistency with Brave
+				c := strings.ToUpper(s.Code().String())
+				span.Tag("grpc.status_code", c)
+				zipkin.TagError.Set(span, c)
 			}
+		} else {
+			zipkin.TagError.Set(span, rs.Error.Error())
 		}
 		span.Finish()
 	}

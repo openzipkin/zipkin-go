@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/stats"
 
 	"github.com/openzipkin/zipkin-go"
@@ -82,8 +82,15 @@ var _ = Describe("gRPC Client", func() {
 			spans := reporter.Flush()
 			Expect(spans).To(HaveLen(1))
 			Expect(spans[0].Tags).To(HaveLen(2))
-			Expect(spans[0].Tags).To(HaveKeyWithValue("grpc.status_code", codes.Aborted.String()))
-			Expect(spans[0].Tags).To(HaveKeyWithValue(string(zipkin.TagError), codes.Aborted.String()))
+			Expect(spans[0].Tags).To(HaveKeyWithValue("grpc.status_code", "ABORTED"))
+			Expect(spans[0].Tags).To(HaveKeyWithValue(string(zipkin.TagError), "ABORTED"))
+		})
+
+		It("copies existing metadata", func() {
+			ctx := metadata.AppendToOutgoingContext(context.Background(), "existing", "metadata")
+			resp, err := client.Hello(ctx, &service.HelloRequest{Payload: "Hello"})
+
+			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue("existing", "metadata"))
 		})
 	})
 
