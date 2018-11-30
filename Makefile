@@ -17,7 +17,7 @@ protoc:
 .PHONY: lint
 lint:
 	# Ignore grep's exit code since no match returns 1.
-	-if [[ ! $TRAVIS_GO_VERSION = 1.8* ]]; then echo 'linting...' ; golint ./... ; fi
+	echo 'linting...' ; golint ./...
 
 .PHONY: vet
 vet:
