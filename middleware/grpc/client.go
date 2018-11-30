@@ -16,18 +16,17 @@ import (
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 )
 
-type ClientHandler interface {
-	stats.Handler
-}
-
 type clientHandler struct {
 	tracer            *zipkin.Tracer
 	rpcHandlers       []RPCHandler
 	remoteServiceName string
 }
 
+// A ClientOption can be passed to NewClientHandler to customize the returned handler.
 type ClientOption func(*clientHandler)
 
+// A RPCHandler can be registered using WithRPCHandler to intercept calls to HandleRPC of a
+// handler for additional span customization.
 type RPCHandler func(span zipkin.Span, rpcStats stats.RPCStats)
 
 // WithRPCHandler allows one to add custom logic for handling a stats.RPCStats, e.g.,
@@ -41,7 +40,7 @@ func WithRPCHandler(handler RPCHandler) ClientOption {
 // NewClientHandler returns a stats.Handler which can be used with grpc.WithStatsHandler to add
 // tracing to a gRPC client. The gRPC method name is used as the span name and by default the only
 // tags are the gRPC status code if the call fails. Use WithRPCHandler to add additional tags.
-func NewClientHandler(tracer *zipkin.Tracer, options ...ClientOption) ClientHandler {
+func NewClientHandler(tracer *zipkin.Tracer, options ...ClientOption) stats.Handler {
 	c := &clientHandler{
 		tracer: tracer,
 	}
