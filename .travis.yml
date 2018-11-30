@@ -3,7 +3,6 @@ language: go
 sudo: false
 
 go:
-  - 1.8.x
   - 1.9.x
   - 1.10.x
   - 1.11.x
@@ -14,7 +13,7 @@ before_install:
 
 install:
   - go get -d -t ./...
-  - if [[ ! $TRAVIS_GO_VERSION = 1.8* ]]; then go get -u golang.org/x/lint/golint ; fi
+  - go get -u golang.org/x/lint/golint
 
 script:
   - make test vet lint bench
