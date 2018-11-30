@@ -12,11 +12,12 @@ bench:
 .PHONY: protoc
 protoc:
 	protoc --go_out=. proto/v2/zipkin.proto
+	protoc --go_out=plugins=grpc:. proto/testing/service.proto
 
 .PHONY: lint
 lint:
 	# Ignore grep's exit code since no match returns 1.
-	-if [[ ! $TRAVIS_GO_VERSION = 1.8* ]]; then echo 'linting...' ; golint ./... ; fi
+	echo 'linting...' ; golint ./...
 
 .PHONY: vet
 vet:
