@@ -11,8 +11,8 @@ import (
 	"net"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 	"google.golang.org/grpc"
 
 	"github.com/openzipkin/zipkin-go/model"
@@ -25,13 +25,13 @@ var (
 )
 
 func TestGrpc(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Grpc Suite")
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "Grpc Suite")
 }
 
-var _ = BeforeSuite(func() {
+var _ = ginkgo.BeforeSuite(func() {
 	lis, err := net.Listen("tcp", ":0")
-	Expect(lis, err).ToNot(BeNil(), "failed to listen to tcp port")
+	gomega.Expect(lis, err).ToNot(gomega.BeNil(), "failed to listen to tcp port")
 
 	server = grpc.NewServer()
 	service.RegisterHelloServiceServer(server, &TestHelloService{})
@@ -41,7 +41,7 @@ var _ = BeforeSuite(func() {
 	serverAddr = lis.Addr().String()
 })
 
-var _ = AfterSuite(func() {
+var _ = ginkgo.AfterSuite(func() {
 	server.Stop()
 })
 

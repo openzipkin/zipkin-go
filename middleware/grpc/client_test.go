@@ -5,20 +5,20 @@ package grpc_test
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/stats"
 
 	"github.com/openzipkin/zipkin-go"
-	. "github.com/openzipkin/zipkin-go/middleware/grpc"
+	zipkingrpc "github.com/openzipkin/zipkin-go/middleware/grpc"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 	service "github.com/openzipkin/zipkin-go/proto/testing"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
-var _ = Describe("gRPC Client", func() {
+var _ = ginkgo.Describe("gRPC Client", func() {
 	var (
 		reporter *recorder.ReporterRecorder
 		tracer   *zipkin.Tracer
@@ -26,96 +26,98 @@ var _ = Describe("gRPC Client", func() {
 		client   service.HelloServiceClient
 	)
 
-	BeforeEach(func() {
+	ginkgo.BeforeEach(func() {
 		var err error
 
 		reporter = recorder.NewReporter()
 		ep, _ := zipkin.NewEndpoint("grpcClient", "")
 		tracer, err = zipkin.NewTracer(
 			reporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(newSequentialIdGenerator()))
-		Expect(tracer, err).ToNot(BeNil())
+		gomega.Expect(tracer, err).ToNot(gomega.BeNil())
 	})
 
-	AfterEach(func() {
+	ginkgo.AfterEach(func() {
 		_ = reporter.Close()
 		_ = conn.Close()
 	})
 
-	Context("with defaults", func() {
-		BeforeEach(func() {
+	ginkgo.Context("with defaults", func() {
+		ginkgo.BeforeEach(func() {
 			var err error
 
-			conn, err = grpc.Dial(serverAddr, grpc.WithInsecure(), grpc.WithStatsHandler(NewClientHandler(tracer)))
-			Expect(conn, err).ToNot(BeNil())
+			conn, err = grpc.Dial(serverAddr, grpc.WithInsecure(), grpc.WithStatsHandler(zipkingrpc.NewClientHandler(tracer)))
+			gomega.Expect(conn, err).ToNot(gomega.BeNil())
 			client = service.NewHelloServiceClient(conn)
 		})
 
-		It("creates a span", func() {
+		ginkgo.It("creates a span", func() {
 			resp, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
-			Expect(resp, err).ToNot(BeNil())
+			gomega.Expect(resp, err).ToNot(gomega.BeNil())
 
 			spans := reporter.Flush()
-			Expect(spans).To(HaveLen(1))
-			Expect(spans[0].Name).To(Equal("zipkin.testing.HelloService.Hello"))
-			Expect(spans[0].Tags).To(BeEmpty())
+			gomega.Expect(spans).To(gomega.HaveLen(1))
+			gomega.Expect(spans[0].Name).To(gomega.Equal("zipkin.testing.HelloService.Hello"))
+			gomega.Expect(spans[0].Tags).To(gomega.BeEmpty())
 		})
 
-		It("propagates trace context", func() {
+		ginkgo.It("propagates trace context", func() {
 			resp, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
-			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue(b3.TraceID, "0000000000000001"))
-			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue(b3.SpanID, "0000000000000001"))
-			Expect(resp.GetMetadata(), err).ToNot(HaveKey(b3.ParentSpanID))
+			gomega.Expect(resp.GetMetadata(), err).To(gomega.HaveKeyWithValue(b3.TraceID, "0000000000000001"))
+			gomega.Expect(resp.GetMetadata(), err).To(gomega.HaveKeyWithValue(b3.SpanID, "0000000000000001"))
+			gomega.Expect(resp.GetMetadata(), err).ToNot(gomega.HaveKey(b3.ParentSpanID))
 		})
 
-		It("propagates parent span", func() {
+		ginkgo.It("propagates parent span", func() {
 			_, ctx := tracer.StartSpanFromContext(context.Background(), "parent")
 			resp, err := client.Hello(ctx, &service.HelloRequest{Payload: "Hello"})
-			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue(b3.TraceID, "0000000000000001"))
-			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue(b3.SpanID, "0000000000000002"))
-			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue(b3.ParentSpanID, "0000000000000001"))
+			gomega.Expect(resp.GetMetadata(), err).To(gomega.HaveKeyWithValue(b3.TraceID, "0000000000000001"))
+			gomega.Expect(resp.GetMetadata(), err).To(gomega.HaveKeyWithValue(b3.SpanID, "0000000000000002"))
+			gomega.Expect(resp.GetMetadata(), err).To(gomega.HaveKeyWithValue(b3.ParentSpanID, "0000000000000001"))
 		})
 
-		It("tags with error code", func() {
+		ginkgo.It("tags with error code", func() {
 			_, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "fail"})
-			Expect(err).To(HaveOccurred())
+			gomega.Expect(err).To(gomega.HaveOccurred())
 
 			spans := reporter.Flush()
-			Expect(spans).To(HaveLen(1))
-			Expect(spans[0].Tags).To(HaveLen(2))
-			Expect(spans[0].Tags).To(HaveKeyWithValue("grpc.status_code", "ABORTED"))
-			Expect(spans[0].Tags).To(HaveKeyWithValue(string(zipkin.TagError), "ABORTED"))
+			gomega.Expect(spans).To(gomega.HaveLen(1))
+			gomega.Expect(spans[0].Tags).To(gomega.HaveLen(2))
+			gomega.Expect(spans[0].Tags).To(gomega.HaveKeyWithValue("grpc.status_code", "ABORTED"))
+			gomega.Expect(spans[0].Tags).To(gomega.HaveKeyWithValue(string(zipkin.TagError), "ABORTED"))
 		})
 
-		It("copies existing metadata", func() {
+		ginkgo.It("copies existing metadata", func() {
 			ctx := metadata.AppendToOutgoingContext(context.Background(), "existing", "metadata")
 			resp, err := client.Hello(ctx, &service.HelloRequest{Payload: "Hello"})
 
-			Expect(resp.GetMetadata(), err).To(HaveKeyWithValue("existing", "metadata"))
+			gomega.Expect(resp.GetMetadata(), err).To(gomega.HaveKeyWithValue("existing", "metadata"))
 		})
 	})
 
-	Context("with custom RPCHandler", func() {
-		BeforeEach(func() {
+	ginkgo.Context("with custom RPCHandler", func() {
+		ginkgo.BeforeEach(func() {
 			var err error
 
 			conn, err = grpc.Dial(
 				serverAddr,
 				grpc.WithInsecure(),
-				grpc.WithStatsHandler(NewClientHandler(tracer, WithRPCHandler(func(span zipkin.Span, rpcStats stats.RPCStats) {
-					span.Tag("custom", "tag")
-				}))))
-			Expect(conn, err).ToNot(BeNil())
+				grpc.WithStatsHandler(zipkingrpc.NewClientHandler(
+					tracer,
+					zipkingrpc.WithRPCHandler(func(span zipkin.Span, rpcStats stats.RPCStats) {
+						span.Tag("custom", "tag")
+					}))))
+			gomega.Expect(conn, err).ToNot(gomega.BeNil())
 			client = service.NewHelloServiceClient(conn)
 		})
 
-		It("calls custom RPCHandler", func() {
+		ginkgo.It("calls custom RPCHandler", func() {
 			resp, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
-			Expect(resp, err).ToNot(BeNil())
+			gomega.Expect(resp, err).ToNot(gomega.BeNil())
 
 			spans := reporter.Flush()
-			Expect(spans).To(HaveLen(1))
-			Expect(spans[0].Tags).To(HaveLen(1))
-			Expect(spans[0].Tags).To(HaveKeyWithValue("custom", "tag"))
+			gomega.Expect(spans).To(gomega.HaveLen(1))
+			gomega.Expect(spans[0].Tags).To(gomega.HaveLen(1))
+			gomega.Expect(spans[0].Tags).To(gomega.HaveKeyWithValue("custom", "tag"))
 		})
 	})
 })
