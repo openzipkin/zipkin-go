@@ -22,7 +22,7 @@ func spanName(rti *stats.RPCTagInfo) string {
 	return name
 }
 
-func handleRpc(span zipkin.Span, rs stats.RPCStats, handlers []RPCHandler) {
+func handleRPC(span zipkin.Span, rs stats.RPCStats, handlers []RPCHandler) {
 	for _, h := range handlers {
 		h(span, rs)
 	}

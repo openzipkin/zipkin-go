@@ -28,6 +28,8 @@ func WithClientRPCHandler(handler RPCHandler) ClientOption {
 	}
 }
 
+// WithClientRemoteServiceName will set the value for the remote endpoint's service name on
+// all spans.
 func WithClientRemoteServiceName(name string) ClientOption {
 	return func(c *clientHandler) {
 		c.remoteServiceName = name
@@ -61,7 +63,7 @@ func (c *clientHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) con
 // HandleRPC implements per-RPC tracing and stats instrumentation.
 func (c *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 	span := zipkin.SpanFromContext(ctx)
-	handleRpc(span, rs, c.rpcHandlers)
+	handleRPC(span, rs, c.rpcHandlers)
 }
 
 // TagRPC implements per-RPC context management.

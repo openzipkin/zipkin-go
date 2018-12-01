@@ -55,7 +55,7 @@ func (s *serverHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) con
 // HandleRPC implements per-RPC tracing and stats instrumentation.
 func (s *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 	span := zipkin.SpanFromContext(ctx)
-	handleRpc(span, rs, s.rpcHandlers)
+	handleRPC(span, rs, s.rpcHandlers)
 }
 
 // TagRPC implements per-RPC context management.
