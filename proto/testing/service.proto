@@ -24,6 +24,8 @@ message HelloResponse {
   string payload = 1;
 
   map<string, string> metadata = 2;
+
+  map<string, string> span_context = 3;
 }
 
 service HelloService {

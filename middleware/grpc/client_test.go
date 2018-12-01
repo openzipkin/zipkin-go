@@ -13,6 +13,7 @@ import (
 
 	"github.com/openzipkin/zipkin-go"
 	zipkingrpc "github.com/openzipkin/zipkin-go/middleware/grpc"
+	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 	service "github.com/openzipkin/zipkin-go/proto/testing"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
@@ -32,7 +33,7 @@ var _ = ginkgo.Describe("gRPC Client", func() {
 		reporter = recorder.NewReporter()
 		ep, _ := zipkin.NewEndpoint("grpcClient", "")
 		tracer, err = zipkin.NewTracer(
-			reporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(newSequentialIdGenerator()))
+			reporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(newSequentialIdGenerator(1)))
 		gomega.Expect(tracer, err).ToNot(gomega.BeNil())
 	})
 
@@ -56,8 +57,11 @@ var _ = ginkgo.Describe("gRPC Client", func() {
 
 			spans := reporter.Flush()
 			gomega.Expect(spans).To(gomega.HaveLen(1))
-			gomega.Expect(spans[0].Name).To(gomega.Equal("zipkin.testing.HelloService.Hello"))
-			gomega.Expect(spans[0].Tags).To(gomega.BeEmpty())
+
+			span := spans[0]
+			gomega.Expect(span.Kind).To(gomega.Equal(model.Client))
+			gomega.Expect(span.Name).To(gomega.Equal("zipkin.testing.HelloService.Hello"))
+			gomega.Expect(span.Tags).To(gomega.BeEmpty())
 		})
 
 		ginkgo.It("propagates trace context", func() {
@@ -103,7 +107,7 @@ var _ = ginkgo.Describe("gRPC Client", func() {
 				grpc.WithInsecure(),
 				grpc.WithStatsHandler(zipkingrpc.NewClientHandler(
 					tracer,
-					zipkingrpc.WithRPCHandler(func(span zipkin.Span, rpcStats stats.RPCStats) {
+					zipkingrpc.WithClientRPCHandler(func(span zipkin.Span, rpcStats stats.RPCStats) {
 						span.Tag("custom", "tag")
 					}))))
 			gomega.Expect(conn, err).ToNot(gomega.BeNil())

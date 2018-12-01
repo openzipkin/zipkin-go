@@ -4,12 +4,9 @@ package grpc
 
 import (
 	"context"
-	"strings"
 
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/stats"
-	"google.golang.org/grpc/status"
 
 	"github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
@@ -25,13 +22,9 @@ type clientHandler struct {
 // A ClientOption can be passed to NewClientHandler to customize the returned handler.
 type ClientOption func(*clientHandler)
 
-// A RPCHandler can be registered using WithRPCHandler to intercept calls to HandleRPC of a
-// handler for additional span customization.
-type RPCHandler func(span zipkin.Span, rpcStats stats.RPCStats)
-
-// WithRPCHandler allows one to add custom logic for handling a stats.RPCStats, e.g.,
+// WithClientRPCHandler allows one to add custom logic for handling a stats.RPCStats, e.g.,
 // to add additional tags.
-func WithRPCHandler(handler RPCHandler) ClientOption {
+func WithClientRPCHandler(handler RPCHandler) ClientOption {
 	return func(c *clientHandler) {
 		c.rpcHandlers = append(c.rpcHandlers, handler)
 	}
@@ -39,7 +32,7 @@ func WithRPCHandler(handler RPCHandler) ClientOption {
 
 // NewClientHandler returns a stats.Handler which can be used with grpc.WithStatsHandler to add
 // tracing to a gRPC client. The gRPC method name is used as the span name and by default the only
-// tags are the gRPC status code if the call fails. Use WithRPCHandler to add additional tags.
+// tags are the gRPC status code if the call fails. Use WithClientRPCHandler to add additional tags.
 func NewClientHandler(tracer *zipkin.Tracer, options ...ClientOption) stats.Handler {
 	c := &clientHandler{
 		tracer: tracer,
@@ -64,27 +57,7 @@ func (c *clientHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) con
 // HandleRPC implements per-RPC tracing and stats instrumentation.
 func (c *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 	span := zipkin.SpanFromContext(ctx)
-
-	for _, h := range c.rpcHandlers {
-		h(span, rs)
-	}
-
-	switch rs := rs.(type) {
-	case *stats.End:
-		s, ok := status.FromError(rs.Error)
-		// rs.Error should always be convertable to a status, this is just a defensive check.
-		if ok {
-			if s.Code() != codes.OK {
-				// Uppercase for consistency with Brave
-				c := strings.ToUpper(s.Code().String())
-				span.Tag("grpc.status_code", c)
-				zipkin.TagError.Set(span, c)
-			}
-		} else {
-			zipkin.TagError.Set(span, rs.Error.Error())
-		}
-		span.Finish()
-	}
+	handleRpc(span, rs, c.rpcHandlers)
 }
 
 // TagRPC implements per-RPC context management.
@@ -93,6 +66,7 @@ func (c *clientHandler) TagRPC(ctx context.Context, rti *stats.RPCTagInfo) conte
 
 	name := spanName(rti)
 	span, ctx = c.tracer.StartSpanFromContext(ctx, name, zipkin.Kind(model.Client))
+
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if ok {
 		md = md.Copy()
