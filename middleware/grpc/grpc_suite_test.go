@@ -76,6 +76,8 @@ var _ = ginkgo.BeforeSuite(func() {
 
 var _ = ginkgo.AfterSuite(func() {
 	server.Stop()
+	customServer.Stop()
+	_ = serverReporter.Close()
 })
 
 type sequentialIdGenerator struct {

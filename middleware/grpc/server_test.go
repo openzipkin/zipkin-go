@@ -26,6 +26,10 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 		serverReporter.Flush()
 	})
 
+	ginkgo.AfterEach(func() {
+		_ = conn.Close()
+	})
+
 	ginkgo.Context("with defaults", func() {
 		ginkgo.BeforeEach(func() {
 			var err error
