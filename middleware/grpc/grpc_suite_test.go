@@ -57,8 +57,8 @@ var _ = ginkgo.BeforeSuite(func() {
 	}()
 	serverAddr = lis.Addr().String()
 
-	lis, err = net.Listen("tcp", ":0")
-	gomega.Expect(lis, err).ToNot(gomega.BeNil(), "failed to listen to tcp port")
+	customLis, err := net.Listen("tcp", ":0")
+	gomega.Expect(customLis, err).ToNot(gomega.BeNil(), "failed to listen to tcp port")
 
 	tracer, err = zipkin.NewTracer(
 		serverReporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(serverIdGenerator), zipkin.WithSharedSpans(true))
@@ -69,9 +69,9 @@ var _ = ginkgo.BeforeSuite(func() {
 		}))))
 	service.RegisterHelloServiceServer(customServer, &TestHelloService{})
 	go func() {
-		_ = customServer.Serve(lis)
+		_ = customServer.Serve(customLis)
 	}()
-	customServerAddr = lis.Addr().String()
+	customServerAddr = customLis.Addr().String()
 })
 
 var _ = ginkgo.AfterSuite(func() {
