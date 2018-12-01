@@ -28,6 +28,12 @@ func WithClientRPCHandler(handler RPCHandler) ClientOption {
 	}
 }
 
+func WithClientRemoteServiceName(name string) ClientOption {
+	return func(c *clientHandler) {
+		c.remoteServiceName = name
+	}
+}
+
 // NewClientHandler returns a stats.Handler which can be used with grpc.WithStatsHandler to add
 // tracing to a gRPC client. The gRPC method name is used as the span name and by default the only
 // tags are the gRPC status code if the call fails. Use WithClientRPCHandler to add additional tags.
@@ -62,8 +68,10 @@ func (c *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 func (c *clientHandler) TagRPC(ctx context.Context, rti *stats.RPCTagInfo) context.Context {
 	var span zipkin.Span
 
+	ep, _ := zipkin.NewEndpoint(c.remoteServiceName, "")
+
 	name := spanName(rti)
-	span, ctx = c.tracer.StartSpanFromContext(ctx, name, zipkin.Kind(model.Client))
+	span, ctx = c.tracer.StartSpanFromContext(ctx, name, zipkin.Kind(model.Client), zipkin.RemoteEndpoint(ep))
 
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if ok {

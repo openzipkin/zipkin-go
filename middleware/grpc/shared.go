@@ -1,13 +1,15 @@
 package grpc
 
 import (
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"context"
 	"strings"
 
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/stats"
+	"google.golang.org/grpc/status"
 
 	"github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go/model"
 )
 
 // A RPCHandler can be registered using WithClientRPCHandler to intercept calls to HandleRPC of a
@@ -41,4 +43,17 @@ func handleRpc(span zipkin.Span, rs stats.RPCStats, handlers []RPCHandler) {
 		}
 		span.Finish()
 	}
+}
+
+type ctxKey struct{}
+
+var remoteEndpointKey = ctxKey{}
+
+func newContextWithRemoteEndpoint(ctx context.Context, ep *model.Endpoint) context.Context {
+	return context.WithValue(ctx, remoteEndpointKey, ep)
+}
+
+func remoteEndpointFromContext(ctx context.Context) *model.Endpoint {
+	ep, _ := ctx.Value(remoteEndpointKey).(*model.Endpoint)
+	return ep
 }

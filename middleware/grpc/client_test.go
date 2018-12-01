@@ -59,6 +59,7 @@ var _ = ginkgo.Describe("gRPC Client", func() {
 			span := spans[0]
 			gomega.Expect(span.Kind).To(gomega.Equal(model.Client))
 			gomega.Expect(span.Name).To(gomega.Equal("zipkin.testing.HelloService.Hello"))
+			gomega.Expect(span.RemoteEndpoint).To(gomega.BeNil())
 			gomega.Expect(span.Tags).To(gomega.BeEmpty())
 		})
 
@@ -96,7 +97,7 @@ var _ = ginkgo.Describe("gRPC Client", func() {
 		})
 	})
 
-	ginkgo.Context("with custom RPCHandler", func() {
+	ginkgo.Context("with custom RPCHandler and remote service name", func() {
 		ginkgo.BeforeEach(func() {
 			var err error
 
@@ -107,17 +108,19 @@ var _ = ginkgo.Describe("gRPC Client", func() {
 					tracer,
 					zipkingrpc.WithClientRPCHandler(func(span zipkin.Span, rpcStats stats.RPCStats) {
 						span.Tag("custom", "tag")
-					}))))
+					}),
+					zipkingrpc.WithClientRemoteServiceName("remoteService"))))
 			gomega.Expect(conn, err).ToNot(gomega.BeNil())
 			client = service.NewHelloServiceClient(conn)
 		})
 
-		ginkgo.It("calls custom RPCHandler", func() {
+		ginkgo.It("calls custom RPCHandler and has remote service name", func() {
 			resp, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
 			gomega.Expect(resp, err).ToNot(gomega.BeNil())
 
 			spans := reporter.Flush()
 			gomega.Expect(spans).To(gomega.HaveLen(1))
+			gomega.Expect(spans[0].RemoteEndpoint.ServiceName).To(gomega.Equal("remoteService"))
 			gomega.Expect(spans[0].Tags).To(gomega.HaveLen(1))
 			gomega.Expect(spans[0].Tags).To(gomega.HaveKeyWithValue("custom", "tag"))
 		})

@@ -45,8 +45,11 @@ func (s *serverHandler) HandleConn(ctx context.Context, cs stats.ConnStats) {
 
 // TagConn exists to satisfy gRPC stats.Handler.
 func (s *serverHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) context.Context {
-	// no-op
-	return ctx
+	ep, err := zipkin.NewEndpoint("", cti.RemoteAddr.String())
+	if err != nil {
+		return ctx
+	}
+	return newContextWithRemoteEndpoint(ctx, ep)
 }
 
 // HandleRPC implements per-RPC tracing and stats instrumentation.
@@ -67,6 +70,7 @@ func (s *serverHandler) TagRPC(ctx context.Context, rti *stats.RPCTagInfo) conte
 
 	sc := s.tracer.Extract(b3.ExtractGRPC(&md))
 
-	span := s.tracer.StartSpan(name, zipkin.Kind(model.Server), zipkin.Parent(sc))
+	span := s.tracer.StartSpan(name, zipkin.Kind(model.Server), zipkin.Parent(sc), zipkin.RemoteEndpoint(remoteEndpointFromContext(ctx)))
+
 	return zipkin.NewContext(ctx, span)
 }

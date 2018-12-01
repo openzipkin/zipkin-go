@@ -44,6 +44,8 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 
 			span := spans[0]
 			gomega.Expect(span.Kind).To(gomega.Equal(model.Server))
+			// Set to local host for tests, might be IPv4 or IPv6 not worth checking the actual address.
+			gomega.Expect(span.RemoteEndpoint.Empty()).To(gomega.BeFalse())
 			gomega.Expect(span.Name).To(gomega.Equal("zipkin.testing.HelloService.Hello"))
 			gomega.Expect(span.Tags).To(gomega.BeEmpty())
 
@@ -71,6 +73,7 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 
 			span := spans[0]
 			gomega.Expect(span.Kind).To(gomega.Equal(model.Server))
+			gomega.Expect(span.RemoteEndpoint.Empty()).To(gomega.BeFalse())
 			gomega.Expect(span.Name).To(gomega.Equal("zipkin.testing.HelloService.Hello"))
 			gomega.Expect(span.Tags).To(gomega.BeEmpty())
 
@@ -110,6 +113,7 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 			gomega.Expect(spans).To(gomega.HaveLen(1))
 
 			span := spans[0]
+			gomega.Expect(span.RemoteEndpoint.Empty()).To(gomega.BeFalse())
 			gomega.Expect(span.Tags).To(gomega.HaveLen(1))
 			gomega.Expect(span.Tags).To(gomega.HaveKeyWithValue("custom", "tag"))
 
