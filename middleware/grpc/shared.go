@@ -12,8 +12,8 @@ import (
 	"github.com/openzipkin/zipkin-go/model"
 )
 
-// A RPCHandler can be registered using WithClientRPCHandler to intercept calls to HandleRPC of a
-// handler for additional span customization.
+// A RPCHandler can be registered using WithClientRPCHandler or WithServerRPCHandler to intercept calls to HandleRPC of
+// a handler for additional span customization.
 type RPCHandler func(span zipkin.Span, rpcStats stats.RPCStats)
 
 func spanName(rti *stats.RPCTagInfo) string {
