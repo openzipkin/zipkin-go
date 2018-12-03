@@ -93,8 +93,8 @@ func TestNewEndpointFailsDueToLookupIP(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	if !strings.Contains(err.Error(), "no such host") {
-		t.Fatalf("expected no such host error, got: %s", err.Error())
+	if _, ok := err.(*net.DNSError); !ok {
+		t.Fatalf("expected no such host error, got: %s", err)
 	}
 }
 

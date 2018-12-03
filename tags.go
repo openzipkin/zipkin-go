@@ -19,5 +19,9 @@ const (
 
 // Set a standard Tag with a payload on provided Span.
 func (t Tag) Set(s Span, value string) {
+	if s == nil {
+		return
+	}
+
 	s.Tag(string(t), value)
 }
