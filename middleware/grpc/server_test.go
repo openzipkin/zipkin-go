@@ -100,7 +100,7 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 		})
 	})
 
-	ginkgo.Context("with joined spans and custom handler", func() {
+	ginkgo.Context("with joined spans and server tags", func() {
 		ginkgo.BeforeEach(func() {
 			var err error
 
@@ -109,7 +109,7 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 			client = service.NewHelloServiceClient(conn)
 		})
 
-		ginkgo.It("calls custom handler", func() {
+		ginkgo.It("has server tags", func() {
 			resp, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
@@ -119,7 +119,7 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 			span := spans[0]
 			gomega.Expect(span.RemoteEndpoint.Empty()).To(gomega.BeFalse())
 			gomega.Expect(span.Tags).To(gomega.HaveLen(1))
-			gomega.Expect(span.Tags).To(gomega.HaveKeyWithValue("custom", "tag"))
+			gomega.Expect(span.Tags).To(gomega.HaveKeyWithValue("default", "tag"))
 
 			spanCtx := resp.GetSpanContext()
 			gomega.Expect(spanCtx).To(gomega.HaveLen(2))

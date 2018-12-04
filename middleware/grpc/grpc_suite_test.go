@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 
 	"github.com/openzipkin/zipkin-go"
@@ -64,9 +63,7 @@ var _ = ginkgo.BeforeSuite(func() {
 		serverReporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(serverIdGenerator), zipkin.WithSharedSpans(true))
 	customServer = grpc.NewServer(grpc.StatsHandler(zipkingrpc.NewServerHandler(
 		tracer,
-		zipkingrpc.WithServerRPCHandler(func(span zipkin.Span, rpcStats stats.RPCStats) {
-			span.Tag("custom", "tag")
-		}))))
+		zipkingrpc.ServerTags(map[string]string{"default": "tag"}))))
 	service.RegisterHelloServiceServer(customServer, &TestHelloService{})
 	go func() {
 		_ = customServer.Serve(customLis)

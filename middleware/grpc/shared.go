@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 
@@ -22,10 +23,8 @@ func spanName(rti *stats.RPCTagInfo) string {
 	return name
 }
 
-func handleRPC(span zipkin.Span, rs stats.RPCStats, handlers []RPCHandler) {
-	for _, h := range handlers {
-		h(span, rs)
-	}
+func handleRPC(ctx context.Context, rs stats.RPCStats) {
+	span := zipkin.SpanFromContext(ctx)
 
 	switch rs := rs.(type) {
 	case *stats.End:
@@ -45,15 +44,14 @@ func handleRPC(span zipkin.Span, rs stats.RPCStats, handlers []RPCHandler) {
 	}
 }
 
-type ctxKey struct{}
+func remoteEndpointFromContext(ctx context.Context, name string) *model.Endpoint {
+	remoteAddr := ""
 
-var remoteEndpointKey = ctxKey{}
+	p, ok := peer.FromContext(ctx)
+	if ok {
+		remoteAddr = p.Addr.String()
+	}
 
-func newContextWithRemoteEndpoint(ctx context.Context, ep *model.Endpoint) context.Context {
-	return context.WithValue(ctx, remoteEndpointKey, ep)
-}
-
-func remoteEndpointFromContext(ctx context.Context) *model.Endpoint {
-	ep, _ := ctx.Value(remoteEndpointKey).(*model.Endpoint)
+	ep, _ := zipkin.NewEndpoint(name, remoteAddr)
 	return ep
 }

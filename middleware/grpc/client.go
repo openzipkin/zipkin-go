@@ -13,24 +13,15 @@ import (
 
 type clientHandler struct {
 	tracer            *zipkin.Tracer
-	rpcHandlers       []RPCHandler
 	remoteServiceName string
 }
 
 // A ClientOption can be passed to NewClientHandler to customize the returned handler.
 type ClientOption func(*clientHandler)
 
-// WithClientRPCHandler allows one to add custom logic for handling a stats.RPCStats, e.g.,
-// to add additional tags.
-func WithClientRPCHandler(handler RPCHandler) ClientOption {
-	return func(c *clientHandler) {
-		c.rpcHandlers = append(c.rpcHandlers, handler)
-	}
-}
-
-// WithClientRemoteServiceName will set the value for the remote endpoint's service name on
+// WithRemoteServiceName will set the value for the remote endpoint's service name on
 // all spans.
-func WithClientRemoteServiceName(name string) ClientOption {
+func WithRemoteServiceName(name string) ClientOption {
 	return func(c *clientHandler) {
 		c.remoteServiceName = name
 	}
@@ -62,15 +53,14 @@ func (c *clientHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) con
 
 // HandleRPC implements per-RPC tracing and stats instrumentation.
 func (c *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	span := zipkin.SpanFromContext(ctx)
-	handleRPC(span, rs, c.rpcHandlers)
+	handleRPC(ctx, rs)
 }
 
 // TagRPC implements per-RPC context management.
 func (c *clientHandler) TagRPC(ctx context.Context, rti *stats.RPCTagInfo) context.Context {
 	var span zipkin.Span
 
-	ep, _ := zipkin.NewEndpoint(c.remoteServiceName, "")
+	ep := remoteEndpointFromContext(ctx, c.remoteServiceName)
 
 	name := spanName(rti)
 	span, ctx = c.tracer.StartSpanFromContext(ctx, name, zipkin.Kind(model.Client), zipkin.RemoteEndpoint(ep))

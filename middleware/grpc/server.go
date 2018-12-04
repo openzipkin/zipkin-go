@@ -10,18 +10,17 @@ import (
 )
 
 type serverHandler struct {
-	tracer            *zipkin.Tracer
-	rpcHandlers       []RPCHandler
+	tracer      *zipkin.Tracer
+	defaultTags map[string]string
 }
 
 // A ServerOption can be passed to NewServerHandler to customize the returned handler.
 type ServerOption func(*serverHandler)
 
-// WithServerRPCHandler allows one to add custom logic for handling a stats.RPCStats, e.g.,
-// to add additional tags.
-func WithServerRPCHandler(handler RPCHandler) ServerOption {
-	return func(s *serverHandler) {
-		s.rpcHandlers = append(s.rpcHandlers, handler)
+// ServerTags adds default Tags to inject into server spans.
+func ServerTags(tags map[string]string) ServerOption {
+	return func(h *serverHandler) {
+		h.defaultTags = tags
 	}
 }
 
@@ -45,17 +44,13 @@ func (s *serverHandler) HandleConn(ctx context.Context, cs stats.ConnStats) {
 
 // TagConn exists to satisfy gRPC stats.Handler.
 func (s *serverHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) context.Context {
-	ep, err := zipkin.NewEndpoint("", cti.RemoteAddr.String())
-	if err != nil {
-		return ctx
-	}
-	return newContextWithRemoteEndpoint(ctx, ep)
+	// no-op
+	return ctx
 }
 
 // HandleRPC implements per-RPC tracing and stats instrumentation.
 func (s *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	span := zipkin.SpanFromContext(ctx)
-	handleRPC(span, rs, s.rpcHandlers)
+	handleRPC(ctx, rs)
 }
 
 // TagRPC implements per-RPC context management.
@@ -70,7 +65,11 @@ func (s *serverHandler) TagRPC(ctx context.Context, rti *stats.RPCTagInfo) conte
 
 	sc := s.tracer.Extract(b3.ExtractGRPC(&md))
 
-	span := s.tracer.StartSpan(name, zipkin.Kind(model.Server), zipkin.Parent(sc), zipkin.RemoteEndpoint(remoteEndpointFromContext(ctx)))
+	span := s.tracer.StartSpan(name, zipkin.Kind(model.Server), zipkin.Parent(sc), zipkin.RemoteEndpoint(remoteEndpointFromContext(ctx, "")))
+
+	for k, v := range s.defaultTags {
+		span.Tag(k, v)
+	}
 
 	return zipkin.NewContext(ctx, span)
 }
