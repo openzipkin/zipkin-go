@@ -26,7 +26,8 @@ func ServerTags(tags map[string]string) ServerOption {
 
 // NewServerHandler returns a stats.Handler which can be used with grpc.WithStatsHandler to add
 // tracing to a gRPC server. The gRPC method name is used as the span name and by default the only
-// tags are the gRPC status code if the call fails. Use WithServerRPCHandler to add additional tags.
+// tags are the gRPC status code if the call fails. Use ServerTags to add additional tags that
+// should be applied to all spans.
 func NewServerHandler(tracer *zipkin.Tracer, options ...ServerOption) stats.Handler {
 	c := &serverHandler{
 		tracer: tracer,

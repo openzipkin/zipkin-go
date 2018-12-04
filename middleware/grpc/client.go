@@ -29,7 +29,7 @@ func WithRemoteServiceName(name string) ClientOption {
 
 // NewClientHandler returns a stats.Handler which can be used with grpc.WithStatsHandler to add
 // tracing to a gRPC client. The gRPC method name is used as the span name and by default the only
-// tags are the gRPC status code if the call fails. Use WithClientRPCHandler to add additional tags.
+// tags are the gRPC status code if the call fails.
 func NewClientHandler(tracer *zipkin.Tracer, options ...ClientOption) stats.Handler {
 	c := &clientHandler{
 		tracer: tracer,
