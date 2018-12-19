@@ -189,6 +189,12 @@ func RequestCallback(rc RequestCallbackFn) ReporterOption {
 	return func(r *httpReporter) { r.reqCallback = rc }
 }
 
+// Logger sets the logger used to report errors in the collection
+// process.
+func Logger(l *log.Logger) ReporterOption {
+	return func(r *httpReporter) { r.logger = l }
+}
+
 // NewReporter returns a new HTTP Reporter.
 // url should be the endpoint to send the spans to, e.g.
 // http://localhost:9411/api/v2/spans
