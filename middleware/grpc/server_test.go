@@ -43,8 +43,11 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 			resp, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
-			spans := serverReporter.Flush()
-			gomega.Expect(spans).To(gomega.HaveLen(1))
+			var spans []model.SpanModel
+			gomega.Eventually(func() []model.SpanModel{
+				spans = serverReporter.Flush()
+				return spans
+			}).Should(gomega.HaveLen(1))
 
 			span := spans[0]
 			gomega.Expect(span.Kind).To(gomega.Equal(model.Server))
@@ -72,8 +75,11 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 			resp, err := client.Hello(ctx, &service.HelloRequest{Payload: "Hello"})
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
-			spans := serverReporter.Flush()
-			gomega.Expect(spans).To(gomega.HaveLen(1))
+			var spans []model.SpanModel
+			gomega.Eventually(func() []model.SpanModel{
+				spans = serverReporter.Flush()
+				return spans
+			}).Should(gomega.HaveLen(1))
 
 			span := spans[0]
 			gomega.Expect(span.Kind).To(gomega.Equal(model.Server))
@@ -92,8 +98,12 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 			_, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "fail"})
 			gomega.Expect(err).To(gomega.HaveOccurred())
 
-			spans := serverReporter.Flush()
-			gomega.Expect(spans).To(gomega.HaveLen(1))
+			var spans []model.SpanModel
+			gomega.Eventually(func() []model.SpanModel{
+				spans = serverReporter.Flush()
+				return spans
+			}).Should(gomega.HaveLen(1))
+
 			gomega.Expect(spans[0].Tags).To(gomega.HaveLen(2))
 			gomega.Expect(spans[0].Tags).To(gomega.HaveKeyWithValue("grpc.status_code", "ABORTED"))
 			gomega.Expect(spans[0].Tags).To(gomega.HaveKeyWithValue(string(zipkin.TagError), "ABORTED"))
@@ -113,8 +123,11 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 			resp, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
-			spans := serverReporter.Flush()
-			gomega.Expect(spans).To(gomega.HaveLen(1))
+			var spans []model.SpanModel
+			gomega.Eventually(func() []model.SpanModel{
+				spans = serverReporter.Flush()
+				return spans
+			}).Should(gomega.HaveLen(1))
 
 			span := spans[0]
 			gomega.Expect(span.RemoteEndpoint.Empty()).To(gomega.BeFalse())
