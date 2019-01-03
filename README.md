@@ -55,7 +55,7 @@ For convenience `NewClient` is provided which returns a HTTP Client which embeds
 calling the `DoWithAppSpan()` method.
 
 #### grpc
-Easy to use stats.Handler middleware are provided for tracing gRPC server and
+Easy to use grpc.StatsHandler middleware are provided for tracing gRPC server and
 client requests. 
 
 For a server, pass `NewServerHandler` when calling `NewServer`, e.g.,
