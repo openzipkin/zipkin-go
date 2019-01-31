@@ -10,6 +10,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/openzipkin/zipkin-go/model"
+	zipkin_proto3 "github.com/openzipkin/zipkin-go/proto/v2"
 	"github.com/openzipkin/zipkin-go/reporter"
 	"github.com/openzipkin/zipkin-go/reporter/kafka"
 )
@@ -53,6 +54,25 @@ func TestKafkaProduce(t *testing.T) {
 	c, err := kafka.NewReporter(
 		[]string{"192.0.2.10:9092"},
 		kafka.Producer(p),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, want := range spans {
+		m := sendSpan(t, c, p, *want)
+		testMetadata(t, m)
+		have := deserializeSpan(t, m.Value)
+		testEqual(t, want, have)
+	}
+}
+
+func TestKafkaProduceProto(t *testing.T) {
+	p := newStubProducer(false)
+	c, err := kafka.NewReporter(
+		[]string{"192.0.2.10:9092"},
+		kafka.Producer(p),
+		kafka.Serializer(zipkin_proto3.SpanSerializer{}),
 	)
 	if err != nil {
 		t.Fatal(err)

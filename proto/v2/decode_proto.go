@@ -90,7 +90,7 @@ func protoSpanToModelSpan(s *Span, debugWasSet bool) (*zipkinmodel.SpanModel, er
 		LocalEndpoint:  protoEndpointToModelEndpoint(s.LocalEndpoint),
 		RemoteEndpoint: protoEndpointToModelEndpoint(s.RemoteEndpoint),
 		Shared:         s.Shared,
-		Annotations:    protoAnnotationToModelAnnotations(s.Annotations),
+		Annotations:    protoAnnotationsToModelAnnotations(s.Annotations),
 	}
 
 	return zms, nil
@@ -135,7 +135,7 @@ func protoSpanIDToModelSpanID(spanId []byte) (zid *zipkinmodel.ID, blank bool, e
 	return &zid_, false, nil
 }
 
-func protoAnnotationToModelAnnotations(zpa []*Annotation) (zma []zipkinmodel.Annotation) {
+func protoAnnotationsToModelAnnotations(zpa []*Annotation) (zma []zipkinmodel.Annotation) {
 	for _, za := range zpa {
 		if za != nil {
 			zma = append(zma, zipkinmodel.Annotation{
@@ -152,5 +152,5 @@ func protoAnnotationToModelAnnotations(zpa []*Annotation) (zma []zipkinmodel.Ann
 }
 
 func microsToTime(us uint64) time.Time {
-	return time.Unix(0, int64(us*1e3))
+	return time.Unix(0, int64(us*1e3)).UTC()
 }

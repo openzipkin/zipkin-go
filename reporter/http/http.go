@@ -5,7 +5,6 @@ package http
 
 import (
 	"bytes"
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -39,6 +38,7 @@ type httpReporter struct {
 	quit          chan struct{}
 	shutdown      chan error
 	reqCallback   RequestCallbackFn
+	serializer    reporter.SpanSerializer
 }
 
 // Send implements reporter
@@ -113,7 +113,7 @@ func (r *httpReporter) sendBatch() error {
 		return nil
 	}
 
-	body, err := json.Marshal(sendBatch)
+	body, err := r.serializer.Serialize(sendBatch)
 	if err != nil {
 		r.logger.Printf("failed when marshalling the spans batch: %s\n", err.Error())
 		return err
@@ -124,7 +124,7 @@ func (r *httpReporter) sendBatch() error {
 		r.logger.Printf("failed when creating the request: %s\n", err.Error())
 		return err
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", r.serializer.ContentType())
 	if r.reqCallback != nil {
 		r.reqCallback(req)
 	}
@@ -195,6 +195,16 @@ func Logger(l *log.Logger) ReporterOption {
 	return func(r *httpReporter) { r.logger = l }
 }
 
+// Serializer sets the serialization function to use for sending span data to
+// Zipkin.
+func Serializer(serializer reporter.SpanSerializer) ReporterOption {
+	return func(r *httpReporter) {
+		if serializer != nil {
+			r.serializer = serializer
+		}
+	}
+}
+
 // NewReporter returns a new HTTP Reporter.
 // url should be the endpoint to send the spans to, e.g.
 // http://localhost:9411/api/v2/spans
@@ -212,6 +222,7 @@ func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 		shutdown:      make(chan error, 1),
 		sendMtx:       &sync.Mutex{},
 		batchMtx:      &sync.Mutex{},
+		serializer:    reporter.JSONSerializer{},
 	}
 
 	for _, opt := range opts {

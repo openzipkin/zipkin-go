@@ -21,9 +21,10 @@ const defaultKafkaTopic = "zipkin"
 // kafkaReporter implements Reporter by publishing spans to a Kafka
 // broker.
 type kafkaReporter struct {
-	producer sarama.AsyncProducer
-	logger   *log.Logger
-	topic    string
+	producer   sarama.AsyncProducer
+	logger     *log.Logger
+	topic      string
+	serializer reporter.SpanSerializer
 }
 
 // ReporterOption sets a parameter for the kafkaReporter
@@ -51,12 +52,23 @@ func Topic(t string) ReporterOption {
 	}
 }
 
+// Serializer sets the serialization function to use for sending span data to
+// Zipkin.
+func Serializer(serializer reporter.SpanSerializer) ReporterOption {
+	return func(c *kafkaReporter) {
+		if serializer != nil {
+			c.serializer = serializer
+		}
+	}
+}
+
 // NewReporter returns a new Kafka-backed Reporter. address should be a slice of
 // TCP endpoints of the form "host:port".
 func NewReporter(address []string, options ...ReporterOption) (reporter.Reporter, error) {
 	r := &kafkaReporter{
-		logger: log.New(os.Stderr, "", log.LstdFlags),
-		topic:  defaultKafkaTopic,
+		logger:     log.New(os.Stderr, "", log.LstdFlags),
+		topic:      defaultKafkaTopic,
+		serializer: reporter.JSONSerializer{},
 	}
 
 	for _, option := range options {
