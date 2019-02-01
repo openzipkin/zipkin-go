@@ -15,12 +15,12 @@
 package zipkin_proto3_test
 
 import (
+	"encoding/json"
 	"net"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	zipkinmodel "github.com/openzipkin/zipkin-go/model"
 	zipkin_proto3 "github.com/openzipkin/zipkin-go/proto/v2"
 )
@@ -96,6 +96,8 @@ func TestExportSpans(t *testing.T) {
 	}
 
 	if got, _ := zipkin_proto3.ParseSpans(protoBlob, true); !reflect.DeepEqual(want, got) {
-		t.Errorf("conversion error!\nWANT:\n%s\n\nGOT:\n%s\n", spew.Sdump(want), spew.Sdump(got))
+		w, _ := json.Marshal(want)
+		g, _ := json.Marshal(got)
+		t.Errorf("conversion error!\nWANT:\n%s\n\nGOT:\n%s\n", w, g)
 	}
 }
