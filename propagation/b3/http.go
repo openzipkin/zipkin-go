@@ -42,13 +42,14 @@ func WithInjectSingleAndMultiple() InjectOption {
 func WithInjectSingleOnly() InjectOption {
 	return func(opts *InjectOptions) {
 		opts.shouldInjectSingle = true
+		opts.shouldInjectMultiple = false
 	}
 }
 
 // ExtractHTTP will extract a span.Context from the HTTP Request if found in
 // B3 header format.
 func ExtractHTTP(r *http.Request) propagation.Extractor {
-	return func() (*model.SpanContext, error) {
+	return func() (sc *model.SpanContext, err error) {
 		var (
 			traceIDHeader      = r.Header.Get(TraceID)
 			spanIDHeader       = r.Header.Get(SpanID)
@@ -58,16 +59,25 @@ func ExtractHTTP(r *http.Request) propagation.Extractor {
 			singleHeader       = r.Header.Get(Context)
 		)
 
+		var sErr error
 		if singleHeader != "" {
-			if sc, err := ParseSingleHeader(singleHeader); err == nil {
-				return sc, nil
+			sc, sErr = ParseSingleHeader(singleHeader)
+			if sErr == nil {
+				return
 			}
 		}
 
-		return ParseHeaders(
+		sc, mErr := ParseHeaders(
 			traceIDHeader, spanIDHeader, parentSpanIDHeader, sampledHeader,
 			flagsHeader,
 		)
+
+		err = mErr
+		if mErr != nil && sErr != nil {
+			err = sErr
+		}
+
+		return
 	}
 }
 
