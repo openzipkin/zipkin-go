@@ -761,6 +761,20 @@ func TestStartSpanFromContext(t *testing.T) {
 	}
 }
 
+func TestStartSpanFromContextForEmptyContext(t *testing.T) {
+	ctx := context.Background()
+	rep := reporter.NewNoopReporter()
+	defer rep.Close()
+
+	tr, err := NewTracer(rep, WithSampler(NeverSample))
+	if err != nil {
+		t.Fatalf("unable to create tracer instance: %+v", err)
+	}
+
+	span, _ := tr.StartSpanFromContext(ctx, "my span")
+	span.Finish()
+}
+
 func TestLocalEndpoint(t *testing.T) {
 	rep := reporter.NewNoopReporter()
 	defer rep.Close()

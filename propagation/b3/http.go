@@ -21,6 +21,30 @@ import (
 	"github.com/openzipkin/zipkin-go/propagation"
 )
 
+type InjectOption func(opts *InjectOptions)
+
+type InjectOptions struct {
+	shouldInjectSingle   bool
+	shouldInjectMultiple bool
+}
+
+// WithInjectSingleAndMultiple allows to include both single and multiple
+// headers in the context injection
+func WithInjectSingleAndMultiple() InjectOption {
+	return func(opts *InjectOptions) {
+		opts.shouldInjectSingle = true
+		opts.shouldInjectMultiple = true
+	}
+}
+
+// WithInjectSingleOnly allows to include only single header in the context
+// injection
+func WithInjectSingleOnly() InjectOption {
+	return func(opts *InjectOptions) {
+		opts.shouldInjectSingle = true
+	}
+}
+
 // ExtractHTTP will extract a span.Context from the HTTP Request if found in
 // B3 header format.
 func ExtractHTTP(r *http.Request) propagation.Extractor {
@@ -31,7 +55,14 @@ func ExtractHTTP(r *http.Request) propagation.Extractor {
 			parentSpanIDHeader = r.Header.Get(ParentSpanID)
 			sampledHeader      = r.Header.Get(Sampled)
 			flagsHeader        = r.Header.Get(Flags)
+			singleHeader       = r.Header.Get(Context)
 		)
+
+		if singleHeader != "" {
+			if sc, err := ParseSingleHeader(singleHeader); err == nil {
+				return sc, nil
+			}
+		}
 
 		return ParseHeaders(
 			traceIDHeader, spanIDHeader, parentSpanIDHeader, sampledHeader,
@@ -41,30 +72,41 @@ func ExtractHTTP(r *http.Request) propagation.Extractor {
 }
 
 // InjectHTTP will inject a span.Context into a HTTP Request
-func InjectHTTP(r *http.Request) propagation.Injector {
+func InjectHTTP(r *http.Request, opts ...InjectOption) propagation.Injector {
+	options := InjectOptions{shouldInjectMultiple: true}
+	for _, opt := range opts {
+		opt(&options)
+	}
+
 	return func(sc model.SpanContext) error {
 		if (model.SpanContext{}) == sc {
 			return ErrEmptyContext
 		}
 
-		if sc.Debug {
-			r.Header.Set(Flags, "1")
-		} else if sc.Sampled != nil {
-			// Debug is encoded as X-B3-Flags: 1. Since Debug implies Sampled,
-			// so don't also send "X-B3-Sampled: 1".
-			if *sc.Sampled {
-				r.Header.Set(Sampled, "1")
-			} else {
-				r.Header.Set(Sampled, "0")
+		if options.shouldInjectMultiple {
+			if sc.Debug {
+				r.Header.Set(Flags, "1")
+			} else if sc.Sampled != nil {
+				// Debug is encoded as X-B3-Flags: 1. Since Debug implies Sampled,
+				// so don't also send "X-B3-Sampled: 1".
+				if *sc.Sampled {
+					r.Header.Set(Sampled, "1")
+				} else {
+					r.Header.Set(Sampled, "0")
+				}
+			}
+
+			if !sc.TraceID.Empty() && sc.ID > 0 {
+				r.Header.Set(TraceID, sc.TraceID.String())
+				r.Header.Set(SpanID, sc.ID.String())
+				if sc.ParentID != nil {
+					r.Header.Set(ParentSpanID, sc.ParentID.String())
+				}
 			}
 		}
 
-		if !sc.TraceID.Empty() && sc.ID > 0 {
-			r.Header.Set(TraceID, sc.TraceID.String())
-			r.Header.Set(SpanID, sc.ID.String())
-			if sc.ParentID != nil {
-				r.Header.Set(ParentSpanID, sc.ParentID.String())
-			}
+		if options.shouldInjectSingle {
+			r.Header.Set(Context, BuildSingleHeader(sc))
 		}
 
 		return nil
