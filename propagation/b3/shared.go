@@ -18,7 +18,7 @@ import "errors"
 
 // Common Header Extraction / Injection errors
 var (
-	ErrInvalidSampledByte        = errors.New("invalid B3 sampled found")
+	ErrInvalidSampledByte        = errors.New("invalid B3 Sampled found")
 	ErrInvalidSampledHeader      = errors.New("invalid B3 Sampled header found")
 	ErrInvalidFlagsHeader        = errors.New("invalid B3 Flags header found")
 	ErrInvalidTraceIDHeader      = errors.New("invalid B3 TraceID header found")
