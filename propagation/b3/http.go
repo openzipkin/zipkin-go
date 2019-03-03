@@ -24,32 +24,32 @@ import (
 type InjectOption func(opts *InjectOptions)
 
 type InjectOptions struct {
-	shouldInjectSingle   bool
-	shouldInjectMultiple bool
+	shouldInjectSingleHeader bool
+	shouldInjectMultiHeader  bool
 }
 
-// WithInjectSingleAndMultiple allows to include both single and multiple
+// WithSingleAndMultiHeader allows to include both single and multiple
 // headers in the context injection
-func WithInjectSingleAndMultiple() InjectOption {
+func WithSingleAndMultiHeader() InjectOption {
 	return func(opts *InjectOptions) {
-		opts.shouldInjectSingle = true
-		opts.shouldInjectMultiple = true
+		opts.shouldInjectSingleHeader = true
+		opts.shouldInjectMultiHeader = true
 	}
 }
 
-// WithInjectSingleOnly allows to include only single header in the context
+// WithSingleHeaderOnly allows to include only single header in the context
 // injection
-func WithInjectSingleOnly() InjectOption {
+func WithSingleHeaderOnly() InjectOption {
 	return func(opts *InjectOptions) {
-		opts.shouldInjectSingle = true
-		opts.shouldInjectMultiple = false
+		opts.shouldInjectSingleHeader = true
+		opts.shouldInjectMultiHeader = false
 	}
 }
 
 // ExtractHTTP will extract a span.Context from the HTTP Request if found in
 // B3 header format.
 func ExtractHTTP(r *http.Request) propagation.Extractor {
-	return func() (sc *model.SpanContext, err error) {
+	return func() (*model.SpanContext, error) {
 		var (
 			traceIDHeader      = r.Header.Get(TraceID)
 			spanIDHeader       = r.Header.Get(SpanID)
@@ -59,31 +59,34 @@ func ExtractHTTP(r *http.Request) propagation.Extractor {
 			singleHeader       = r.Header.Get(Context)
 		)
 
-		var sErr error
+		var (
+			sc   *model.SpanContext
+			sErr error
+			mErr error
+		)
 		if singleHeader != "" {
 			sc, sErr = ParseSingleHeader(singleHeader)
 			if sErr == nil {
-				return
+				return sc, nil
 			}
 		}
 
-		sc, mErr := ParseHeaders(
-			traceIDHeader, spanIDHeader, parentSpanIDHeader, sampledHeader,
-			flagsHeader,
+		sc, mErr = ParseHeaders(
+			traceIDHeader, spanIDHeader, parentSpanIDHeader,
+			sampledHeader, flagsHeader,
 		)
 
-		err = mErr
 		if mErr != nil && sErr != nil {
-			err = sErr
+			return nil, sErr
 		}
 
-		return
+		return sc, mErr
 	}
 }
 
 // InjectHTTP will inject a span.Context into a HTTP Request
 func InjectHTTP(r *http.Request, opts ...InjectOption) propagation.Injector {
-	options := InjectOptions{shouldInjectMultiple: true}
+	options := InjectOptions{shouldInjectMultiHeader: true}
 	for _, opt := range opts {
 		opt(&options)
 	}
@@ -93,7 +96,7 @@ func InjectHTTP(r *http.Request, opts ...InjectOption) propagation.Injector {
 			return ErrEmptyContext
 		}
 
-		if options.shouldInjectMultiple {
+		if options.shouldInjectMultiHeader {
 			if sc.Debug {
 				r.Header.Set(Flags, "1")
 			} else if sc.Sampled != nil {
@@ -115,7 +118,7 @@ func InjectHTTP(r *http.Request, opts ...InjectOption) propagation.Injector {
 			}
 		}
 
-		if options.shouldInjectSingle {
+		if options.shouldInjectSingleHeader {
 			r.Header.Set(Context, BuildSingleHeader(sc))
 		}
 

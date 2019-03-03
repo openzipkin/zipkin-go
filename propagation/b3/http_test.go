@@ -375,7 +375,7 @@ func TestHTTPInjectWithSingleOnlyHeaders(t *testing.T) {
 		Sampled: &sampled,
 	}
 
-	b3.InjectHTTP(r, b3.WithInjectSingleOnly())(sc)
+	b3.InjectHTTP(r, b3.WithSingleHeaderOnly())(sc)
 
 	if want, have := "", r.Header.Get(b3.TraceID); want != have {
 		t.Errorf("TraceID want empty, have %s", have)
@@ -396,7 +396,7 @@ func TestHTTPInjectWithBothSingleAndMultipleHeaders(t *testing.T) {
 		Sampled: &sampled,
 	}
 
-	b3.InjectHTTP(r, b3.WithInjectSingleAndMultiple())(sc)
+	b3.InjectHTTP(r, b3.WithSingleAndMultiHeader())(sc)
 
 	if want, have := "0000000000000001", r.Header.Get(b3.TraceID); want != have {
 		t.Errorf("Trace ID want %s, have %s", want, have)
