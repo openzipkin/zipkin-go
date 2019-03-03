@@ -141,6 +141,8 @@ func ParseSingleHeader(contextHeader string) (*model.SpanContext, error) {
 
 			if headerLen == pos+16+1+16+1+1 {
 				sampling = string(contextHeader[pos+16+1+16+1])
+			} else if headerLen == pos+16+1+16+1+16 {
+				return nil, ErrInvalidScopeParentSingle
 			} else if headerLen == pos+16+1+16+1+1+1+16 {
 				sampling = string(contextHeader[pos+16+1+16+1])
 

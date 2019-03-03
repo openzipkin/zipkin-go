@@ -26,6 +26,7 @@ var (
 	ErrInvalidParentSpanIDHeader = errors.New("invalid B3 ParentSpanID header found")
 	ErrInvalidScope              = errors.New("require either both TraceID and SpanID or none")
 	ErrInvalidScopeParent        = errors.New("ParentSpanID requires both TraceID and SpanID to be available")
+	ErrInvalidScopeParentSingle  = errors.New("ParentSpanID requires TraceID, SpanID and Sampled to be available")
 	ErrEmptyContext              = errors.New("empty request context")
 	ErrInvalidTraceIDValue       = errors.New("invalid B3 TraceID value found")
 	ErrInvalidSpanIDValue        = errors.New("invalid B3 SpanID value found")

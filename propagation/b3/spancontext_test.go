@@ -30,7 +30,6 @@ func TestParseHeaderSuccess(t *testing.T) {
 		expectedContext *model.SpanContext
 		expectedErr     error
 	}{
-		{"d", nil, nil},
 		{"d", &model.SpanContext{Debug: true}, nil},
 		{"1", &model.SpanContext{Sampled: &trueVal}, nil},
 		{"000000000000007b00000000000001c8-000000000000007b", &model.SpanContext{TraceID: model.TraceID{High: 123, Low: 456}, ID: model.ID(123)}, nil},
@@ -82,15 +81,15 @@ func TestParseHeaderFails(t *testing.T) {
 		{"000000000000007b00000000000001c8", ErrInvalidScope},
 		{"000000000000007b00000000000001c8-000000000000007b-", ErrInvalidSampledByte},
 		{"000000000000007b00000000000001c8-000000000000007b-3", ErrInvalidSampledByte},
-		{"000000000000007b00000000000001c8-000000000000007b-00000000000001c8", ErrInvalidParentSpanIDValue},
+		{"000000000000007b00000000000001c8-000000000000007b-00000000000001c8", ErrInvalidScopeParentSingle},
 		{"000000000000007b00000000000001c8-000000000000007b-1-00000000000001c", ErrInvalidParentSpanIDValue},
 		{"", ErrEmptyContext},
 	}
 
 	for _, testCase := range testCases {
 		_, actualErr := ParseSingleHeader(testCase.header)
-		if want, have := actualErr, testCase.expectedErr; want != have {
-			t.Fatalf("unexpected error for header %q, want: %v, have %v", testCase.header, want, have)
+		if want, have := testCase.expectedErr, actualErr; want != have {
+			t.Fatalf("unexpected error for header %q, want: %q, have: %q", testCase.header, want, have)
 		}
 	}
 }
