@@ -24,11 +24,27 @@ import (
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 )
 
+// ErrHandler allows instrumentations to decide how to tag errors
+// based on the response status code and the error from the
+// Transport.RoundTrip
+type ErrHandler func(sp zipkin.Span, err error, statusCode int)
+
+func defaultErrHandler(sp zipkin.Span, err error, statusCode int) {
+	if err != nil {
+		zipkin.TagError.Set(sp, err.Error())
+		return
+	}
+
+	statusCodeVal := strconv.FormatInt(int64(statusCode), 10)
+	zipkin.TagError.Set(sp, statusCodeVal)
+}
+
 type transport struct {
 	tracer      *zipkin.Tracer
 	rt          http.RoundTripper
 	httpTrace   bool
 	defaultTags map[string]string
+	errHandler  ErrHandler
 }
 
 // TransportOption allows one to configure optional transport configuration.
@@ -57,6 +73,13 @@ func TransportTrace(enable bool) TransportOption {
 	}
 }
 
+// TransportTrace allows one to enable Go's net/http/httptrace.
+func TransportErrHandler(h ErrHandler) TransportOption {
+	return func(t *transport) {
+		t.errHandler = h
+	}
+}
+
 // NewTransport returns a new Zipkin instrumented http RoundTripper which can be
 // used with a standard library http Client.
 func NewTransport(tracer *zipkin.Tracer, options ...TransportOption) (http.RoundTripper, error) {
@@ -65,9 +88,10 @@ func NewTransport(tracer *zipkin.Tracer, options ...TransportOption) (http.Round
 	}
 
 	t := &transport{
-		tracer:    tracer,
-		rt:        http.DefaultTransport,
-		httpTrace: false,
+		tracer:     tracer,
+		rt:         http.DefaultTransport,
+		httpTrace:  false,
+		errHandler: defaultErrHandler,
 	}
 
 	for _, option := range options {
@@ -119,9 +143,8 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	_ = b3.InjectHTTP(req)(sp.Context())
 
 	res, err = t.rt.RoundTrip(req)
-
 	if err != nil {
-		zipkin.TagError.Set(sp, err.Error())
+		t.errHandler(sp, err, 0)
 		sp.Finish()
 		return
 	}
@@ -133,7 +156,7 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		statusCode := strconv.FormatInt(int64(res.StatusCode), 10)
 		zipkin.TagHTTPStatusCode.Set(sp, statusCode)
 		if res.StatusCode > 399 {
-			zipkin.TagError.Set(sp, statusCode)
+			t.errHandler(sp, nil, res.StatusCode)
 		}
 	}
 	sp.Finish()
