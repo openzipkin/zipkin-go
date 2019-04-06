@@ -73,7 +73,7 @@ func TransportTrace(enable bool) TransportOption {
 	}
 }
 
-// TransportTrace allows one to enable Go's net/http/httptrace.
+// TransportErrHandler allows to pass a custom error handler for the round trip
 func TransportErrHandler(h ErrHandler) TransportOption {
 	return func(t *transport) {
 		t.errHandler = h
