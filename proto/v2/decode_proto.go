@@ -113,24 +113,24 @@ func protoEndpointToModelEndpoint(zpe *Endpoint) *zipkinmodel.Endpoint {
 	}
 }
 
-func protoSpanIDToModelSpanID(spanId []byte) (zid *zipkinmodel.ID, blank bool, err error) {
-	if len(spanId) == 0 {
+func protoSpanIDToModelSpanID(spanID []byte) (zid *zipkinmodel.ID, blank bool, err error) {
+	if len(spanID) == 0 {
 		return nil, true, nil
 	}
-	if len(spanId) != 8 {
-		return nil, true, fmt.Errorf("has length %d yet wanted length 8", len(spanId))
+	if len(spanID) != 8 {
+		return nil, true, fmt.Errorf("has length %d yet wanted length 8", len(spanID))
 	}
 
 	// Converting [8]byte --> uint64
 	var u64 uint64
-	u64 |= uint64(spanId[7]&0xFF) << 0
-	u64 |= uint64(spanId[6]&0xFF) << 8
-	u64 |= uint64(spanId[5]&0xFF) << 16
-	u64 |= uint64(spanId[4]&0xFF) << 24
-	u64 |= uint64(spanId[3]&0xFF) << 32
-	u64 |= uint64(spanId[2]&0xFF) << 40
-	u64 |= uint64(spanId[1]&0xFF) << 48
-	u64 |= uint64(spanId[0]&0xFF) << 56
+	u64 |= uint64(spanID[7]&0xFF) << 0
+	u64 |= uint64(spanID[6]&0xFF) << 8
+	u64 |= uint64(spanID[5]&0xFF) << 16
+	u64 |= uint64(spanID[4]&0xFF) << 24
+	u64 |= uint64(spanID[3]&0xFF) << 32
+	u64 |= uint64(spanID[2]&0xFF) << 40
+	u64 |= uint64(spanID[1]&0xFF) << 48
+	u64 |= uint64(spanID[0]&0xFF) << 56
 	zid_ := zipkinmodel.ID(u64)
 	return &zid_, false, nil
 }
