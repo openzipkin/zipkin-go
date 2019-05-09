@@ -18,6 +18,7 @@ import "errors"
 
 // Common Header Extraction / Injection errors
 var (
+	ErrInvalidSampledByte        = errors.New("invalid B3 Sampled found")
 	ErrInvalidSampledHeader      = errors.New("invalid B3 Sampled header found")
 	ErrInvalidFlagsHeader        = errors.New("invalid B3 Flags header found")
 	ErrInvalidTraceIDHeader      = errors.New("invalid B3 TraceID header found")
@@ -25,7 +26,11 @@ var (
 	ErrInvalidParentSpanIDHeader = errors.New("invalid B3 ParentSpanID header found")
 	ErrInvalidScope              = errors.New("require either both TraceID and SpanID or none")
 	ErrInvalidScopeParent        = errors.New("ParentSpanID requires both TraceID and SpanID to be available")
+	ErrInvalidScopeParentSingle  = errors.New("ParentSpanID requires TraceID, SpanID and Sampled to be available")
 	ErrEmptyContext              = errors.New("empty request context")
+	ErrInvalidTraceIDValue       = errors.New("invalid B3 TraceID value found")
+	ErrInvalidSpanIDValue        = errors.New("invalid B3 SpanID value found")
+	ErrInvalidParentSpanIDValue  = errors.New("invalid B3 ParentSpanID value found")
 )
 
 // Default B3 Header keys
@@ -35,4 +40,5 @@ const (
 	ParentSpanID = "x-b3-parentspanid"
 	Sampled      = "x-b3-sampled"
 	Flags        = "x-b3-flags"
+	Context      = "b3"
 )

@@ -88,3 +88,115 @@ func ParseHeaders(
 
 	return sc, nil
 }
+
+// ParseSingleHeader takes values found from B3 Single Header and tries to reconstruct a
+// SpanContext.
+func ParseSingleHeader(contextHeader string) (*model.SpanContext, error) {
+	if contextHeader == "" {
+		return nil, ErrEmptyContext
+	}
+
+	var (
+		sc       = model.SpanContext{}
+		sampling string
+	)
+
+	headerLen := len(contextHeader)
+
+	if headerLen == 1 {
+		sampling = contextHeader
+	} else if headerLen == 16 || headerLen == 32 {
+		return nil, ErrInvalidScope
+	} else if headerLen >= 16+16+1 {
+		var high, low uint64
+		pos := 0
+		if string(contextHeader[16]) != "-" {
+			// traceID must be 128 bits
+			var err error
+			high, err = strconv.ParseUint(contextHeader[0:16], 16, 64)
+			if err != nil {
+				return nil, ErrInvalidTraceIDValue
+			}
+			pos = 16
+		}
+
+		low, err := strconv.ParseUint(contextHeader[pos+1:pos+16], 16, 64)
+		if err != nil {
+			return nil, ErrInvalidTraceIDValue
+		}
+
+		sc.TraceID = model.TraceID{High: high, Low: low}
+
+		rawID, err := strconv.ParseUint(contextHeader[pos+16+1:pos+16+1+16], 16, 64)
+		if err != nil {
+			return nil, ErrInvalidSpanIDValue
+		}
+
+		sc.ID = model.ID(rawID)
+
+		if headerLen > pos+16+1+16 {
+			if headerLen == pos+16+1+16+1 {
+				return nil, ErrInvalidSampledByte
+			}
+
+			if headerLen == pos+16+1+16+1+1 {
+				sampling = string(contextHeader[pos+16+1+16+1])
+			} else if headerLen == pos+16+1+16+1+16 {
+				return nil, ErrInvalidScopeParentSingle
+			} else if headerLen == pos+16+1+16+1+1+1+16 {
+				sampling = string(contextHeader[pos+16+1+16+1])
+
+				rawParentID, err := strconv.ParseUint(contextHeader[pos+16+1+16+1+1+1:], 16, 64)
+				if err != nil {
+					return nil, ErrInvalidParentSpanIDValue
+				}
+
+				parentID := model.ID(rawParentID)
+				sc.ParentID = &parentID
+			} else {
+				return nil, ErrInvalidParentSpanIDValue
+			}
+		}
+	} else {
+		return nil, ErrInvalidTraceIDValue
+	}
+	switch sampling {
+	case "d":
+		sc.Debug = true
+	case "1":
+		trueVal := true
+		sc.Sampled = &trueVal
+	case "0":
+		falseVal := false
+		sc.Sampled = &falseVal
+	case "":
+	default:
+		return nil, ErrInvalidSampledByte
+	}
+
+	return &sc, nil
+}
+
+// BuildSingleHeader takes the values from the SpanContext and builds the B3 header
+func BuildSingleHeader(sc model.SpanContext) string {
+	header := []string{}
+	if !sc.TraceID.Empty() && sc.ID > 0 {
+		header = append(header, sc.TraceID.String(), sc.ID.String())
+	}
+
+	if sc.Debug {
+		header = append(header, "d")
+	} else if sc.Sampled != nil {
+		if *sc.Sampled {
+			header = append(header, "1")
+		} else {
+			header = append(header, "0")
+		}
+	}
+
+	if sc.ParentID != nil {
+		header = append(header, sc.ParentID.String())
+	}
+
+	return strings.Join(header, "-")
+}

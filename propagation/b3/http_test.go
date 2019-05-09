@@ -257,7 +257,35 @@ func TestHTTPExtractInvalidParentIDError(t *testing.T) {
 	if want, have := b3.ErrInvalidParentSpanIDHeader, err; want != have {
 		t.Errorf("ExtractHTTP Error want %+v, have %+v", want, have)
 	}
+}
 
+func TestHTTPExtractSingleFailsAndMultipleFallsbackSuccessfully(t *testing.T) {
+	r := newHTTPRequest(t)
+
+	r.Header.Set(b3.Context, "invalid")
+	r.Header.Set(b3.TraceID, "1")
+	r.Header.Set(b3.SpanID, "2")
+
+	_, err := b3.ExtractHTTP(r)()
+
+	if err != nil {
+		t.Errorf("ExtractHTTP Unexpected error %+v", err)
+	}
+}
+
+func TestHTTPExtractSingleFailsAndMultipleFallsbackFailing(t *testing.T) {
+	r := newHTTPRequest(t)
+
+	r.Header.Set(b3.Context, "0000000000000001-0000000000000002-x")
+	r.Header.Set(b3.TraceID, "1")
+	r.Header.Set(b3.SpanID, "2")
+	r.Header.Set(b3.ParentSpanID, "invalid_data")
+
+	_, err := b3.ExtractHTTP(r)()
+
+	if want, have := b3.ErrInvalidSampledByte, err; want != have {
+		t.Errorf("HTTPExtract Error want %+v, have %+v", want, have)
+	}
 }
 
 func TestHTTPInjectEmptyContextError(t *testing.T) {
@@ -333,6 +361,49 @@ func TestHTTPInjectSampledAndDebugTrace(t *testing.T) {
 
 	if want, have := "1", r.Header.Get(b3.Flags); want != have {
 		t.Errorf("Debug want %s, have %s", want, have)
+	}
+}
+
+func TestHTTPInjectWithSingleOnlyHeaders(t *testing.T) {
+	r := newHTTPRequest(t)
+
+	sampled := true
+	sc := model.SpanContext{
+		TraceID: model.TraceID{Low: 1},
+		ID:      model.ID(2),
+		Debug:   true,
+		Sampled: &sampled,
+	}
+
+	b3.InjectHTTP(r, b3.WithSingleHeaderOnly())(sc)
+
+	if want, have := "", r.Header.Get(b3.TraceID); want != have {
+		t.Errorf("TraceID want empty, have %s", have)
+	}
+
+	if want, have := "0000000000000001-0000000000000002-d", r.Header.Get(b3.Context); want != have {
+		t.Errorf("Context want %s, have %s", want, have)
+	}
+}
+func TestHTTPInjectWithBothSingleAndMultipleHeaders(t *testing.T) {
+	r := newHTTPRequest(t)
+
+	sampled := true
+	sc := model.SpanContext{
+		TraceID: model.TraceID{Low: 1},
+		ID:      model.ID(2),
+		Debug:   true,
+		Sampled: &sampled,
+	}
+
+	b3.InjectHTTP(r, b3.WithSingleAndMultiHeader())(sc)
+
+	if want, have := "0000000000000001", r.Header.Get(b3.TraceID); want != have {
+		t.Errorf("Trace ID want %s, have %s", want, have)
+	}
+
+	if want, have := "0000000000000001-0000000000000002-d", r.Header.Get(b3.Context); want != have {
+		t.Errorf("Context want %s, have %s", want, have)
 	}
 }
 
