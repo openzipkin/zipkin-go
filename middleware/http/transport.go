@@ -25,7 +25,7 @@ import (
 )
 
 // ErrHandler allows instrumentations to decide how to tag errors
-// based on the response status code and the error from the
+// based on the response status code >399 and the error from the
 // Transport.RoundTrip
 type ErrHandler func(sp zipkin.Span, err error, statusCode int)
 
