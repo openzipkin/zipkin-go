@@ -32,6 +32,7 @@ type handler struct {
 	tagResponseSize bool
 	defaultTags     map[string]string
 	requestSampler  func(r *http.Request) bool
+	errHandler      ErrHandler
 }
 
 // ServerOption allows Middleware to be optionally configured.
@@ -70,12 +71,20 @@ func RequestSampler(sampleFunc func(r *http.Request) bool) ServerOption {
 	}
 }
 
+// ServerErrHandler allows to pass a custom error handler for the server response
+func ServerErrHandler(eh ErrHandler) ServerOption {
+	return func(h *handler) {
+		h.errHandler = eh
+	}
+}
+
 // NewServerMiddleware returns a http.Handler middleware with Zipkin tracing.
 func NewServerMiddleware(t *zipkin.Tracer, options ...ServerOption) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		h := &handler{
-			tracer: t,
-			next:   next,
+			tracer:     t,
+			next:       next,
+			errHandler: defaultErrHandler,
 		}
 		for _, option := range options {
 			option(h)
@@ -135,10 +144,10 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		code := ri.getStatusCode()
 		sCode := strconv.Itoa(code)
 		if code > 399 {
-			zipkin.TagError.Set(sp, sCode)
+			h.errHandler(sp, nil, code)
 		}
 		zipkin.TagHTTPStatusCode.Set(sp, sCode)
-		if h.tagResponseSize && ri.size > 0 {
+		if h.tagResponseSize && atomic.LoadUint64(&ri.size) > 0 {
 			zipkin.TagHTTPResponseSize.Set(sp, ri.getResponseSize())
 		}
 		sp.Finish()
