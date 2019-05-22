@@ -15,8 +15,13 @@
 package http
 
 import (
+	"bytes"
+	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptrace"
+	"os"
 	"strconv"
 
 	zipkin "github.com/openzipkin/zipkin-go"
@@ -39,12 +44,19 @@ func defaultErrHandler(sp zipkin.Span, err error, statusCode int) {
 	zipkin.TagError.Set(sp, statusCodeVal)
 }
 
+// ErrResponseReader allows instrumentations to read the error body
+// and decide to obtain information to it and add it to the span i.e.
+// tag the span with a more meaningful error code or with error details.
+type ErrResponseReader func(sp zipkin.Span, body io.Reader)
+
 type transport struct {
-	tracer      *zipkin.Tracer
-	rt          http.RoundTripper
-	httpTrace   bool
-	defaultTags map[string]string
-	errHandler  ErrHandler
+	tracer            *zipkin.Tracer
+	rt                http.RoundTripper
+	httpTrace         bool
+	defaultTags       map[string]string
+	errHandler        ErrHandler
+	errResponseReader *ErrResponseReader
+	logger            *log.Logger
 }
 
 // TransportOption allows one to configure optional transport configuration.
@@ -80,6 +92,20 @@ func TransportErrHandler(h ErrHandler) TransportOption {
 	}
 }
 
+// TransportErrResponseReader allows to pass a custom ErrResponseReader
+func TransportErrResponseReader(r ErrResponseReader) TransportOption {
+	return func(t *transport) {
+		t.errResponseReader = &r
+	}
+}
+
+// TransportLogger allows to plug a logger into the transport
+func TransportLogger(l *log.Logger) TransportOption {
+	return func(t *transport) {
+		t.logger = l
+	}
+}
+
 // NewTransport returns a new Zipkin instrumented http RoundTripper which can be
 // used with a standard library http Client.
 func NewTransport(tracer *zipkin.Tracer, options ...TransportOption) (http.RoundTripper, error) {
@@ -92,6 +118,7 @@ func NewTransport(tracer *zipkin.Tracer, options ...TransportOption) (http.Round
 		rt:         http.DefaultTransport,
 		httpTrace:  false,
 		errHandler: defaultErrHandler,
+		logger:     log.New(os.Stderr, "", log.LstdFlags),
 	}
 
 	for _, option := range options {
@@ -157,6 +184,17 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		zipkin.TagHTTPStatusCode.Set(sp, statusCode)
 		if res.StatusCode > 399 {
 			t.errHandler(sp, nil, res.StatusCode)
+
+			if t.errResponseReader != nil {
+				sBody, err := ioutil.ReadAll(res.Body)
+				if err == nil {
+					res.Body.Close()
+					(*t.errResponseReader)(sp, ioutil.NopCloser(bytes.NewBuffer(sBody)))
+					res.Body = ioutil.NopCloser(bytes.NewBuffer(sBody))
+				} else {
+					t.logger.Printf("failed to read the response body in the ErrResponseReader: %v", err)
+				}
+			}
 		}
 	}
 	sp.Finish()
