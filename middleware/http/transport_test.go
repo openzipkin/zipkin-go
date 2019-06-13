@@ -2,6 +2,8 @@ package http
 
 import (
 	"errors"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -87,5 +89,39 @@ func TestRoundTripErrHandlingForStatusCode(t *testing.T) {
 		}
 
 		srv.Close()
+	}
+}
+
+func TestRoundTripErrResponseReadingSuccess(t *testing.T) {
+	expectedBody := []byte("message")
+	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		rw.WriteHeader(500)
+		rw.Write(expectedBody)
+	}))
+	defer srv.Close()
+
+	tracer, err := zipkin.NewTracer(nil)
+	if err != nil {
+		t.Fatalf("unexpected error when creating tracer: %v", err)
+	}
+	req, _ := http.NewRequest("GET", srv.URL, nil)
+	transport, _ := NewTransport(
+		tracer,
+		TransportErrResponseReader(func(_ zipkin.Span, br io.Reader) {
+			body, _ := ioutil.ReadAll(br)
+			if want, have := expectedBody, body; string(want) != string(have) {
+				t.Errorf("unexpected body, want %q, have %q", want, have)
+			}
+		}),
+	)
+
+	res, err := transport.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	actualBody, _ := ioutil.ReadAll(res.Body)
+	if want, have := expectedBody, actualBody; string(expectedBody) != string(actualBody) {
+		t.Errorf("unexpected body: want %s, have %s", want, have)
 	}
 }
