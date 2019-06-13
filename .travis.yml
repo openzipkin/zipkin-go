@@ -24,7 +24,7 @@ before_install:
   - go get github.com/mattn/goveralls
 
 install:
-  - go get -d -t ./...
+  - go mod download
   - go get -u golang.org/x/lint/golint
 
 script:
