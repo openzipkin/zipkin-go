@@ -10,7 +10,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-var spans = []model.SpanModel{
+var spans = []*model.SpanModel{
 	makeNewSpan("avg", 123, 456, 0, true),
 	makeNewSpan("sum", 123, 789, 456, true),
 	makeNewSpan("div", 123, 101112, 456, true),
@@ -29,12 +29,12 @@ func TestRabbitProduce(t *testing.T) {
 	msgs := setupConsume(t, ch)
 
 	for _, s := range spans {
-		c.Send(s)
+		c.Send(*s)
 	}
 
 	for _, s := range spans {
 		msg := <-msgs
-		ds := decodeSpan(t, msg.Body)
+		ds := deserializeSpan(t, msg.Body)
 		testEqual(t, s, ds)
 	}
 }
@@ -44,9 +44,6 @@ func TestRabbitClose(t *testing.T) {
 	conn, ch, closeFunc := setupRabbit(t, address)
 	defer closeFunc()
 
-	cl1 := ch.NotifyClose(make(chan *amqp.Error))
-	cl2 := conn.NotifyClose(make(chan *amqp.Error))
-
 	r, err := zipkinamqp.NewReporter(address, zipkinamqp.Channel(ch), zipkinamqp.Connection(conn))
 	if err != nil {
 		t.Fatal(err)
@@ -54,21 +51,8 @@ func TestRabbitClose(t *testing.T) {
 	if err = r.Close(); err != nil {
 		t.Fatal(err)
 	}
-	checkClose(t, cl1)
-	checkClose(t, cl2)
-
 }
 
-func checkClose(t *testing.T, ch <-chan *amqp.Error) {
-	select {
-	case err := <-ch:
-		if err != nil {
-			t.Fatal(err)
-		}
-	default:
-		t.Fatal("channel not closed")
-	}
-}
 
 func setupRabbit(t *testing.T, address string) (conn *amqp.Connection, ch *amqp.Channel, close func()) {
 	var err error
@@ -87,25 +71,25 @@ func setupRabbit(t *testing.T, address string) (conn *amqp.Connection, ch *amqp.
 
 func setupConsume(t *testing.T, ch *amqp.Channel) <-chan amqp.Delivery {
 	csm, err := ch.Consume(
-		"zipkin", // queue
-		"",       // consumer
-		true,     // auto-ack
-		false,    // exclusive
-		false,    // no-local
-		false,    // no-wait
-		nil,      // args
+		"zipkin",
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
 	)
 	failOnError(t, err, "Failed to register a consumer")
 	return csm
 }
 
-func decodeSpan(t *testing.T, data []byte) model.SpanModel {
+func deserializeSpan(t *testing.T, data []byte) *model.SpanModel {
 	var receivedSpans []model.SpanModel
 	err := json.Unmarshal(data, &receivedSpans)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return receivedSpans[0]
+	return &receivedSpans[0]
 }
 
 func failOnError(t *testing.T, err error, msg string) {
@@ -114,7 +98,7 @@ func failOnError(t *testing.T, err error, msg string) {
 	}
 }
 
-func testEqual(t *testing.T, want model.SpanModel, have model.SpanModel) {
+func testEqual(t *testing.T, want *model.SpanModel, have *model.SpanModel) {
 	if have.TraceID != want.TraceID {
 		t.Errorf("incorrect trace_id. have %d, want %d", have.TraceID, want.TraceID)
 	}
@@ -125,19 +109,19 @@ func testEqual(t *testing.T, want model.SpanModel, have model.SpanModel) {
 		if want.ParentID != nil {
 			t.Errorf("incorrect parent_id. have %d, want %d", have.ParentID, want.ParentID)
 		}
-	} else if have.ParentID != want.ParentID {
+	} else if *have.ParentID != *want.ParentID {
 		t.Errorf("incorrect parent_id. have %d, want %d", have.ParentID, want.ParentID)
 	}
 }
 
-func makeNewSpan(methodName string, traceID, spanID, parentSpanID uint64, debug bool) model.SpanModel {
+func makeNewSpan(methodName string, traceID, spanID, parentSpanID uint64, debug bool) *model.SpanModel {
 	timestamp := time.Now()
 	var parentID = new(model.ID)
 	if parentSpanID != 0 {
 		*parentID = model.ID(parentSpanID)
 	}
 
-	return model.SpanModel{
+	return &model.SpanModel{
 		SpanContext: model.SpanContext{
 			TraceID:  model.TraceID{Low: traceID},
 			ID:       model.ID(spanID),
