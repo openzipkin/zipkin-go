@@ -53,7 +53,6 @@ func TestRabbitClose(t *testing.T) {
 	}
 }
 
-
 func setupRabbit(t *testing.T, address string) (conn *amqp.Connection, ch *amqp.Channel, close func()) {
 	var err error
 	conn, err = amqp.Dial(address)
