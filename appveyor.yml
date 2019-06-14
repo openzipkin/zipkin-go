@@ -10,26 +10,26 @@ environment:
   GOFLAGS: -mod=readonly
 
 install:
-  - Write-Host "Installing RabbitMQ..." -ForegroundColor Cyan
+  - ps: Write-Host "Installing RabbitMQ..." -ForegroundColor Cyan
 
-  - Write-Host "Downloading..."
-  - $exePath = "$($env:USERPROFILE)\rabbitmq-server-3.7.15.exe"
-  - (New-Object Net.WebClient).DownloadFile('https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.7.15/rabbitmq-server-3.7.15.exe', $exePath)
+  - ECHO Write-Host "Downloading..."
+  - ps: $exePath = "$($env:USERPROFILE)\rabbitmq-server-3.7.15.exe"
+  - ps: (New-Object Net.WebClient).DownloadFile('https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.7.15/rabbitmq-server-3.7.15.exe', $exePath)
 
-  - Write-Host "Installing..."
+  - ECHO Write-Host "Installing..."
   - cmd /c start /wait $exePath /S
 
-  - $rabbitPath = 'C:\Program Files (x86)\RabbitMQ Server\rabbitmq-server-3.7.15'
+  - ps: $rabbitPath = 'C:\Program Files (x86)\RabbitMQ Server\rabbitmq-server-3.7.15'
 
-  - Write-Host "Installing service..."
-  - Start-Process -Wait "$rabbitPath\sbin\rabbitmq-service.bat" "install"
+  - ECHO Write-Host "Installing service..."
+  - ps: Start-Process -Wait "$rabbitPath\sbin\rabbitmq-service.bat" "install"
 
-  - Write-Host "Starting service..."
-  - Start-Process -Wait "$rabbitPath\sbin\rabbitmq-service.bat" "start"
+  - ECHO Write-Host "Starting service..."
+  - ps: Start-Process -Wait "$rabbitPath\sbin\rabbitmq-service.bat" "start"
 
-  - Get-Service "RabbitMQ"
+  - ps: Get-Service "RabbitMQ"
 
-  - Write-Host "RabbitMQ installed and started" -ForegroundColor Green
+  - ECHO Write-Host "RabbitMQ installed and started" -ForegroundColor Green
 
   - echo %PATH%
   - echo %GOPATH%
