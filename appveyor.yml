@@ -18,7 +18,7 @@ environment:
   GO111MODULE: on
   GOFLAGS: -mod=readonly
 
-before_test:
+install:
   - ps: $webclient=New-Object System.Net.WebClient
 
   - ECHO Downloading Erlang...
@@ -52,8 +52,6 @@ before_test:
 
   - ECHO Getting RabbitMQ status...
   - cmd /c "C:\Program Files\RabbitMQ Server\rabbitmq_server-%rabbitmq_version%\sbin\rabbitmqctl.bat" status
-
-install:
   - echo %PATH%
   - echo %GOPATH%
   - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
