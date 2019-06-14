@@ -10,27 +10,7 @@ environment:
   GOFLAGS: -mod=readonly
 
 install:
-  - ps: Write-Host "Installing RabbitMQ..." -ForegroundColor Cyan
-
-  - ECHO Write-Host "Downloading..."
-  - ps: $exePath = "$($env:USERPROFILE)\rabbitmq-server-3.7.15.exe"
-  - ps: (New-Object Net.WebClient).DownloadFile('https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.7.15/rabbitmq-server-3.7.15.exe', $exePath)
-
-  - ECHO Write-Host "Installing..."
-  - ps: cmd /c start /wait $exePath /S
-
-  - ps: $rabbitPath = 'C:\Program Files (x86)\RabbitMQ Server\rabbitmq-server-3.7.15'
-
-  - ECHO Write-Host "Installing service..."
-  - ps: Start-Process -Wait "$rabbitPath\sbin\rabbitmq-service.bat" "install"
-
-  - ECHO Write-Host "Starting service..."
-  - ps: Start-Process -Wait "$rabbitPath\sbin\rabbitmq-service.bat" "start"
-
-  - ps: Get-Service "RabbitMQ"
-
-  - ECHO Write-Host "RabbitMQ installed and started" -ForegroundColor Green
-
+  - choco install rabbitmq --ignoredependencies -y
   - echo %PATH%
   - echo %GOPATH%
   - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
