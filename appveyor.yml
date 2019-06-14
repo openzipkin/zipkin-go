@@ -5,12 +5,55 @@ platform: x64
 clone_folder: c:\gopath\src\github.com\openzipkin\zipkin-go
 
 environment:
+  erlang_download_url: "http://erlang.org/download/otp_win64_22.0.exe"
+  erlang_exe_path: "C:\\Users\\appveyor\\erlang_22.0.exe"
+  erlang_home_dir: "C:\\Users\\appveyor\\erlang"
+  erlang_erts_version: "erts-10.4"
+
+  rabbitmq_version: 3.7.4
+  rabbitmq_installer_download_url: "https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.7.15/rabbitmq-server-3.7.15.exe"
+  rabbitmq_installer_path: "C:\\Users\\appveyor\\rabbitmq-server-3.7.15.exe"
+
   GOPATH: c:\gopath
   GO111MODULE: on
   GOFLAGS: -mod=readonly
 
+before_test:
+  - ps: $webclient=New-Object System.Net.WebClient
+
+  - ECHO Downloading Erlang...
+  - ps: if (-Not (Test-Path "$env:erlang_exe_path")) { $webclient.DownloadFile("$env:erlang_download_url", "$env:erlang_exe_path") } else { Write-Host "Found" $env:erlang_exe_path "in cache." }
+
+  - ECHO Installing Erlang...
+  - start /B /WAIT %erlang_exe_path% /S /D=%erlang_home_dir%
+  - set ERLANG_HOME=%erlang_home_dir%
+
+  - ECHO Downloading RabbitMQ...
+  - ps: if (-Not (Test-Path "$env:rabbitmq_installer_path")) { $webclient.DownloadFile("$env:rabbitmq_installer_download_url", "$env:rabbitmq_installer_path") } else { Write-Host "Found" $env:rabbitmq_installer_path "in cache." }
+
+  - ECHO Creating directory %AppData%\RabbitMQ...
+  - ps: New-Item -ItemType Directory -ErrorAction Continue -Path "$env:AppData/RabbitMQ"
+
+  - ECHO Creating RabbitMQ configuration file in %AppData%\RabbitMQ...
+  - ps: Get-Content C:/Projects/pika/testdata/rabbitmq.conf.in | %{ $_ -replace 'PIKA_DIR', 'C:/projects/pika' } | Set-Content -Path "$env:AppData/RabbitMQ/rabbitmq.conf"
+  - ps: Get-Content "$env:AppData/RabbitMQ/rabbitmq.conf"
+
+  - ECHO Creating Erlang cookie files...
+  - ps: '[System.IO.File]::WriteAllText("C:\Users\appveyor\.erlang.cookie", "PIKAISTHEBEST", [System.Text.Encoding]::ASCII)'
+  - ps: '[System.IO.File]::WriteAllText("C:\Windows\System32\config\systemprofile\.erlang.cookie", "PIKAISTHEBEST", [System.Text.Encoding]::ASCII)'
+
+  - ECHO Installing and starting RabbitMQ with default config...
+  - start /B /WAIT %rabbitmq_installer_path% /S
+  - ps: (Get-Service -Name RabbitMQ).Status
+
+  - ECHO Waiting for epmd to report that RabbitMQ has started...
+  - ps: 'C:\projects\pika\testdata\wait-epmd.ps1'
+  - ps: 'C:\projects\pika\testdata\wait-rabbitmq.ps1'
+
+  - ECHO Getting RabbitMQ status...
+  - cmd /c "C:\Program Files\RabbitMQ Server\rabbitmq_server-%rabbitmq_version%\sbin\rabbitmqctl.bat" status
+
 install:
-  - choco install rabbitmq --ignoredependencies -y
   - echo %PATH%
   - echo %GOPATH%
   - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
