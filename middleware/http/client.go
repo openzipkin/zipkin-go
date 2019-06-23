@@ -108,14 +108,14 @@ func (c *Client) DoWithAppSpan(req *http.Request, name string) (res *http.Respon
 
 	appSpan := c.tracer.StartSpan(name, zipkin.Parent(parentContext))
 
-	zipkin.TagHTTPMethod.Set(appSpan, req.Method)
-	zipkin.TagHTTPPath.Set(appSpan, req.URL.Path)
+	appSpan.Tag(zipkin.TagHTTPMethod, req.Method)
+	appSpan.Tag(zipkin.TagHTTPPath, req.URL.Path)
 
 	res, err = c.Client.Do(
 		req.WithContext(zipkin.NewContext(req.Context(), appSpan)),
 	)
 	if err != nil {
-		zipkin.TagError.Set(appSpan, err.Error())
+		appSpan.Tag(zipkin.TagError, err.Error())
 		appSpan.Finish()
 		return
 	}
@@ -125,13 +125,13 @@ func (c *Client) DoWithAppSpan(req *http.Request, name string) (res *http.Respon
 	}
 
 	if res.ContentLength > 0 {
-		zipkin.TagHTTPResponseSize.Set(appSpan, strconv.FormatInt(res.ContentLength, 10))
+		appSpan.Tag(zipkin.TagHTTPResponseSize, strconv.FormatInt(res.ContentLength, 10))
 	}
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		statusCode := strconv.FormatInt(int64(res.StatusCode), 10)
-		zipkin.TagHTTPStatusCode.Set(appSpan, statusCode)
+		appSpan.Tag(zipkin.TagHTTPStatusCode, statusCode)
 		if res.StatusCode > 399 {
-			zipkin.TagError.Set(appSpan, statusCode)
+			appSpan.Tag(zipkin.TagError, statusCode)
 		}
 	}
 

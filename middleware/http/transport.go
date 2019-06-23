@@ -36,12 +36,12 @@ type ErrHandler func(sp zipkin.Span, err error, statusCode int)
 
 func defaultErrHandler(sp zipkin.Span, err error, statusCode int) {
 	if err != nil {
-		zipkin.TagError.Set(sp, err.Error())
+		sp.Tag(zipkin.TagError, err.Error())
 		return
 	}
 
 	statusCodeVal := strconv.FormatInt(int64(statusCode), 10)
-	zipkin.TagError.Set(sp, statusCodeVal)
+	sp.Tag(zipkin.TagError, statusCodeVal)
 }
 
 // ErrResponseReader allows instrumentations to read the error body
@@ -163,9 +163,8 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 			httptrace.WithClientTrace(req.Context(), sptr.c),
 		)
 	}
-
-	zipkin.TagHTTPMethod.Set(sp, req.Method)
-	zipkin.TagHTTPPath.Set(sp, req.URL.Path)
+	sp.Tag(zipkin.TagHTTPMethod, req.Method)
+	sp.Tag(zipkin.TagHTTPPath, req.URL.Path)
 
 	_ = b3.InjectHTTP(req)(sp.Context())
 
@@ -177,11 +176,11 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	}
 
 	if res.ContentLength > 0 {
-		zipkin.TagHTTPResponseSize.Set(sp, strconv.FormatInt(res.ContentLength, 10))
+		sp.Tag(zipkin.TagHTTPResponseSize, strconv.FormatInt(res.ContentLength, 10))
 	}
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		statusCode := strconv.FormatInt(int64(res.StatusCode), 10)
-		zipkin.TagHTTPStatusCode.Set(sp, statusCode)
+		sp.Tag(zipkin.TagHTTPStatusCode, statusCode)
 		if res.StatusCode > 399 {
 			t.errHandler(sp, nil, res.StatusCode)
 

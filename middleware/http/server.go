@@ -129,10 +129,10 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := zipkin.NewContext(r.Context(), sp)
 
 	// tag typical HTTP request items
-	zipkin.TagHTTPMethod.Set(sp, r.Method)
-	zipkin.TagHTTPPath.Set(sp, r.URL.Path)
+	sp.Tag(zipkin.TagHTTPMethod, r.Method)
+	sp.Tag(zipkin.TagHTTPPath, r.URL.Path)
 	if r.ContentLength > 0 {
-		zipkin.TagHTTPRequestSize.Set(sp, strconv.FormatInt(r.ContentLength, 10))
+		sp.Tag(zipkin.TagHTTPRequestSize, strconv.FormatInt(r.ContentLength, 10))
 	}
 
 	// create http.ResponseWriter interceptor for tracking response size and
@@ -146,9 +146,9 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if code > 399 {
 			h.errHandler(sp, nil, code)
 		}
-		zipkin.TagHTTPStatusCode.Set(sp, sCode)
+		sp.Tag(zipkin.TagHTTPStatusCode, sCode)
 		if h.tagResponseSize && atomic.LoadUint64(&ri.size) > 0 {
-			zipkin.TagHTTPResponseSize.Set(sp, ri.getResponseSize())
+			sp.Tag(zipkin.TagHTTPResponseSize, ri.getResponseSize())
 		}
 		sp.Finish()
 	}()

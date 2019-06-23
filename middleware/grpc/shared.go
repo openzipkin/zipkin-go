@@ -49,10 +49,10 @@ func handleRPC(ctx context.Context, rs stats.RPCStats) {
 				// Uppercase for consistency with Brave
 				c := strings.ToUpper(s.Code().String())
 				span.Tag("grpc.status_code", c)
-				zipkin.TagError.Set(span, c)
+				span.Tag(zipkin.TagError, c)
 			}
 		} else {
-			zipkin.TagError.Set(span, rs.Error.Error())
+			span.Tag(zipkin.TagError, rs.Error.Error())
 		}
 		span.Finish()
 	}

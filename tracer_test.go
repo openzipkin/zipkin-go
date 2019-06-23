@@ -486,7 +486,7 @@ func TestTagOverwriteRules(t *testing.T) {
 		t.Errorf("Tag want %s=%s, have %s=%s", k1, want, k1, have)
 	}
 
-	TagError.Set(s, v1Last)
+	s.Tag(TagError, v1Last)
 
 	if want, have := v1First, s.(*spanImpl).Tags[k2]; want != have {
 		t.Errorf("Tag want %s=%s, have %s=%s", k1, want, k1, have)
