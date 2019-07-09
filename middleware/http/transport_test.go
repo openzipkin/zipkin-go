@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
 type errRoundTripper struct {
@@ -123,5 +125,92 @@ func TestRoundTripErrResponseReadingSuccess(t *testing.T) {
 	actualBody, _ := ioutil.ReadAll(res.Body)
 	if want, have := expectedBody, actualBody; string(expectedBody) != string(actualBody) {
 		t.Errorf("unexpected body: want %s, have %s", want, have)
+	}
+}
+
+func boolToPtr(b bool) *bool {
+	return &b
+}
+
+func TestTransportRequestSamplerOverridesSamplingFromContext(t *testing.T) {
+	cases := []struct {
+		Sampler          func(uint64) bool
+		RequestSampler   func(*http.Request) *bool
+		ExpectedSampling string
+	}{
+		// Test proper handling when there is no RequestSampler
+		{
+			Sampler:          zipkin.AlwaysSample,
+			RequestSampler:   nil,
+			ExpectedSampling: "1",
+		},
+		// Test proper handling when there is no RequestSampler
+		{
+			Sampler:          zipkin.NeverSample,
+			RequestSampler:   nil,
+			ExpectedSampling: "0",
+		},
+		// Test RequestSampler override sample -> no sample
+		{
+			Sampler:          zipkin.AlwaysSample,
+			RequestSampler:   func(_ *http.Request) *bool { return boolToPtr(false) },
+			ExpectedSampling: "0",
+		},
+		// Test RequestSampler override no sample -> sample
+		{
+			Sampler:          zipkin.NeverSample,
+			RequestSampler:   func(_ *http.Request) *bool { return boolToPtr(true) },
+			ExpectedSampling: "1",
+		},
+		// Test RequestSampler pass through of sampled decision
+		{
+			Sampler: zipkin.AlwaysSample,
+			RequestSampler: func(r *http.Request) *bool {
+				return nil
+			},
+			ExpectedSampling: "1",
+		},
+		// Test RequestSampler pass through of not sampled decision
+		{
+			Sampler: zipkin.NeverSample,
+			RequestSampler: func(r *http.Request) *bool {
+				return nil
+			},
+			ExpectedSampling: "0",
+		},
+	}
+
+	for i, c := range cases {
+		srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			if want, have := c.ExpectedSampling, r.Header.Get("x-b3-sampled"); want != have {
+				t.Errorf("unexpected sampling decision in case #%d, want %q, have %q", i, want, have)
+			}
+		}))
+
+		// we need to use a valid reporter or Tracer will implement noop mode which makes this test invalid
+		rep := recorder.NewReporter()
+
+		tracer, err := zipkin.NewTracer(rep, zipkin.WithSampler(c.Sampler))
+		if err != nil {
+			t.Fatalf("unexpected error when creating tracer: %v", err)
+		}
+
+		sp := tracer.StartSpan("op1")
+		defer sp.Finish()
+		ctx := zipkin.NewContext(context.Background(), sp)
+
+		req, _ := http.NewRequest("GET", srv.URL, nil)
+		transport, _ := NewTransport(
+			tracer,
+			TransportRequestSampler(c.RequestSampler),
+		)
+
+		_, err = transport.RoundTrip(req.WithContext(ctx))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		rep.Close()
+		srv.Close()
 	}
 }
