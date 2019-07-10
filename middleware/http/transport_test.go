@@ -128,14 +128,10 @@ func TestRoundTripErrResponseReadingSuccess(t *testing.T) {
 	}
 }
 
-func boolToPtr(b bool) *bool {
-	return &b
-}
-
 func TestTransportRequestSamplerOverridesSamplingFromContext(t *testing.T) {
 	cases := []struct {
 		Sampler          func(uint64) bool
-		RequestSampler   func(*http.Request) *bool
+		RequestSampler   RequestSamplerFunc
 		ExpectedSampling string
 	}{
 		// Test proper handling when there is no RequestSampler
@@ -153,13 +149,13 @@ func TestTransportRequestSamplerOverridesSamplingFromContext(t *testing.T) {
 		// Test RequestSampler override sample -> no sample
 		{
 			Sampler:          zipkin.AlwaysSample,
-			RequestSampler:   func(_ *http.Request) *bool { return boolToPtr(false) },
+			RequestSampler:   func(_ *http.Request) *bool { return Discard() },
 			ExpectedSampling: "0",
 		},
 		// Test RequestSampler override no sample -> sample
 		{
 			Sampler:          zipkin.NeverSample,
-			RequestSampler:   func(_ *http.Request) *bool { return boolToPtr(true) },
+			RequestSampler:   func(_ *http.Request) *bool { return Sample() },
 			ExpectedSampling: "1",
 		},
 		// Test RequestSampler pass through of sampled decision

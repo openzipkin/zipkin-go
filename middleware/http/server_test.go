@@ -207,10 +207,6 @@ func TestHTTPDefaultSpanName(t *testing.T) {
 
 func TestHTTPRequestSampler(t *testing.T) {
 	var (
-		sample            = true
-		noSample          = false
-		passThrough *bool = nil
-
 		spanRecorder    = &recorder.ReporterRecorder{}
 		httpRecorder    = httptest.NewRecorder()
 		requestBuf      = bytes.NewBufferString("incoming data")
@@ -220,9 +216,9 @@ func TestHTTPRequestSampler(t *testing.T) {
 
 	samplers := [](func(r *http.Request) *bool){
 		nil,
-		func(r *http.Request) *bool { return &sample },
-		func(r *http.Request) *bool { return &noSample },
-		func(r *http.Request) *bool { return passThrough },
+		func(r *http.Request) *bool { return mw.Sample() },
+		func(r *http.Request) *bool { return mw.Discard() },
+		func(r *http.Request) *bool { return nil },
 	}
 
 	for idx, sampler := range samplers {

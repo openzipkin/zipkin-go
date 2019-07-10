@@ -31,7 +31,7 @@ type handler struct {
 	next            http.Handler
 	tagResponseSize bool
 	defaultTags     map[string]string
-	requestSampler  func(r *http.Request) *bool
+	requestSampler  RequestSamplerFunc
 	errHandler      ErrHandler
 }
 
@@ -66,7 +66,7 @@ func SpanName(name string) ServerOption {
 // RequestSampler allows one to set the sampling decision based on the details
 // found in the http.Request. If wanting to keep the existing sampling decision
 // from upstream as is, this function should return nil.
-func RequestSampler(sampleFunc func(r *http.Request) *bool) ServerOption {
+func RequestSampler(sampleFunc RequestSamplerFunc) ServerOption {
 	return func(h *handler) {
 		h.requestSampler = sampleFunc
 	}
