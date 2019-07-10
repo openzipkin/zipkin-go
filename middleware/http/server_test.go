@@ -207,6 +207,10 @@ func TestHTTPDefaultSpanName(t *testing.T) {
 
 func TestHTTPRequestSampler(t *testing.T) {
 	var (
+		sample            = true
+		noSample          = false
+		passThrough *bool = nil
+
 		spanRecorder    = &recorder.ReporterRecorder{}
 		httpRecorder    = httptest.NewRecorder()
 		requestBuf      = bytes.NewBufferString("incoming data")
@@ -214,13 +218,14 @@ func TestHTTPRequestSampler(t *testing.T) {
 		httpHandlerFunc = http.HandlerFunc(httpHandler(200, nil, bytes.NewBufferString("")))
 	)
 
-	samplers := [](func(r *http.Request) bool){
+	samplers := [](func(r *http.Request) *bool){
 		nil,
-		func(r *http.Request) bool { return true },
-		func(r *http.Request) bool { return false },
+		func(r *http.Request) *bool { return &sample },
+		func(r *http.Request) *bool { return &noSample },
+		func(r *http.Request) *bool { return passThrough },
 	}
 
-	for _, sampler := range samplers {
+	for idx, sampler := range samplers {
 		tr, _ := zipkin.NewTracer(spanRecorder, zipkin.WithLocalEndpoint(lep), zipkin.WithSampler(zipkin.AlwaysSample))
 
 		request, err := http.NewRequest(methodType, "/test", requestBuf)
@@ -235,16 +240,16 @@ func TestHTTPRequestSampler(t *testing.T) {
 		spans := spanRecorder.Flush()
 
 		sampledSpans := 0
-		if sampler == nil || sampler(request) {
+		if sampler == nil || sampler(request) == nil || *(sampler(request)) {
 			sampledSpans = 1
 		}
 
 		if want, have := sampledSpans, len(spans); want != have {
-			t.Errorf("Expected %d spans, got %d", want, have)
+			t.Errorf("[%d] Expected %d spans, got %d", idx, want, have)
 		}
 	}
 
-	for _, sampler := range samplers {
+	for idx, sampler := range samplers {
 		tr, _ := zipkin.NewTracer(spanRecorder, zipkin.WithLocalEndpoint(lep), zipkin.WithSampler(zipkin.NeverSample))
 
 		request, err := http.NewRequest(methodType, "/test", requestBuf)
@@ -259,12 +264,12 @@ func TestHTTPRequestSampler(t *testing.T) {
 		spans := spanRecorder.Flush()
 
 		sampledSpans := 0
-		if sampler != nil && sampler(request) {
+		if sampler != nil && sampler(request) != nil && *(sampler(request)) {
 			sampledSpans = 1
 		}
 
 		if want, have := sampledSpans, len(spans); want != have {
-			t.Errorf("Expected %d spans, got %d", want, have)
+			t.Errorf("[%d] Expected %d spans, got %d", idx, want, have)
 		}
 	}
 
