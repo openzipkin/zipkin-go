@@ -31,7 +31,7 @@ type handler struct {
 	next            http.Handler
 	tagResponseSize bool
 	defaultTags     map[string]string
-	requestSampler  func(r *http.Request) bool
+	requestSampler  RequestSamplerFunc
 	errHandler      ErrHandler
 }
 
@@ -64,8 +64,9 @@ func SpanName(name string) ServerOption {
 }
 
 // RequestSampler allows one to set the sampling decision based on the details
-// found in the http.Request.
-func RequestSampler(sampleFunc func(r *http.Request) bool) ServerOption {
+// found in the http.Request. If wanting to keep the existing sampling decision
+// from upstream as is, this function should return nil.
+func RequestSampler(sampleFunc RequestSamplerFunc) ServerOption {
 	return func(h *handler) {
 		h.requestSampler = sampleFunc
 	}
@@ -100,9 +101,10 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// try to extract B3 Headers from upstream
 	sc := h.tracer.Extract(b3.ExtractHTTP(r))
 
-	if h.requestSampler != nil && sc.Sampled == nil {
-		sample := h.requestSampler(r)
-		sc.Sampled = &sample
+	if h.requestSampler != nil {
+		if sample := h.requestSampler(r); sample != nil {
+			sc.Sampled = sample
+		}
 	}
 
 	remoteEndpoint, _ := zipkin.NewEndpoint("", r.RemoteAddr)

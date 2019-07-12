@@ -57,7 +57,7 @@ type transport struct {
 	errHandler        ErrHandler
 	errResponseReader *ErrResponseReader
 	logger            *log.Logger
-	requestSampler    func(r *http.Request) *bool
+	requestSampler    RequestSamplerFunc
 }
 
 // TransportOption allows one to configure optional transport configuration.
@@ -112,7 +112,7 @@ func TransportLogger(l *log.Logger) TransportOption {
 // sampling decision contained in the context. The function returns a *bool,
 // if returning nil, sampling decision is not being changed whereas returning
 // something else than nil is being used as sampling decision.
-func TransportRequestSampler(sampleFunc func(r *http.Request) *bool) TransportOption {
+func TransportRequestSampler(sampleFunc RequestSamplerFunc) TransportOption {
 	return func(t *transport) {
 		t.requestSampler = sampleFunc
 	}
