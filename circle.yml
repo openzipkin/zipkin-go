@@ -1,7 +1,12 @@
 version: 2
 machine:
-  services:
-    - rabbitmq-server
+dependencies:
+  pre:
+    - echo 'deb http://www.rabbitmq.com/debian/ testing main' | sudo tee /etc/apt/sources.list.d/rabbitmq.list
+    - wget -O- https://www.rabbitmq.com/rabbitmq-release-signing-key.asc | sudo apt-key add -
+    - sudo apt-get update
+    - sudo apt-get install rabbitmq-server
+    - sudo service rabbitmq-server start
 jobs:
   build:
     working_directory: /go/src/github.com/openzipkin/zipkin-go
