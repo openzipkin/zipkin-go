@@ -19,7 +19,7 @@ var spans = []*model.SpanModel{
 }
 
 func TestRabbitProduce(t *testing.T) {
-	address := "amqp://guest:guest@127.0.0.1:5672/"
+	address := "amqp://guest:guest@localhost:5672/"
 	_, ch, closeFunc := setupRabbit(t, address)
 	defer closeFunc()
 
