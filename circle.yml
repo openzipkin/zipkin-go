@@ -1,4 +1,7 @@
 version: 2
+machine:
+  services:
+    - rabbitmq-server
 jobs:
   build:
     working_directory: /go/src/github.com/openzipkin/zipkin-go
