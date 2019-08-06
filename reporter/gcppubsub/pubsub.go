@@ -1,4 +1,4 @@
-package pubsub
+package gcppubsub
 
 import (
 	"cloud.google.com/go/pubsub"
@@ -10,9 +10,9 @@ import (
 	"os"
 )
 
-const defaultPubSubTopic = "opentracing"
+const defaultPubSubTopic = "defaultTopic"
 
-// Reporter implements Reporter by publishing spans to a GCP pubsub.
+// Reporter implements Reporter by publishing spans to a GCP gcppubsub.
 type Reporter struct {
 	logger *log.Logger
 	topic  string
@@ -33,7 +33,7 @@ func (r *Reporter) Send(s model.SpanModel) {
 	}
 	err = r.publish(m)
 	if err != nil {
-		r.logger.Printf("Error publishing message to pubsub: %s msg: %s", err.Error(), string(m))
+		r.logger.Printf("Error publishing message to gcppubsub: %s msg: %s", err.Error(), string(m))
 	}
 }
 
@@ -50,21 +50,21 @@ func Logger(logger *log.Logger) ReporterOption {
 	}
 }
 
-// Client sets the client used to produce to pubsub.
+// Client sets the client used to produce to gcppubsub.
 func Client(client *pubsub.Client) ReporterOption {
 	return func(c *Reporter) {
 		c.client = client
 	}
 }
 
-// Topic sets the pubsub topic to attach the reporter producer on.
+// Topic sets the gcppubsub topic to attach the reporter producer on.
 func Topic(t string) ReporterOption {
 	return func(c *Reporter) {
 		c.topic = t
 	}
 }
 
-// NewReporter returns a new pubsub-backed Reporter. address should be a slice of
+// NewReporter returns a new gcppubsub-backed Reporter. address should be a slice of
 // TCP endpoints of the form "host:port".
 func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
 	topic := os.Getenv("OPENTRACING_PUBSUB_TOPIC")
@@ -84,11 +84,11 @@ func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
 		ctx := context.Background()
 		proj := os.Getenv("GOOGLE_CLOUD_PROJECT")
 		if proj == "" {
-			log.Fatal("GOOGLE_CLOUD_PROJECT environment variable must be set. Traces wont be sent to pubsub")
+			log.Fatal("GOOGLE_CLOUD_PROJECT environment variable must be set. Traces wont be sent to gcppubsub")
 		}
 		client, err := pubsub.NewClient(ctx, proj)
 		if err != nil {
-			log.Fatalf("Could not create pubsub Client: %v", err)
+			log.Fatalf("Could not create gcppubsub Client: %v", err)
 		}
 		r.client = client
 	}

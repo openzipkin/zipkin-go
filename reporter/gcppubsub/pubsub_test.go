@@ -1,4 +1,4 @@
-package pubsub
+package gcppubsub
 
 import (
 	"context"
