@@ -67,7 +67,7 @@ func Topic(t string) ReporterOption {
 // NewReporter returns a new gcppubsub-backed Reporter. address should be a slice of
 // TCP endpoints of the form "host:port".
 func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
-	topic := os.Getenv("OPENTRACING_PUBSUB_TOPIC")
+	topic := os.Getenv("ZIPKIN_PUBSUB_TOPIC")
 	if topic == "" {
 		topic = defaultPubSubTopic
 	}
