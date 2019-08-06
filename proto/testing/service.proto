@@ -1,4 +1,4 @@
-// Copyright 2018 The OpenZipkin Authors
+// Copyright 2019 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ message HelloResponse {
   string payload = 1;
 
   map<string, string> metadata = 2;
+
+  map<string, string> span_context = 3;
 }
 
 service HelloService {

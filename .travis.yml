@@ -1,12 +1,25 @@
 language: go
+dist: trusty
+
+services:
+  - rabbitmq
 
 sudo: false
 
-go:
-  - 1.9.x
-  - 1.10.x
-  - 1.11.x
-  - tip
+matrix:
+  include:
+    - go: "1.9.x"
+    - go: "1.10.x"
+    - go: "1.11.x"
+      env:
+        - GO111MODULE=on
+    - go: "1.12.x"
+      env:
+        - GO111MODULE=on
+    - go: "tip"
+      env:
+        - GO111MODULE=on
+
 before_install:
   - go get golang.org/x/tools/cmd/cover
   - go get github.com/mattn/goveralls
@@ -18,3 +31,11 @@ install:
 script:
   - make test vet lint bench
   - $GOPATH/bin/goveralls -service=travis-ci
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/ead3c37d57527214e9f2
+      - https://webhooks.gitter.im/e/e57478303f87ecd7bffc
+    on_success: change
+    on_failure: always

@@ -1,3 +1,17 @@
+// Copyright 2019 The OpenZipkin Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 /*
 Package kafka implements a Kafka reporter to send spans to a Kafka server/cluster.
 */
@@ -21,9 +35,10 @@ const defaultKafkaTopic = "zipkin"
 // kafkaReporter implements Reporter by publishing spans to a Kafka
 // broker.
 type kafkaReporter struct {
-	producer sarama.AsyncProducer
-	logger   *log.Logger
-	topic    string
+	producer   sarama.AsyncProducer
+	logger     *log.Logger
+	topic      string
+	serializer reporter.SpanSerializer
 }
 
 // ReporterOption sets a parameter for the kafkaReporter
@@ -51,12 +66,23 @@ func Topic(t string) ReporterOption {
 	}
 }
 
+// Serializer sets the serialization function to use for sending span data to
+// Zipkin.
+func Serializer(serializer reporter.SpanSerializer) ReporterOption {
+	return func(c *kafkaReporter) {
+		if serializer != nil {
+			c.serializer = serializer
+		}
+	}
+}
+
 // NewReporter returns a new Kafka-backed Reporter. address should be a slice of
 // TCP endpoints of the form "host:port".
 func NewReporter(address []string, options ...ReporterOption) (reporter.Reporter, error) {
 	r := &kafkaReporter{
-		logger: log.New(os.Stderr, "", log.LstdFlags),
-		topic:  defaultKafkaTopic,
+		logger:     log.New(os.Stderr, "", log.LstdFlags),
+		topic:      defaultKafkaTopic,
+		serializer: reporter.JSONSerializer{},
 	}
 
 	for _, option := range options {

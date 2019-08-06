@@ -12,19 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*
-Package propagation holds the required function signatures for Injection and
-Extraction as used by the Zipkin Tracer.
+package zipkin
 
-Subpackages of this package contain officially supported standard propagation
-implementations.
-*/
-package propagation
+import (
+	"context"
+	"testing"
+)
 
-import "github.com/openzipkin/zipkin-go/model"
+func TestSpanOrNoopFromContext(t *testing.T) {
+	var (
+		ctx   = context.Background()
+		tr, _ = NewTracer(nil, WithLocalEndpoint(nil))
+		span  = tr.StartSpan("test")
+	)
 
-// Extractor function signature
-type Extractor func() (*model.SpanContext, error)
+	if want, have := defaultNoopSpan, SpanOrNoopFromContext(ctx); want != have {
+		t.Errorf("Invalid response want %+v, have %+v", want, have)
+	}
 
-// Injector function signature
-type Injector func(model.SpanContext) error
+	ctx = NewContext(ctx, span)
+
+	if want, have := span, SpanOrNoopFromContext(ctx); want != have {
+		t.Errorf("Invalid response want %+v, have %+v", want, have)
+	}
+
+}

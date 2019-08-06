@@ -55,7 +55,30 @@ For convenience `NewClient` is provided which returns a HTTP Client which embeds
 calling the `DoWithAppSpan()` method.
 
 #### grpc
-gRPC middleware / interceptors are planned for the near future.
+Easy to use grpc.StatsHandler middleware are provided for tracing gRPC server and
+client requests. 
+
+For a server, pass `NewServerHandler` when calling `NewServer`, e.g.,
+
+```go
+import (
+	"google.golang.org/grpc"
+	zipkingrpc "github.com/openzipkin/zipkin-go/middleware/grpc"
+)
+
+server = grpc.NewServer(grpc.StatsHandler(zipkingrpc.NewServerHandler(tracer)))
+```
+
+For a client, pass `NewClientHandler` when calling `Dial`, e.g.,
+
+```go
+import (
+	"google.golang.org/grpc"
+	zipkingrpc "github.com/openzipkin/zipkin-go/middleware/grpc"
+)
+
+conn, err = grpc.Dial(addr, grpc.WithStatsHandler(zipkingrpc.NewClientHandler(tracer)))
+```
 
 ### reporter
 The reporter package holds the interface which the various Reporter

@@ -1,4 +1,16 @@
-// +build go1.9
+// Copyright 2019 The OpenZipkin Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package grpc_test
 
@@ -9,10 +21,10 @@ import (
 	"github.com/onsi/gomega"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/stats"
 
 	"github.com/openzipkin/zipkin-go"
 	zipkingrpc "github.com/openzipkin/zipkin-go/middleware/grpc"
+	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 	service "github.com/openzipkin/zipkin-go/proto/testing"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
@@ -32,7 +44,7 @@ var _ = ginkgo.Describe("gRPC Client", func() {
 		reporter = recorder.NewReporter()
 		ep, _ := zipkin.NewEndpoint("grpcClient", "")
 		tracer, err = zipkin.NewTracer(
-			reporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(newSequentialIdGenerator()))
+			reporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(newSequentialIdGenerator(1)))
 		gomega.Expect(tracer, err).ToNot(gomega.BeNil())
 	})
 
@@ -56,8 +68,12 @@ var _ = ginkgo.Describe("gRPC Client", func() {
 
 			spans := reporter.Flush()
 			gomega.Expect(spans).To(gomega.HaveLen(1))
-			gomega.Expect(spans[0].Name).To(gomega.Equal("zipkin.testing.HelloService.Hello"))
-			gomega.Expect(spans[0].Tags).To(gomega.BeEmpty())
+
+			span := spans[0]
+			gomega.Expect(span.Kind).To(gomega.Equal(model.Client))
+			gomega.Expect(span.Name).To(gomega.Equal("zipkin.testing.HelloService.Hello"))
+			gomega.Expect(span.RemoteEndpoint).To(gomega.BeNil())
+			gomega.Expect(span.Tags).To(gomega.BeEmpty())
 		})
 
 		ginkgo.It("propagates trace context", func() {
@@ -94,7 +110,7 @@ var _ = ginkgo.Describe("gRPC Client", func() {
 		})
 	})
 
-	ginkgo.Context("with custom RPCHandler", func() {
+	ginkgo.Context("with remote service name", func() {
 		ginkgo.BeforeEach(func() {
 			var err error
 
@@ -103,21 +119,18 @@ var _ = ginkgo.Describe("gRPC Client", func() {
 				grpc.WithInsecure(),
 				grpc.WithStatsHandler(zipkingrpc.NewClientHandler(
 					tracer,
-					zipkingrpc.WithRPCHandler(func(span zipkin.Span, rpcStats stats.RPCStats) {
-						span.Tag("custom", "tag")
-					}))))
+					zipkingrpc.WithRemoteServiceName("remoteService"))))
 			gomega.Expect(conn, err).ToNot(gomega.BeNil())
 			client = service.NewHelloServiceClient(conn)
 		})
 
-		ginkgo.It("calls custom RPCHandler", func() {
+		ginkgo.It("has remote service name", func() {
 			resp, err := client.Hello(context.Background(), &service.HelloRequest{Payload: "Hello"})
 			gomega.Expect(resp, err).ToNot(gomega.BeNil())
 
 			spans := reporter.Flush()
 			gomega.Expect(spans).To(gomega.HaveLen(1))
-			gomega.Expect(spans[0].Tags).To(gomega.HaveLen(1))
-			gomega.Expect(spans[0].Tags).To(gomega.HaveKeyWithValue("custom", "tag"))
+			gomega.Expect(spans[0].RemoteEndpoint.ServiceName).To(gomega.Equal("remoteService"))
 		})
 	})
 })

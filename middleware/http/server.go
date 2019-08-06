@@ -1,3 +1,17 @@
+// Copyright 2019 The OpenZipkin Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package http
 
 import (
@@ -17,7 +31,8 @@ type handler struct {
 	next            http.Handler
 	tagResponseSize bool
 	defaultTags     map[string]string
-	requestSampler  func(r *http.Request) bool
+	requestSampler  RequestSamplerFunc
+	errHandler      ErrHandler
 }
 
 // ServerOption allows Middleware to be optionally configured.
@@ -49,10 +64,18 @@ func SpanName(name string) ServerOption {
 }
 
 // RequestSampler allows one to set the sampling decision based on the details
-// found in the http.Request.
-func RequestSampler(sampleFunc func(r *http.Request) bool) ServerOption {
+// found in the http.Request. If wanting to keep the existing sampling decision
+// from upstream as is, this function should return nil.
+func RequestSampler(sampleFunc RequestSamplerFunc) ServerOption {
 	return func(h *handler) {
 		h.requestSampler = sampleFunc
+	}
+}
+
+// ServerErrHandler allows to pass a custom error handler for the server response
+func ServerErrHandler(eh ErrHandler) ServerOption {
+	return func(h *handler) {
+		h.errHandler = eh
 	}
 }
 
@@ -60,8 +83,9 @@ func RequestSampler(sampleFunc func(r *http.Request) bool) ServerOption {
 func NewServerMiddleware(t *zipkin.Tracer, options ...ServerOption) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		h := &handler{
-			tracer: t,
-			next:   next,
+			tracer:     t,
+			next:       next,
+			errHandler: defaultErrHandler,
 		}
 		for _, option := range options {
 			option(h)
@@ -77,9 +101,10 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// try to extract B3 Headers from upstream
 	sc := h.tracer.Extract(b3.ExtractHTTP(r))
 
-	if h.requestSampler != nil && sc.Sampled == nil {
-		sample := h.requestSampler(r)
-		sc.Sampled = &sample
+	if h.requestSampler != nil {
+		if sample := h.requestSampler(r); sample != nil {
+			sc.Sampled = sample
+		}
 	}
 
 	remoteEndpoint, _ := zipkin.NewEndpoint("", r.RemoteAddr)
@@ -121,10 +146,10 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		code := ri.getStatusCode()
 		sCode := strconv.Itoa(code)
 		if code > 399 {
-			zipkin.TagError.Set(sp, sCode)
+			h.errHandler(sp, nil, code)
 		}
 		zipkin.TagHTTPStatusCode.Set(sp, sCode)
-		if h.tagResponseSize && ri.size > 0 {
+		if h.tagResponseSize && atomic.LoadUint64(&ri.size) > 0 {
 			zipkin.TagHTTPResponseSize.Set(sp, ri.getResponseSize())
 		}
 		sp.Finish()
