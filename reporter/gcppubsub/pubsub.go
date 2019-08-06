@@ -4,6 +4,7 @@ import (
 	"cloud.google.com/go/pubsub"
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 	"log"
@@ -67,11 +68,6 @@ func Topic(t string) ReporterOption {
 // NewReporter returns a new gcppubsub-backed Reporter. address should be a slice of
 // TCP endpoints of the form "host:port".
 func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
-	topic := os.Getenv("ZIPKIN_PUBSUB_TOPIC")
-	if topic == "" {
-		topic = defaultPubSubTopic
-	}
-
 	r := &Reporter{
 		logger: log.New(os.Stderr, "", log.LstdFlags),
 		topic:  defaultPubSubTopic,
@@ -84,11 +80,13 @@ func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
 		ctx := context.Background()
 		proj := os.Getenv("GOOGLE_CLOUD_PROJECT")
 		if proj == "" {
-			log.Fatal("GOOGLE_CLOUD_PROJECT environment variable must be set. Traces wont be sent to gcppubsub")
+			err := errors.New("GOOGLE_CLOUD_PROJECT environment variable must be set. Traces wont be sent to gcppubsub")
+			return nil, err
 		}
 		client, err := pubsub.NewClient(ctx, proj)
 		if err != nil {
 			log.Fatalf("Could not create gcppubsub Client: %v", err)
+			return nil, err
 		}
 		r.client = client
 	}

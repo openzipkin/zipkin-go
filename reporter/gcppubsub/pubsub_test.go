@@ -29,7 +29,7 @@ func setup(t *testing.T) *pubsub.Client {
 
 	_, err = client.CreateTopic(ctx, topicID)
 	if err != nil {
-		t.Fatalf("failed to create topic: %v", err)
+		fmt.Printf("failed to create topic: %v", err)
 	}
 	fmt.Printf("Topic created: %s\n", topicID)
 	return client
@@ -39,7 +39,7 @@ func TestPublish(t *testing.T) {
 	c := setup(t)
 	reporter, err := NewReporter(Client(c), Topic(topicID))
 	if err != nil {
-		t.Errorf("failed creating reporter: %v", err)
+		t.Fatalf("failed creating reporter: %v", err)
 	}
 	span := makeNewSpan("avg1", 124, 457, 0, true)
 	reporter.Send(*span)
@@ -50,15 +50,38 @@ func TestPublish(t *testing.T) {
 		topic := c.Topic(topicID)
 		ok, err := topic.Exists(ctx)
 		if err != nil {
-			t.Fatalf("failed to check if topic exists: %v", err)
+			fmt.Printf("failed to check if topic exists: %v", err)
 		}
 		if !ok {
 			return
 		}
 		if err := topic.Delete(ctx); err != nil {
-			t.Fatalf("failed to cleanup the topic (%q): %v", topicID, err)
+			fmt.Printf("failed to cleanup the topic (%q): %v", topicID, err)
 		}
 	})
+}
+
+func TestErrorNotProjEnv(t *testing.T) {
+	reporter, err := NewReporter(Topic(topicID))
+	if reporter != nil {
+		t.Fatal("Reporter should be null when initiated without client")
+	}
+	if err == nil {
+		t.Fatal("NewReporter should return an error when initiated without client")
+	}
+	if err.Error() != "GOOGLE_CLOUD_PROJECT environment variable must be set. Traces wont be sent to gcppubsub" {
+		t.Fatal("NewReporter should return GOOGLE_CLOUD_PROJECT environment variable must be set error when initiated without client")
+	}
+}
+
+func TestErrorNotCredentials(t *testing.T) {
+	os.Setenv("GOOGLE_CLOUD_PROJECT", "anything")
+	reporter, err := NewReporter(Topic(topicID))
+	if err != nil {
+		t.Fatalf("failed creating reporter: %v", err)
+	}
+	span := makeNewSpan("avg1", 124, 457, 0, true)
+	reporter.Send(*span)
 }
 
 func makeNewSpan(methodName string, traceID, spanID, parentSpanID uint64, debug bool) *model.SpanModel {
