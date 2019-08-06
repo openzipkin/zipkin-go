@@ -19,6 +19,7 @@ var once sync.Once // guards cleanup related operations in setup.
 func setup(t *testing.T) *pubsub.Client {
 	ctx := context.Background()
 	proj := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	fmt.Printf("GCP Project: %s\n", proj)
 	topicID = "test-topic"
 
 	client, err := pubsub.NewClient(ctx, proj)
@@ -30,7 +31,7 @@ func setup(t *testing.T) *pubsub.Client {
 	if err != nil {
 		t.Fatalf("failed to create topic: %v", err)
 	}
-	fmt.Printf("Topic created: %s\n", t.Name())
+	fmt.Printf("Topic created: %s\n", topicID)
 	return client
 }
 
@@ -40,7 +41,7 @@ func TestPublish(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed creating reporter: %v", err)
 	}
-	span := makeNewSpan("avg", 123, 456, 0, true)
+	span := makeNewSpan("avg1", 124, 457, 0, true)
 	reporter.Send(*span)
 
 	// Cleanup resources from the previous failed tests.
@@ -78,4 +79,3 @@ func makeNewSpan(methodName string, traceID, spanID, parentSpanID uint64, debug 
 		Timestamp: timestamp,
 	}
 }
-

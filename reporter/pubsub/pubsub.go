@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-const defaultPubSubTopic = "pubsub"
+const defaultPubSubTopic = "opentracing"
 
 // Reporter implements Reporter by publishing spans to a GCP pubsub.
 type Reporter struct {
@@ -57,16 +57,21 @@ func Client(client *pubsub.Client) ReporterOption {
 	}
 }
 
-// Topic sets the kafka topic to attach the reporter producer on.
+// Topic sets the pubsub topic to attach the reporter producer on.
 func Topic(t string) ReporterOption {
 	return func(c *Reporter) {
 		c.topic = t
 	}
 }
 
-// NewReporter returns a new Kafka-backed Reporter. address should be a slice of
+// NewReporter returns a new pubsub-backed Reporter. address should be a slice of
 // TCP endpoints of the form "host:port".
 func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
+	topic := os.Getenv("OPENTRACING_PUBSUB_TOPIC")
+	if topic == "" {
+		topic = defaultPubSubTopic
+	}
+
 	r := &Reporter{
 		logger: log.New(os.Stderr, "", log.LstdFlags),
 		topic:  defaultPubSubTopic,
