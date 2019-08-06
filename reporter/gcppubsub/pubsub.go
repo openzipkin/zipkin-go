@@ -32,10 +32,7 @@ func (r *Reporter) Send(s model.SpanModel) {
 		r.logger.Printf("failed when marshalling the span: %s\n", err.Error())
 		return
 	}
-	err = r.publish(m)
-	if err != nil {
-		r.logger.Printf("Error publishing message to gcppubsub: %s msg: %s", err.Error(), string(m))
-	}
+	r.publish(m)
 }
 
 // Close releases any resources held by the client (pubsub client publisher and subscriber connections).
@@ -94,7 +91,7 @@ func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
 	return r, nil
 }
 
-func (r *Reporter) publish(msg []byte) error {
+func (r *Reporter) publish(msg []byte) {
 	ctx := context.Background()
 	t := r.client.Topic(r.topic)
 
@@ -108,6 +105,4 @@ func (r *Reporter) publish(msg []byte) error {
 			r.logger.Printf("Error sending message: %s\n", err.Error())
 		}
 	}()
-
-	return nil
 }
