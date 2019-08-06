@@ -20,7 +20,7 @@ type Reporter struct {
 	client *pubsub.Client
 }
 
-// ReporterOption sets a parameter for the PubSubReporter
+// ReporterOption sets a parameter for the reporter
 type ReporterOption func(c *Reporter)
 
 // Send send span to topic
@@ -38,7 +38,7 @@ func (r *Reporter) Send(s model.SpanModel) {
 	}
 }
 
-// Close close span
+// Close releases any resources held by the client (pubsub client publisher and subscriber connections).
 func (r *Reporter) Close() error {
 	return r.client.Close()
 }

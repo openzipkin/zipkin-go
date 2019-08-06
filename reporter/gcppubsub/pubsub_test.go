@@ -16,7 +16,7 @@ var topicID string
 
 var once sync.Once // guards cleanup related operations in setup.
 
-func setup(t *testing.T) *pubsub.Client {
+func setup() *pubsub.Client {
 	ctx := context.Background()
 	proj := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	fmt.Printf("GCP Project: %s\n", proj)
@@ -38,7 +38,7 @@ func setup(t *testing.T) *pubsub.Client {
 }
 
 func TestPublish(t *testing.T) {
-	c := setup(t)
+	c := setup()
 	if c != nil {
 		reporter, err := NewReporter(Client(c), Topic(topicID))
 		if err != nil {
