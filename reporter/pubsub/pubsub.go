@@ -12,17 +12,18 @@ import (
 
 const defaultPubSubTopic = "pubsub"
 
-// PubSubReporter implements Reporter by publishing spans to a GCP pubsub.
-type PubSubReporter struct {
-	logger   *log.Logger
-	topic    string
+// Reporter implements Reporter by publishing spans to a GCP pubsub.
+type Reporter struct {
+	logger *log.Logger
+	topic  string
 	client *pubsub.Client
 }
 
 // ReporterOption sets a parameter for the PubSubReporter
-type ReporterOption func(c *PubSubReporter)
+type ReporterOption func(c *Reporter)
 
-func (r *PubSubReporter) Send(s model.SpanModel) {
+// Send send span to topic
+func (r *Reporter) Send(s model.SpanModel) {
 	// Zipkin expects the message to be wrapped in an array
 	ss := []model.SpanModel{s}
 	m, err := json.Marshal(ss)
@@ -36,28 +37,29 @@ func (r *PubSubReporter) Send(s model.SpanModel) {
 	}
 }
 
-func (r *PubSubReporter) Close() error {
+// Close close span
+func (r *Reporter) Close() error {
 	return r.client.Close()
 }
 
 // Logger sets the logger used to report errors in the collection
 // process.
 func Logger(logger *log.Logger) ReporterOption {
-	return func(c *PubSubReporter) {
+	return func(c *Reporter) {
 		c.logger = logger
 	}
 }
 
 // Client sets the client used to produce to pubsub.
 func Client(client *pubsub.Client) ReporterOption {
-	return func(c *PubSubReporter) {
+	return func(c *Reporter) {
 		c.client = client
 	}
 }
 
 // Topic sets the kafka topic to attach the reporter producer on.
 func Topic(t string) ReporterOption {
-	return func(c *PubSubReporter) {
+	return func(c *Reporter) {
 		c.topic = t
 	}
 }
@@ -65,7 +67,7 @@ func Topic(t string) ReporterOption {
 // NewReporter returns a new Kafka-backed Reporter. address should be a slice of
 // TCP endpoints of the form "host:port".
 func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
-	r := &PubSubReporter{
+	r := &Reporter{
 		logger: log.New(os.Stderr, "", log.LstdFlags),
 		topic:  defaultPubSubTopic,
 	}
@@ -89,7 +91,7 @@ func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
 	return r, nil
 }
 
-func (r *PubSubReporter) publish(msg []byte) error {
+func (r *Reporter) publish(msg []byte) error {
 	ctx := context.Background()
 	t := r.client.Topic(r.topic)
 
