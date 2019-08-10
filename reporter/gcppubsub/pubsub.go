@@ -88,13 +88,14 @@ func (r *Reporter) publish(msg []byte) {
 	ctx := context.Background()
 
 	result := r.topic.Publish(ctx, &pubsub.Message{
-		// data must be a ByteString
 		Data: msg,
 	})
-	go func() {
-		_, err := result.Get(ctx)
-		if err != nil {
-			r.logger.Printf("Error sending message: %s\n", err.Error())
-		}
-	}()
+	go r.checkResult(*result, ctx)
+}
+
+func (r *Reporter) checkResult(result pubsub.PublishResult, ctx context.Context) {
+	_, err := result.Get(ctx)
+	if err != nil {
+		r.logger.Printf("Error sending message: %s\n", err.Error())
+	}
 }
