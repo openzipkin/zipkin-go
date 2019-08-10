@@ -40,7 +40,8 @@ func setup() *pubsub.Client {
 func TestPublish(t *testing.T) {
 	c := setup()
 	if c != nil {
-		reporter, err := NewReporter(Client(c), Topic(topicID))
+		top := c.Topic(topicID)
+		reporter, err := NewReporter(Client(c), Topic(top))
 		if err != nil {
 			t.Fatalf("failed creating reporter: %v", err)
 		}
@@ -66,15 +67,15 @@ func TestPublish(t *testing.T) {
 }
 
 func TestErrorNotProjEnv(t *testing.T) {
-	reporter, err := NewReporter(Topic(topicID))
+	reporter, err := NewReporter()
 	if reporter != nil {
 		t.Fatal("Reporter should be null when initiated without client")
 	}
 	if err == nil {
 		t.Fatal("NewReporter should return an error when initiated without client")
 	}
-	if err.Error() != "GOOGLE_CLOUD_PROJECT environment variable must be set. Traces wont be sent to gcppubsub" {
-		t.Fatal("NewReporter should return GOOGLE_CLOUD_PROJECT environment variable must be set error when initiated without client")
+	if err.Error() != "cannot create pubsub reporter without valid client" {
+		t.Fatal("NewReporter should return cannot create pubsub reporter without valid client error")
 	}
 }
 

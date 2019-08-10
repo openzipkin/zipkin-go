@@ -16,7 +16,7 @@ const defaultPubSubTopic = "defaultTopic"
 // Reporter implements Reporter by publishing spans to a GCP gcppubsub.
 type Reporter struct {
 	logger *log.Logger
-	topic  string
+	topic  *pubsub.Topic
 	client *pubsub.Client
 }
 
@@ -56,7 +56,7 @@ func Client(client *pubsub.Client) ReporterOption {
 }
 
 // Topic sets the gcppubsub topic to attach the reporter producer on.
-func Topic(t string) ReporterOption {
+func Topic(t *pubsub.Topic) ReporterOption {
 	return func(c *Reporter) {
 		c.topic = t
 	}
@@ -67,35 +67,27 @@ func Topic(t string) ReporterOption {
 func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
 	r := &Reporter{
 		logger: log.New(os.Stderr, "", log.LstdFlags),
-		topic:  defaultPubSubTopic,
 	}
 
 	for _, option := range options {
 		option(r)
 	}
+
 	if r.client == nil {
-		ctx := context.Background()
-		proj := os.Getenv("GOOGLE_CLOUD_PROJECT")
-		if proj == "" {
-			err := errors.New("GOOGLE_CLOUD_PROJECT environment variable must be set. Traces wont be sent to gcppubsub")
-			return nil, err
-		}
-		client, err := pubsub.NewClient(ctx, proj)
-		if err != nil {
-			log.Fatalf("Could not create gcppubsub Client: %v", err)
-			return nil, err
-		}
-		r.client = client
+		err := errors.New("cannot create pubsub reporter without valid client")
+		return nil, err
 	}
+
+	t := r.client.Topic(defaultPubSubTopic)
+	r.topic = t
 
 	return r, nil
 }
 
 func (r *Reporter) publish(msg []byte) {
 	ctx := context.Background()
-	t := r.client.Topic(r.topic)
 
-	result := t.Publish(ctx, &pubsub.Message{
+	result := r.topic.Publish(ctx, &pubsub.Message{
 		// data must be a ByteString
 		Data: msg,
 	})
