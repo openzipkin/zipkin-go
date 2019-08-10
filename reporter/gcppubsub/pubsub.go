@@ -90,10 +90,10 @@ func (r *Reporter) publish(msg []byte) {
 	result := r.topic.Publish(ctx, &pubsub.Message{
 		Data: msg,
 	})
-	go r.checkResult(*result, ctx)
+	go r.checkResult(ctx, *result)
 }
 
-func (r *Reporter) checkResult(result pubsub.PublishResult, ctx context.Context) {
+func (r *Reporter) checkResult(ctx context.Context, result pubsub.PublishResult) {
 	_, err := result.Get(ctx)
 	if err != nil {
 		r.logger.Printf("Error sending message: %s\n", err.Error())
