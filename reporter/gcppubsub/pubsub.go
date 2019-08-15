@@ -13,11 +13,18 @@ import (
 
 const defaultPubSubTopic = "defaultTopic"
 
+var resultMsg = make(chan reporterResult)
+
 // Reporter implements Reporter by publishing spans to a GCP gcppubsub.
 type Reporter struct {
 	logger *log.Logger
 	topic  *pubsub.Topic
 	client *pubsub.Client
+}
+
+type reporterResult struct {
+	ctx    context.Context
+	result pubsub.PublishResult
 }
 
 // ReporterOption sets a parameter for the reporter
@@ -37,6 +44,7 @@ func (r *Reporter) Send(s model.SpanModel) {
 
 // Close releases any resources held by the client (pubsub client publisher and subscriber connections).
 func (r *Reporter) Close() error {
+	close(resultMsg)
 	return r.client.Close()
 }
 
@@ -80,7 +88,7 @@ func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
 
 	t := r.client.Topic(defaultPubSubTopic)
 	r.topic = t
-
+	r.checkResult()
 	return r, nil
 }
 
@@ -90,12 +98,14 @@ func (r *Reporter) publish(msg []byte) {
 	result := r.topic.Publish(ctx, &pubsub.Message{
 		Data: msg,
 	})
-	go r.checkResult(ctx, *result)
+	resultMsg <- reporterResult{ctx, *result}
 }
 
-func (r *Reporter) checkResult(ctx context.Context, result pubsub.PublishResult) {
-	_, err := result.Get(ctx)
-	if err != nil {
-		r.logger.Printf("Error sending message: %s\n", err.Error())
+func (r *Reporter) checkResult() {
+	for n := range resultMsg {
+		_, err := n.result.Get(n.ctx)
+		if err != nil {
+			r.logger.Printf("Error sending message: %s\n", err.Error())
+		}
 	}
 }
