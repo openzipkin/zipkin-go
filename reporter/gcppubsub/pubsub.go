@@ -88,7 +88,7 @@ func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
 
 	t := r.client.Topic(defaultPubSubTopic)
 	r.topic = t
-	r.checkResult()
+	go r.checkResult()
 	return r, nil
 }
 
