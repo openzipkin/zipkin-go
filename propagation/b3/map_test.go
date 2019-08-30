@@ -15,7 +15,6 @@
 package b3_test
 
 import (
-	"net/http"
 	"testing"
 
 	zipkin "github.com/openzipkin/zipkin-go"
@@ -24,18 +23,14 @@ import (
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
-const (
-	invalidID = "invalid_data"
-)
+func TestMapExtractFlagsOnly(t *testing.T) {
+	m := make(b3.Map)
 
-func TestHTTPExtractFlagsOnly(t *testing.T) {
-	r := newHTTPRequest(t)
+	m[b3.Flags] = "1"
 
-	r.Header.Set(b3.Flags, "1")
-
-	sc, err := b3.ExtractHTTP(r)()
+	sc, err := m.Extract()
 	if err != nil {
-		t.Fatalf("ExtractHTTP failed: %+v", err)
+		t.Fatalf("Extract failed: %+v", err)
 	}
 
 	if want, have := true, sc.Debug; want != have {
@@ -43,14 +38,14 @@ func TestHTTPExtractFlagsOnly(t *testing.T) {
 	}
 }
 
-func TestHTTPExtractSampledOnly(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapExtractSampledOnly(t *testing.T) {
+	m := make(b3.Map)
 
-	r.Header.Set(b3.Sampled, "0")
+	m[b3.Sampled] = "0"
 
-	sc, err := b3.ExtractHTTP(r)()
+	sc, err := m.Extract()
 	if err != nil {
-		t.Fatalf("ExtractHTTP failed: %+v", err)
+		t.Fatalf("Extract failed: %+v", err)
 	}
 
 	if sc.Sampled == nil {
@@ -61,13 +56,13 @@ func TestHTTPExtractSampledOnly(t *testing.T) {
 		t.Errorf("Sampled want %t, have %t", want, have)
 	}
 
-	r = newHTTPRequest(t)
+	m = make(b3.Map)
 
-	r.Header.Set(b3.Sampled, "1")
+	m[b3.Sampled] = "1"
 
-	sc, err = b3.ExtractHTTP(r)()
+	sc, err = m.Extract()
 	if err != nil {
-		t.Fatalf("ExtractHTTP failed: %+v", err)
+		t.Fatalf("Extract failed: %+v", err)
 	}
 
 	if sc.Sampled == nil {
@@ -79,15 +74,15 @@ func TestHTTPExtractSampledOnly(t *testing.T) {
 	}
 }
 
-func TestHTTPExtractFlagsAndSampledOnly(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapExtractFlagsAndSampledOnly(t *testing.T) {
+	m := make(b3.Map)
 
-	r.Header.Set(b3.Flags, "1")
-	r.Header.Set(b3.Sampled, "1")
+	m[b3.Flags] = "1"
+	m[b3.Sampled] = "1"
 
-	sc, err := b3.ExtractHTTP(r)()
+	sc, err := m.Extract()
 	if err != nil {
-		t.Fatalf("ExtractHTTP failed: %+v", err)
+		t.Fatalf("Extract failed: %+v", err)
 	}
 
 	if want, have := true, sc.Debug; want != have {
@@ -100,12 +95,12 @@ func TestHTTPExtractFlagsAndSampledOnly(t *testing.T) {
 	}
 }
 
-func TestHTTPExtractSampledErrors(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapExtractSampledErrors(t *testing.T) {
+	m := make(b3.Map)
 
-	r.Header.Set(b3.Sampled, "2")
+	m[b3.Sampled] = "2"
 
-	sc, err := b3.ExtractHTTP(r)()
+	sc, err := m.Extract()
 
 	if want, have := b3.ErrInvalidSampledHeader, err; want != have {
 		t.Errorf("SpanContext Error want %+v, have %+v", want, have)
@@ -116,7 +111,7 @@ func TestHTTPExtractSampledErrors(t *testing.T) {
 	}
 }
 
-func TestHTTPExtractFlagsErrors(t *testing.T) {
+func TestMapExtractFlagsErrors(t *testing.T) {
 	values := map[string]bool{
 		"1":    true,  // only acceptable Flags value, debug switches to true
 		"true": false, // true is not a valid value for Flags
@@ -125,12 +120,12 @@ func TestHTTPExtractFlagsErrors(t *testing.T) {
 		"7":    false, // Flags is not a bitset
 	}
 	for value, debug := range values {
-		r := newHTTPRequest(t)
-		r.Header.Set(b3.Flags, value)
-		spanContext, err := b3.ExtractHTTP(r)()
+		m := make(b3.Map)
+		m[b3.Flags] = value
+		spanContext, err := m.Extract()
 		if err != nil {
 			// Flags should not trigger failed extraction
-			t.Fatalf("ExtractHTTP failed: %+v", err)
+			t.Fatalf("Extract failed: %+v", err)
 		}
 		if want, have := debug, spanContext.Debug; want != have {
 			t.Errorf("SpanContext Error want %t, have %t", want, have)
@@ -138,7 +133,7 @@ func TestHTTPExtractFlagsErrors(t *testing.T) {
 	}
 }
 
-func TestHTTPExtractScope(t *testing.T) {
+func TestMapExtractScope(t *testing.T) {
 	recorder := &recorder.ReporterRecorder{}
 	defer recorder.Close()
 
@@ -155,13 +150,13 @@ func TestHTTPExtractScope(t *testing.T) {
 			wantContext = child.Context()
 		)
 
-		r := newHTTPRequest(t)
+		w := make(b3.Map)
 
-		b3.InjectHTTP(r)(wantContext)
+		w.Inject()(wantContext)
 
-		haveContext, err := b3.ExtractHTTP(r)()
+		haveContext, err := w.Extract()
 		if err != nil {
-			t.Errorf("ExtractHTTP failed: %+v", err)
+			t.Errorf("Extract failed: %+v", err)
 		}
 
 		if haveContext == nil {
@@ -189,110 +184,110 @@ func TestHTTPExtractScope(t *testing.T) {
 	}
 }
 
-func TestHTTPExtractTraceIDError(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapExtractTraceIDError(t *testing.T) {
+	m := make(b3.Map)
 
-	r.Header.Set(b3.TraceID, invalidID)
+	m[b3.TraceID] = invalidID
 
-	_, err := b3.ExtractHTTP(r)()
+	_, err := m.Extract()
 
 	if want, have := b3.ErrInvalidTraceIDHeader, err; want != have {
 		t.Errorf("ExtractHTTP Error want %+v, have %+v", want, have)
 	}
 }
 
-func TestHTTPExtractSpanIDError(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapExtractSpanIDError(t *testing.T) {
+	m := make(b3.Map)
 
-	r.Header.Set(b3.SpanID, invalidID)
+	m[b3.SpanID] = invalidID
 
-	_, err := b3.ExtractHTTP(r)()
+	_, err := m.Extract()
 
 	if want, have := b3.ErrInvalidSpanIDHeader, err; want != have {
 		t.Errorf("ExtractHTTP Error want %+v, have %+v", want, have)
 	}
 }
 
-func TestHTTPExtractTraceIDOnlyError(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapExtractTraceIDOnlyError(t *testing.T) {
+	m := make(b3.Map)
 
-	r.Header.Set(b3.TraceID, "1")
+	m[b3.TraceID] = "1"
 
-	_, err := b3.ExtractHTTP(r)()
-
-	if want, have := b3.ErrInvalidScope, err; want != have {
-		t.Errorf("ExtractHTTP Error want %+v, have %+v", want, have)
-	}
-}
-
-func TestHTTPExtractSpanIDOnlyError(t *testing.T) {
-	r := newHTTPRequest(t)
-
-	r.Header.Set(b3.SpanID, "1")
-
-	_, err := b3.ExtractHTTP(r)()
+	_, err := m.Extract()
 
 	if want, have := b3.ErrInvalidScope, err; want != have {
 		t.Errorf("ExtractHTTP Error want %+v, have %+v", want, have)
 	}
 }
 
-func TestHTTPExtractParentIDOnlyError(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapExtractSpanIDOnlyError(t *testing.T) {
+	m := make(b3.Map)
 
-	r.Header.Set(b3.ParentSpanID, "1")
+	m[b3.SpanID] = "1"
 
-	_, err := b3.ExtractHTTP(r)()
+	_, err := m.Extract()
+
+	if want, have := b3.ErrInvalidScope, err; want != have {
+		t.Errorf("ExtractHTTP Error want %+v, have %+v", want, have)
+	}
+}
+
+func TestMapExtractParentIDOnlyError(t *testing.T) {
+	m := make(b3.Map)
+
+	m[b3.ParentSpanID] = "1"
+
+	_, err := m.Extract()
 
 	if want, have := b3.ErrInvalidScopeParent, err; want != have {
 		t.Errorf("ExtractHTTP Error want %+v, have %+v", want, have)
 	}
 }
 
-func TestHTTPExtractInvalidParentIDError(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapExtractInvalidParentIDError(t *testing.T) {
+	m := make(b3.Map)
 
-	r.Header.Set(b3.TraceID, "1")
-	r.Header.Set(b3.SpanID, "2")
-	r.Header.Set(b3.ParentSpanID, invalidID)
+	m[b3.TraceID] = "1"
+	m[b3.SpanID] = "2"
+	m[b3.ParentSpanID] = invalidID
 
-	_, err := b3.ExtractHTTP(r)()
+	_, err := m.Extract()
 
 	if want, have := b3.ErrInvalidParentSpanIDHeader, err; want != have {
 		t.Errorf("ExtractHTTP Error want %+v, have %+v", want, have)
 	}
 }
 
-func TestHTTPExtractSingleFailsAndMultipleFallsbackSuccessfully(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapExtractSingleFailsAndMultipleFallsbackSuccessfully(t *testing.T) {
+	m := make(b3.Map)
 
-	r.Header.Set(b3.Context, "invalid")
-	r.Header.Set(b3.TraceID, "1")
-	r.Header.Set(b3.SpanID, "2")
+	m[b3.Context] = "invalid"
+	m[b3.TraceID] = "1"
+	m[b3.SpanID] = "2"
 
-	_, err := b3.ExtractHTTP(r)()
+	_, err := m.Extract()
 
 	if err != nil {
 		t.Errorf("ExtractHTTP Unexpected error %+v", err)
 	}
 }
 
-func TestHTTPExtractSingleFailsAndMultipleFallsbackFailing(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapExtractSingleFailsAndMultipleFallsbackFailing(t *testing.T) {
+	m := make(b3.Map)
 
-	r.Header.Set(b3.Context, "0000000000000001-0000000000000002-x")
-	r.Header.Set(b3.TraceID, "1")
-	r.Header.Set(b3.SpanID, "2")
-	r.Header.Set(b3.ParentSpanID, invalidID)
+	m[b3.Context] = "0000000000000001-0000000000000002-x"
+	m[b3.TraceID] = "1"
+	m[b3.SpanID] = "2"
+	m[b3.ParentSpanID] = invalidID
 
-	_, err := b3.ExtractHTTP(r)()
+	_, err := m.Extract()
 
 	if want, have := b3.ErrInvalidSampledByte, err; want != have {
 		t.Errorf("HTTPExtract Error want %+v, have %+v", want, have)
 	}
 }
 
-func TestHTTPInjectEmptyContextError(t *testing.T) {
+func TestMapInjectEmptyContextError(t *testing.T) {
 	err := b3.InjectHTTP(nil)(model.SpanContext{})
 
 	if want, have := b3.ErrEmptyContext, err; want != have {
@@ -300,37 +295,37 @@ func TestHTTPInjectEmptyContextError(t *testing.T) {
 	}
 }
 
-func TestHTTPInjectDebugOnly(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapInjectDebugOnly(t *testing.T) {
+	m := make(b3.Map)
 
 	sc := model.SpanContext{
 		Debug: true,
 	}
 
-	b3.InjectHTTP(r)(sc)
+	m.Inject()(sc)
 
-	if want, have := "1", r.Header.Get(b3.Flags); want != have {
+	if want, have := "1", m[b3.Flags]; want != have {
 		t.Errorf("Flags want %s, have %s", want, have)
 	}
 }
 
-func TestHTTPInjectSampledOnly(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapInjectSampledOnly(t *testing.T) {
+	m := make(b3.Map)
 
 	sampled := false
 	sc := model.SpanContext{
 		Sampled: &sampled,
 	}
 
-	b3.InjectHTTP(r)(sc)
+	m.Inject()(sc)
 
-	if want, have := "0", r.Header.Get(b3.Sampled); want != have {
+	if want, have := "0", m[b3.Sampled]; want != have {
 		t.Errorf("Sampled want %s, have %s", want, have)
 	}
 }
 
-func TestHTTPInjectUnsampledTrace(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapInjectUnsampledTrace(t *testing.T) {
+	m := make(b3.Map)
 
 	sampled := false
 	sc := model.SpanContext{
@@ -339,15 +334,15 @@ func TestHTTPInjectUnsampledTrace(t *testing.T) {
 		Sampled: &sampled,
 	}
 
-	b3.InjectHTTP(r)(sc)
+	m.Inject()(sc)
 
-	if want, have := "0", r.Header.Get(b3.Sampled); want != have {
+	if want, have := "0", m[b3.Sampled]; want != have {
 		t.Errorf("Sampled want %s, have %s", want, have)
 	}
 }
 
-func TestHTTPInjectSampledAndDebugTrace(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapInjectSampledAndDebugTrace(t *testing.T) {
+	m := make(b3.Map)
 
 	sampled := true
 	sc := model.SpanContext{
@@ -357,19 +352,19 @@ func TestHTTPInjectSampledAndDebugTrace(t *testing.T) {
 		Sampled: &sampled,
 	}
 
-	b3.InjectHTTP(r)(sc)
+	m.Inject()(sc)
 
-	if want, have := "", r.Header.Get(b3.Sampled); want != have {
+	if want, have := "", m[b3.Sampled]; want != have {
 		t.Errorf("Sampled want empty, have %s", have)
 	}
 
-	if want, have := "1", r.Header.Get(b3.Flags); want != have {
+	if want, have := "1", m[b3.Flags]; want != have {
 		t.Errorf("Debug want %s, have %s", want, have)
 	}
 }
 
-func TestHTTPInjectWithSingleOnlyHeaders(t *testing.T) {
-	r := newHTTPRequest(t)
+func TestMapInjectWithSingleOnlyHeaders(t *testing.T) {
+	m := make(b3.Map)
 
 	sampled := true
 	sc := model.SpanContext{
@@ -379,18 +374,19 @@ func TestHTTPInjectWithSingleOnlyHeaders(t *testing.T) {
 		Sampled: &sampled,
 	}
 
-	b3.InjectHTTP(r, b3.WithSingleHeaderOnly())(sc)
+	m.Inject(b3.WithSingleHeaderOnly())(sc)
 
-	if want, have := "", r.Header.Get(b3.TraceID); want != have {
+	if want, have := "", m[b3.TraceID]; want != have {
 		t.Errorf("TraceID want empty, have %s", have)
 	}
 
-	if want, have := "0000000000000001-0000000000000002-d", r.Header.Get(b3.Context); want != have {
+	if want, have := "0000000000000001-0000000000000002-d", m[b3.Context]; want != have {
 		t.Errorf("Context want %s, have %s", want, have)
 	}
 }
-func TestHTTPInjectWithBothSingleAndMultipleHeaders(t *testing.T) {
-	r := newHTTPRequest(t)
+
+func TestMapInjectWithBothSingleAndMultipleHeaders(t *testing.T) {
+	m := make(b3.Map)
 
 	sampled := true
 	sc := model.SpanContext{
@@ -400,21 +396,13 @@ func TestHTTPInjectWithBothSingleAndMultipleHeaders(t *testing.T) {
 		Sampled: &sampled,
 	}
 
-	b3.InjectHTTP(r, b3.WithSingleAndMultiHeader())(sc)
+	m.Inject(b3.WithSingleAndMultiHeader())(sc)
 
-	if want, have := "0000000000000001", r.Header.Get(b3.TraceID); want != have {
+	if want, have := "0000000000000001", m[b3.TraceID]; want != have {
 		t.Errorf("Trace ID want %s, have %s", want, have)
 	}
 
-	if want, have := "0000000000000001-0000000000000002-d", r.Header.Get(b3.Context); want != have {
+	if want, have := "0000000000000001-0000000000000002-d", m[b3.Context]; want != have {
 		t.Errorf("Context want %s, have %s", want, have)
 	}
-}
-
-func newHTTPRequest(t *testing.T) *http.Request {
-	r, err := http.NewRequest("test", "", nil)
-	if err != nil {
-		t.Fatalf("HTTP Request failed: %+v", err)
-	}
-	return r
 }
