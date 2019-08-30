@@ -24,6 +24,10 @@ import (
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
+const (
+	invalidID = "invalid_data"
+)
+
 func TestHTTPExtractFlagsOnly(t *testing.T) {
 	r := newHTTPRequest(t)
 
@@ -188,7 +192,7 @@ func TestHTTPExtractScope(t *testing.T) {
 func TestHTTPExtractTraceIDError(t *testing.T) {
 	r := newHTTPRequest(t)
 
-	r.Header.Set(b3.TraceID, "invalid_data")
+	r.Header.Set(b3.TraceID, invalidID)
 
 	_, err := b3.ExtractHTTP(r)()
 
@@ -200,7 +204,7 @@ func TestHTTPExtractTraceIDError(t *testing.T) {
 func TestHTTPExtractSpanIDError(t *testing.T) {
 	r := newHTTPRequest(t)
 
-	r.Header.Set(b3.SpanID, "invalid_data")
+	r.Header.Set(b3.SpanID, invalidID)
 
 	_, err := b3.ExtractHTTP(r)()
 
@@ -250,7 +254,7 @@ func TestHTTPExtractInvalidParentIDError(t *testing.T) {
 
 	r.Header.Set(b3.TraceID, "1")
 	r.Header.Set(b3.SpanID, "2")
-	r.Header.Set(b3.ParentSpanID, "invalid_data")
+	r.Header.Set(b3.ParentSpanID, invalidID)
 
 	_, err := b3.ExtractHTTP(r)()
 
@@ -279,7 +283,7 @@ func TestHTTPExtractSingleFailsAndMultipleFallsbackFailing(t *testing.T) {
 	r.Header.Set(b3.Context, "0000000000000001-0000000000000002-x")
 	r.Header.Set(b3.TraceID, "1")
 	r.Header.Set(b3.SpanID, "2")
-	r.Header.Set(b3.ParentSpanID, "invalid_data")
+	r.Header.Set(b3.ParentSpanID, invalidID)
 
 	_, err := b3.ExtractHTTP(r)()
 

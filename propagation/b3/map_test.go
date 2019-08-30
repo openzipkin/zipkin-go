@@ -187,7 +187,7 @@ func TestMapExtractScope(t *testing.T) {
 func TestMapExtractTraceIDError(t *testing.T) {
 	m := make(b3.Map)
 
-	m[b3.TraceID] = "invalid_data"
+	m[b3.TraceID] = invalidID
 
 	_, err := m.Extract()
 
@@ -199,7 +199,7 @@ func TestMapExtractTraceIDError(t *testing.T) {
 func TestMapExtractSpanIDError(t *testing.T) {
 	m := make(b3.Map)
 
-	m[b3.SpanID] = "invalid_data"
+	m[b3.SpanID] = invalidID
 
 	_, err := m.Extract()
 
@@ -249,7 +249,7 @@ func TestMapExtractInvalidParentIDError(t *testing.T) {
 
 	m[b3.TraceID] = "1"
 	m[b3.SpanID] = "2"
-	m[b3.ParentSpanID] = "invalid_data"
+	m[b3.ParentSpanID] = invalidID
 
 	_, err := m.Extract()
 
@@ -278,7 +278,7 @@ func TestMapExtractSingleFailsAndMultipleFallsbackFailing(t *testing.T) {
 	m[b3.Context] = "0000000000000001-0000000000000002-x"
 	m[b3.TraceID] = "1"
 	m[b3.SpanID] = "2"
-	m[b3.ParentSpanID] = "invalid_data"
+	m[b3.ParentSpanID] = invalidID
 
 	_, err := m.Extract()
 
