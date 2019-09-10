@@ -15,31 +15,28 @@
 package http_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
-
-	"fmt"
 	"time"
-
-	"strings"
 
 	"github.com/openzipkin/zipkin-go/idgenerator"
 	"github.com/openzipkin/zipkin-go/model"
+	"github.com/openzipkin/zipkin-go/reporter"
 	zipkinhttp "github.com/openzipkin/zipkin-go/reporter/http"
 )
 
-func TestSpanIsBeingReported(t *testing.T) {
+func generateSpans(n int) []*model.SpanModel {
+	spans := make([]*model.SpanModel, n)
 	idGen := idgenerator.NewRandom64()
 	traceID := idGen.TraceID()
 
-	nSpans := 2
-	var aSpans []model.SpanModel
-	var eSpans []string
-
-	for i := 0; i < nSpans; i++ {
-		span := model.SpanModel{
+	for i := 0; i < n; i++ {
+		spans[i] = &model.SpanModel{
 			SpanContext: model.SpanContext{
 				TraceID: traceID,
 				ID:      idGen.SpanID(traceID),
@@ -48,44 +45,125 @@ func TestSpanIsBeingReported(t *testing.T) {
 			Kind:      model.Client,
 			Timestamp: time.Now(),
 		}
-
-		aSpans = append(aSpans, span)
-		eSpans = append(
-			eSpans,
-			fmt.Sprintf(
-				`{"timestamp":%d,"traceId":"%s","id":"%s","name":"%s","kind":"%s"}`,
-				span.Timestamp.Round(time.Microsecond).UnixNano()/1e3,
-				span.SpanContext.TraceID,
-				span.SpanContext.ID,
-				span.Name,
-				span.Kind,
-			),
-		)
 	}
 
-	eSpansPayload := fmt.Sprintf("[%s]", strings.Join(eSpans, ","))
+	return spans
+}
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func newTestServer(t *testing.T, spans []*model.SpanModel, serializer reporter.SpanSerializer, onReceive func(int)) *httptest.Server {
+	sofar := 0
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			t.Errorf("expected 'POST' request, got '%s'", r.Method)
 		}
 
-		aSpanPayload, err := ioutil.ReadAll(r.Body)
+		aPayload, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			t.Errorf("unexpected error: %s", err.Error())
+			t.Errorf("unexpected error: %v", err)
 		}
 
-		if eSpansPayload != string(aSpanPayload) {
-			t.Errorf("unexpected span payload \nwant %s, \nhave %s\n", eSpansPayload, string(aSpanPayload))
+		var aSpans []*model.SpanModel
+		err = json.Unmarshal(aPayload, &aSpans)
+		if err != nil {
+			t.Errorf("failed to parse json payload: %v", err)
+		}
+		eSpans := spans[sofar : sofar+len(aSpans)]
+		sofar += len(aSpans)
+		onReceive(len(aSpans))
+
+		ePayload, err := serializer.Serialize(eSpans)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+
+		if !bytes.Equal(aPayload, ePayload) {
+			t.Errorf("unexpected span payload\nhave %s\nwant %s", string(aPayload), string(ePayload))
 		}
 	}))
+}
 
+func TestSpanIsBeingReported(t *testing.T) {
+	serializer := reporter.JSONSerializer{}
+
+	var numSpans int64
+	eNumSpans := 2
+	spans := generateSpans(eNumSpans)
+	ts := newTestServer(t, spans, serializer, func(num int) { atomic.AddInt64(&numSpans, int64(num)) })
 	defer ts.Close()
 
-	rep := zipkinhttp.NewReporter(ts.URL)
-	defer rep.Close()
+	rep := zipkinhttp.NewReporter(ts.URL, zipkinhttp.Serializer(serializer))
+	for _, span := range spans {
+		rep.Send(*span)
+	}
+	rep.Close()
 
-	for _, span := range aSpans {
-		rep.Send(span)
+	aNumSpans := int(atomic.LoadInt64(&numSpans))
+	if aNumSpans != eNumSpans {
+		t.Errorf("unexpected number of spans received\nhave: %d, want: %d", aNumSpans, eNumSpans)
+	}
+}
+
+func TestSpanIsReportedOnTime(t *testing.T) {
+	serializer := reporter.JSONSerializer{}
+	batchInterval := 200 * time.Millisecond
+
+	var numSpans int64
+	eNumSpans := 2
+	spans := generateSpans(eNumSpans)
+	ts := newTestServer(t, spans, serializer, func(num int) { atomic.AddInt64(&numSpans, int64(num)) })
+	defer ts.Close()
+
+	rep := zipkinhttp.NewReporter(ts.URL,
+		zipkinhttp.Serializer(serializer),
+		zipkinhttp.BatchInterval(batchInterval))
+
+	for _, span := range spans {
+		rep.Send(*span)
+	}
+
+	time.Sleep(3 * batchInterval / 2)
+
+	aNumSpans := int(atomic.LoadInt64(&numSpans))
+	if aNumSpans != eNumSpans {
+		t.Errorf("unexpected number of spans received\nhave: %d, want: %d", aNumSpans, eNumSpans)
+	}
+
+	rep.Close()
+}
+
+func TestSpanIsReportedAfterBatchSize(t *testing.T) {
+	serializer := reporter.JSONSerializer{}
+	batchSize := 2
+
+	var numSpans int64
+	eNumSpans := 6
+	spans := generateSpans(eNumSpans)
+	ts := newTestServer(t, spans, serializer, func(num int) { atomic.AddInt64(&numSpans, int64(num)) })
+	defer ts.Close()
+
+	rep := zipkinhttp.NewReporter(ts.URL,
+		zipkinhttp.Serializer(serializer),
+		zipkinhttp.BatchSize(batchSize))
+
+	for _, span := range spans[:batchSize] {
+		rep.Send(*span)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	aNumSpans := int(atomic.LoadInt64(&numSpans))
+	if aNumSpans != batchSize {
+		t.Errorf("unexpected number of spans received\nhave: %d, want: %d", aNumSpans, batchSize)
+	}
+
+	for _, span := range spans[batchSize:] {
+		rep.Send(*span)
+	}
+
+	rep.Close()
+
+	aNumSpans = int(atomic.LoadInt64(&numSpans))
+	if aNumSpans != eNumSpans {
+		t.Errorf("unexpected number of spans received\nhave: %d, want: %d", aNumSpans, eNumSpans)
 	}
 }
