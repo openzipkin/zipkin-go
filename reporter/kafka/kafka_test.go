@@ -68,6 +68,7 @@ func TestKafkaProduce(t *testing.T) {
 	c, err := kafka.NewReporter(
 		[]string{"192.0.2.10:9092"},
 		kafka.Producer(p),
+		kafka.BatchInterval(time.Millisecond*50),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -87,6 +88,7 @@ func TestKafkaProduceProto(t *testing.T) {
 		[]string{"192.0.2.10:9092"},
 		kafka.Producer(p),
 		kafka.Serializer(zipkin_proto3.SpanSerializer{}),
+		kafka.BatchInterval(time.Millisecond*50),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -147,6 +149,7 @@ func TestKafkaErrors(t *testing.T) {
 		[]string{"192.0.2.10:9092"},
 		kafka.Producer(p),
 		kafka.Logger(log.New(&chanWriter{errs}, "", log.LstdFlags)),
+		kafka.BatchInterval(time.Millisecond*50),
 	)
 	if err != nil {
 		t.Fatal(err)
