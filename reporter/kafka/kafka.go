@@ -51,10 +51,10 @@ type kafkaReporter struct {
 	batchInterval time.Duration
 	batchSize     int
 	maxBacklog    int
-	sendMtx       *sync.Mutex
 	batchMtx      *sync.Mutex
 	batch         []*model.SpanModel
 	spanC         chan *model.SpanModel
+	sendC         chan struct{}
 	quit          chan struct{}
 	shutdown      chan error
 }
@@ -125,9 +125,9 @@ func NewReporter(address []string, options ...ReporterOption) (reporter.Reporter
 		maxBacklog:    defaultMaxBacklog,
 		batch:         []*model.SpanModel{},
 		spanC:         make(chan *model.SpanModel),
+		sendC:         make(chan struct{}, 1),
 		quit:          make(chan struct{}, 1),
 		shutdown:      make(chan error, 1),
-		sendMtx:       &sync.Mutex{},
 		batchMtx:      &sync.Mutex{},
 	}
 
@@ -143,6 +143,7 @@ func NewReporter(address []string, options ...ReporterOption) (reporter.Reporter
 	}
 
 	go r.loop()
+	go r.sendLoop()
 	go r.logErrors()
 
 	return r, nil
@@ -178,29 +179,37 @@ func (r *kafkaReporter) loop() {
 			currentBatchSize := r.append(span)
 			if currentBatchSize >= r.batchSize {
 				nextSend = time.Now().Add(r.batchInterval)
-				go func() {
-					_ = r.sendBatch()
-				}()
+				r.enqueueSend()
 			}
 		case <-tickerChan:
 			if time.Now().After(nextSend) {
 				nextSend = time.Now().Add(r.batchInterval)
-				go func() {
-					_ = r.sendBatch()
-				}()
+				r.enqueueSend()
 			}
 		case <-r.quit:
-			r.shutdown <- r.sendBatch()
+			close(r.sendC)
 			return
 		}
 	}
 }
 
+func (r *kafkaReporter) sendLoop() {
+	for range r.sendC {
+		_ = r.sendBatch()
+	}
+	r.shutdown <- r.sendBatch()
+}
+
+func (r *kafkaReporter) enqueueSend() {
+	select {
+	case r.sendC <- struct{}{}:
+	default:
+		// Do nothing if there's a pending send request already
+	}
+}
+
 func (r *kafkaReporter) sendBatch() error {
 	// Zipkin expects the message to be wrapped in an array
-	// in order to prevent sending the same batch twice
-	r.sendMtx.Lock()
-	defer r.sendMtx.Unlock()
 
 	// Select all current spans in the batch to be sent
 	r.batchMtx.Lock()
