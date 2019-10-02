@@ -100,6 +100,26 @@ func TestKafkaProduceProto(t *testing.T) {
 	}
 }
 
+func TestKafkaProduceProtoNonBlocking(t *testing.T) {
+	p := newStubProducer(false)
+	c, err := kafka.NewReporter(
+		[]string{"192.0.2.10:9092"},
+		kafka.Producer(p),
+		kafka.Serializer(zipkin_proto3.SpanSerializer{}),
+		kafka.AsyncSendTimeout(100*time.Millisecond),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, want := range spans {
+		m := sendSpan(t, c, p, *want)
+		testMetadata(t, m)
+		have := deserializeSpan(t, m.Value)
+		testEqual(t, want, have)
+	}
+}
+
 func TestKafkaClose(t *testing.T) {
 	p := newStubProducer(false)
 	r, err := kafka.NewReporter(
@@ -162,6 +182,33 @@ func TestKafkaErrors(t *testing.T) {
 
 		json.Unmarshal(messageBody, &have)
 		testEqual(t, want, &have[0])
+	}
+
+	for i := 0; i < len(spans); i++ {
+		select {
+		case <-errs:
+		case <-time.After(100 * time.Millisecond):
+			t.Fatalf("errors not logged. have %d, wanted %d", i, len(spans))
+		}
+	}
+}
+
+func TestKafkaAsyncSend(t *testing.T) {
+	p := newStubProducer(false)
+	errs := make(chan []interface{}, len(spans))
+
+	c, err := kafka.NewReporter(
+		[]string{"192.0.2.10:9092"},
+		kafka.Producer(p),
+		kafka.AsyncSendTimeout(0),
+		kafka.Logger(log.New(&chanWriter{errs}, "", log.LstdFlags)),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, want := range spans {
+		c.Send(*want)
 	}
 
 	for i := 0; i < len(spans); i++ {

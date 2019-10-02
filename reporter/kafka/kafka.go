@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/openzipkin/zipkin-go/model"
@@ -35,10 +36,11 @@ const defaultKafkaTopic = "zipkin"
 // kafkaReporter implements Reporter by publishing spans to a Kafka
 // broker.
 type kafkaReporter struct {
-	producer   sarama.AsyncProducer
-	logger     *log.Logger
-	topic      string
-	serializer reporter.SpanSerializer
+	producer           sarama.AsyncProducer
+	logger             *log.Logger
+	topic              string
+	serializer         reporter.SpanSerializer
+	nonBlockingTimeout time.Duration
 }
 
 // ReporterOption sets a parameter for the kafkaReporter
@@ -76,13 +78,21 @@ func Serializer(serializer reporter.SpanSerializer) ReporterOption {
 	}
 }
 
+// AsyncSendTimeout enables and sets timeout for non-blocking sending data
+func AsyncSendTimeout(duration time.Duration) ReporterOption {
+	return func(c *kafkaReporter) {
+		c.nonBlockingTimeout = duration
+	}
+}
+
 // NewReporter returns a new Kafka-backed Reporter. address should be a slice of
 // TCP endpoints of the form "host:port".
 func NewReporter(address []string, options ...ReporterOption) (reporter.Reporter, error) {
 	r := &kafkaReporter{
-		logger:     log.New(os.Stderr, "", log.LstdFlags),
-		topic:      defaultKafkaTopic,
-		serializer: reporter.JSONSerializer{},
+		logger:             log.New(os.Stderr, "", log.LstdFlags),
+		topic:              defaultKafkaTopic,
+		serializer:         reporter.JSONSerializer{},
+		nonBlockingTimeout: -1,
 	}
 
 	for _, option := range options {
@@ -115,11 +125,23 @@ func (r *kafkaReporter) Send(s model.SpanModel) {
 		r.logger.Printf("failed when marshalling the span: %s\n", err.Error())
 		return
 	}
-
-	r.producer.Input() <- &sarama.ProducerMessage{
+	msg := &sarama.ProducerMessage{
 		Topic: r.topic,
 		Key:   nil,
 		Value: sarama.ByteEncoder(m),
+	}
+
+	// check if non-blocking send is allowed
+	if r.nonBlockingTimeout >= 0 {
+		select {
+		case r.producer.Input() <- msg:
+			return
+		case <-time.After(r.nonBlockingTimeout):
+			r.logger.Printf("failed to send msg beaceuse chan is full, msg %s\n", msg.Value)
+			return
+		}
+	} else {
+		r.producer.Input() <- msg
 	}
 }
 
