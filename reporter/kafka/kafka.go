@@ -30,8 +30,8 @@ import (
 )
 
 // defaultKafkaTopic sets the standard Kafka topic our Reporter will publish
-// on. The default topic for zipkin-receiver-kafka is "zipkin", see:
-// https://github.com/openzipkin/zipkin/tree/master/zipkin-receiver-kafka
+// on. The default topic for zipkin-collector/kafka is "zipkin", see:
+// https://github.com/openzipkin/zipkin/tree/master/zipkin-collector/kafka
 
 // defaults
 const (
@@ -95,7 +95,6 @@ func MaxBacklog(n int) ReporterOption {
 	return func(r *kafkaReporter) { r.maxBacklog = n }
 }
 
-// Topic sets the kafka topic to attach the reporter producer on.
 // Topic sets the kafka topic to attach the reporter producer on.
 func Topic(t string) ReporterOption {
 	return func(c *kafkaReporter) {
