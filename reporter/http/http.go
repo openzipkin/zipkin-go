@@ -24,7 +24,7 @@ import (
 	"os"
 	"sync"
 	"time"
-
+	"math"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 )
@@ -35,6 +35,8 @@ const (
 	defaultBatchInterval = time.Second * 1 // BatchInterval in seconds
 	defaultBatchSize     = 100
 	defaultMaxBacklog    = 1000
+	defaultMaxRetry      = math.MaxInt32
+	defaultRetryCounter  = math.MaxInt32
 )
 
 // httpReporter will send spans to a Zipkin HTTP Collector using Zipkin V2 API.
@@ -53,11 +55,15 @@ type httpReporter struct {
 	shutdown      chan error
 	reqCallback   RequestCallbackFn
 	serializer    reporter.SpanSerializer
+	maxRetry      int
+	retryCounter  int
 }
 
 // Send implements reporter
 func (r *httpReporter) Send(s model.SpanModel) {
-	r.spanC <- &s
+	if r.retryCounter > 0 {
+		r.spanC <- &s
+	}
 }
 
 // Close implements reporter
@@ -152,6 +158,11 @@ func (r *httpReporter) sendBatch() error {
 
 	resp, err := r.client.Do(req)
 	if err != nil {
+		r.retryCounter--
+		if r.retryCounter < 1 {
+			r.batch = r.batch[len(r.batch):]
+			r.logger.Printf("max retry exceeded: %d\n", r.maxRetry)
+		}
 		r.logger.Printf("failed to send the request: %s\n", err.Error())
 		return err
 	}
@@ -159,7 +170,7 @@ func (r *httpReporter) sendBatch() error {
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		r.logger.Printf("failed the request with status code %d\n", resp.StatusCode)
 	}
-
+	r.retryCounter = r.maxRetry
 	// Remove sent spans from the batch even if they were not saved
 	r.batchMtx.Lock()
 	r.batch = r.batch[len(sendBatch):]
@@ -179,6 +190,16 @@ type ReporterOption func(r *httpReporter)
 // Timeout sets maximum timeout for http request.
 func Timeout(duration time.Duration) ReporterOption {
 	return func(r *httpReporter) { r.client.Timeout = duration }
+}
+
+// MaxRetry sets maximum retries for reaching reporter.
+func MaxRetry(n int) ReporterOption {
+	return func(r *httpReporter) {
+		if n > 0 {
+			r.maxRetry = n
+			r.retryCounter = n
+		}
+	}
 }
 
 // BatchSize sets the maximum batch size, after which a collect will be
@@ -244,6 +265,8 @@ func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 		shutdown:      make(chan error, 1),
 		batchMtx:      &sync.Mutex{},
 		serializer:    reporter.JSONSerializer{},
+		maxRetry:      defaultMaxRetry,
+		retryCounter:  defaultRetryCounter,
 	}
 
 	for _, opt := range opts {
