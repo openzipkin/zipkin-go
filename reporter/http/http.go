@@ -19,14 +19,14 @@ package http
 
 import (
 	"bytes"
+	"github.com/openzipkin/zipkin-go/model"
+	"github.com/openzipkin/zipkin-go/reporter"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"sync"
 	"time"
-	"math"
-	"github.com/openzipkin/zipkin-go/model"
-	"github.com/openzipkin/zipkin-go/reporter"
 )
 
 // defaults
@@ -61,9 +61,7 @@ type httpReporter struct {
 
 // Send implements reporter
 func (r *httpReporter) Send(s model.SpanModel) {
-	if r.retryCounter > 0 {
-		r.spanC <- &s
-	}
+	r.spanC <- &s
 }
 
 // Close implements reporter
