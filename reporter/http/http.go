@@ -95,8 +95,21 @@ func (r *httpReporter) loop() {
 }
 
 func (r *httpReporter) sendLoop() {
+	retries := uint(0)
+loop:
 	for range r.sendC {
-		_ = r.sendBatch()
+		err := r.sendBatch()
+		if err == nil {
+			retries = 0
+			continue
+		}
+
+		retries++
+		select {
+		case <-r.quit:
+			break loop
+		case <-time.After(backoff(retries)):
+		}
 	}
 	r.shutdown <- r.sendBatch()
 }
