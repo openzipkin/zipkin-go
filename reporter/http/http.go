@@ -19,6 +19,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -37,10 +38,15 @@ const (
 	defaultMaxBacklog    = 1000
 )
 
+// Doer will do a request to the Zipkin HTTP Collector
+type Doer interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 // httpReporter will send spans to a Zipkin HTTP Collector using Zipkin V2 API.
 type httpReporter struct {
 	url           string
-	client        *http.Client
+	client        Doer
 	logger        *log.Logger
 	batchInterval time.Duration
 	batchSize     int
@@ -52,6 +58,7 @@ type httpReporter struct {
 	quit          chan struct{}
 	shutdown      chan error
 	reqCallback   RequestCallbackFn
+	reqTimeout    time.Duration
 	serializer    reporter.SpanSerializer
 }
 
@@ -150,7 +157,10 @@ func (r *httpReporter) sendBatch() error {
 		r.reqCallback(req)
 	}
 
-	resp, err := r.client.Do(req)
+	timeoutCtx, cancelFn := context.WithTimeout(req.Context(), r.reqTimeout)
+	defer cancelFn()
+
+	resp, err := r.client.Do(req.WithContext(timeoutCtx))
 	if err != nil {
 		r.logger.Printf("failed to send the request: %s\n", err.Error())
 		return err
@@ -178,7 +188,7 @@ type ReporterOption func(r *httpReporter)
 
 // Timeout sets maximum timeout for http request.
 func Timeout(duration time.Duration) ReporterOption {
-	return func(r *httpReporter) { r.client.Timeout = duration }
+	return func(r *httpReporter) { r.reqTimeout = duration }
 }
 
 // BatchSize sets the maximum batch size, after which a collect will be
@@ -200,7 +210,7 @@ func BatchInterval(d time.Duration) ReporterOption {
 }
 
 // Client sets a custom http client to use.
-func Client(client *http.Client) ReporterOption {
+func Client(client Doer) ReporterOption {
 	return func(r *httpReporter) { r.client = client }
 }
 
@@ -233,7 +243,7 @@ func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 	r := httpReporter{
 		url:           url,
 		logger:        log.New(os.Stderr, "", log.LstdFlags),
-		client:        &http.Client{Timeout: defaultTimeout},
+		client:        &http.Client{},
 		batchInterval: defaultBatchInterval,
 		batchSize:     defaultBatchSize,
 		maxBacklog:    defaultMaxBacklog,
@@ -244,6 +254,7 @@ func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 		shutdown:      make(chan error, 1),
 		batchMtx:      &sync.Mutex{},
 		serializer:    reporter.JSONSerializer{},
+		reqTimeout:    defaultTimeout,
 	}
 
 	for _, opt := range opts {
