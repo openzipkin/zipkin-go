@@ -18,7 +18,6 @@ Package kafka implements a Kafka reporter to send spans to a Kafka server/cluste
 package kafka
 
 import (
-	"encoding/json"
 	"log"
 	"os"
 
@@ -109,8 +108,8 @@ func (r *kafkaReporter) logErrors() {
 
 func (r *kafkaReporter) Send(s model.SpanModel) {
 	// Zipkin expects the message to be wrapped in an array
-	ss := []model.SpanModel{s}
-	m, err := json.Marshal(ss)
+	ss := []*model.SpanModel{&s}
+	m, err := r.serializer.Serialize(ss)
 	if err != nil {
 		r.logger.Printf("failed when marshalling the span: %s\n", err.Error())
 		return

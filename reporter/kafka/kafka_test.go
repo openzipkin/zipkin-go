@@ -63,6 +63,17 @@ var spans = []*model.SpanModel{
 	makeNewSpan("div", 123, 101112, 456, true),
 }
 
+func jsonDeserializer(body []byte) ([]*model.SpanModel, error) {
+	spans := []*model.SpanModel{}
+	err := json.Unmarshal(body, &spans)
+	return spans, err
+}
+
+func protoDeserializer(body []byte) ([]*model.SpanModel, error) {
+	spans, err := zipkin_proto3.ParseSpans(body, true)
+	return spans, err
+}
+
 func TestKafkaProduce(t *testing.T) {
 	p := newStubProducer(false)
 	c, err := kafka.NewReporter(
@@ -76,7 +87,7 @@ func TestKafkaProduce(t *testing.T) {
 	for _, want := range spans {
 		m := sendSpan(t, c, p, *want)
 		testMetadata(t, m)
-		have := deserializeSpan(t, m.Value)
+		have := deserializeSpan(t, m.Value, jsonDeserializer)
 		testEqual(t, want, have)
 	}
 }
@@ -95,7 +106,7 @@ func TestKafkaProduceProto(t *testing.T) {
 	for _, want := range spans {
 		m := sendSpan(t, c, p, *want)
 		testMetadata(t, m)
-		have := deserializeSpan(t, m.Value)
+		have := deserializeSpan(t, m.Value, protoDeserializer)
 		testEqual(t, want, have)
 	}
 }
@@ -208,21 +219,19 @@ func testMetadata(t *testing.T, m *sarama.ProducerMessage) {
 	}
 }
 
-func deserializeSpan(t *testing.T, e sarama.Encoder) *model.SpanModel {
+func deserializeSpan(t *testing.T, e sarama.Encoder, deserializer func([]byte) ([]*model.SpanModel, error)) *model.SpanModel {
 	bytes, err := e.Encode()
 	if err != nil {
 		t.Errorf("unexpected error in encoding: %v", err)
 	}
 
-	var s []model.SpanModel
-
-	err = json.Unmarshal(bytes, &s)
+	s, err := deserializer(bytes)
 	if err != nil {
 		t.Errorf("unexpected error in decoding: %v", err)
 		return nil
 	}
 
-	return &s[0]
+	return s[0]
 }
 
 func testEqual(t *testing.T, want *model.SpanModel, have *model.SpanModel) {
