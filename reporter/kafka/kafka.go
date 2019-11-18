@@ -18,7 +18,6 @@ Package kafka implements a Kafka reporter to send spans to a Kafka server/cluste
 package kafka
 
 import (
-	"encoding/json"
 	"log"
 	"os"
 	"sync"
@@ -218,7 +217,7 @@ func (r *kafkaReporter) sendBatch() error {
 	if len(sendBatch) == 0 {
 		return nil
 	}
-	m, err := json.Marshal(sendBatch)
+	m, err := r.serializer.Serialize(sendBatch)
 	if err != nil {
 		r.logger.Printf("failed when marshalling the span: %s\n", err.Error())
 		return err
