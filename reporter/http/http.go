@@ -38,15 +38,15 @@ const (
 	defaultMaxBacklog    = 1000
 )
 
-// Doer will do a request to the Zipkin HTTP Collector
-type Doer interface {
+// HTTPDoer will do a request to the Zipkin HTTP Collector
+type HTTPDoer interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
 // httpReporter will send spans to a Zipkin HTTP Collector using Zipkin V2 API.
 type httpReporter struct {
 	url           string
-	client        Doer
+	client        HTTPDoer
 	logger        *log.Logger
 	batchInterval time.Duration
 	batchSize     int
@@ -157,10 +157,10 @@ func (r *httpReporter) sendBatch() error {
 		r.reqCallback(req)
 	}
 
-	timeoutCtx, cancelFn := context.WithTimeout(req.Context(), r.reqTimeout)
-	defer cancelFn()
+	ctx, cancel := context.WithTimeout(req.Context(), r.reqTimeout)
+	defer cancel()
 
-	resp, err := r.client.Do(req.WithContext(timeoutCtx))
+	resp, err := r.client.Do(req.WithContext(ctx))
 	if err != nil {
 		r.logger.Printf("failed to send the request: %s\n", err.Error())
 		return err
@@ -186,7 +186,7 @@ type RequestCallbackFn func(*http.Request)
 // ReporterOption sets a parameter for the HTTP Reporter
 type ReporterOption func(r *httpReporter)
 
-// Timeout sets maximum timeout for http request.
+// Timeout sets maximum timeout for the http request through its context.
 func Timeout(duration time.Duration) ReporterOption {
 	return func(r *httpReporter) { r.reqTimeout = duration }
 }
@@ -209,8 +209,9 @@ func BatchInterval(d time.Duration) ReporterOption {
 	return func(r *httpReporter) { r.batchInterval = d }
 }
 
-// Client sets a custom http client to use.
-func Client(client Doer) ReporterOption {
+// Client sets a custom http client to use under the interface HTTPDoer
+// which includes a `Do` method with same signature as the *http.Client
+func Client(client HTTPDoer) ReporterOption {
 	return func(r *httpReporter) { r.client = client }
 }
 
