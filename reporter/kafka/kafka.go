@@ -51,7 +51,9 @@ func Logger(logger *log.Logger) ReporterOption {
 	}
 }
 
-// Producer sets the producer used to produce to Kafka.
+// Producer sets the producer used to produce to Kafka. For tweaking
+// the reporting settings (e.g. reporting timeout or authentication)
+// check the sarama.Config struct.
 func Producer(p sarama.AsyncProducer) ReporterOption {
 	return func(c *kafkaReporter) {
 		c.producer = p
