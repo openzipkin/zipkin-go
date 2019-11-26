@@ -99,7 +99,7 @@ Producer digesting JSON V2 Spans. The reporter uses the
 underneath.
 
 #### GCP Pubsub Reporter
-Reporter transporting Spans to the Zipkin server using a Pubsub
+Reporter transporting Spans to the Zipkin server using a Pubsub.
 
 ## usage and examples
 [HTTP Server Example](example_httpserver_test.go)
