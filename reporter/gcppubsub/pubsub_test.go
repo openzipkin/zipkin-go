@@ -16,11 +16,10 @@ var topicID string
 
 var once sync.Once // guards cleanup related operations in setup.
 
-func setup() *pubsub.Client {
+func setup(topicID string) *pubsub.Client {
 	ctx := context.Background()
 	proj := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	fmt.Printf("GCP Project: %s\n", proj)
-	topicID = "test-topic"
 
 	client, err := pubsub.NewClient(ctx, proj)
 	if err != nil {
@@ -38,29 +37,42 @@ func setup() *pubsub.Client {
 }
 
 func TestPublish(t *testing.T) {
-	c := setup()
-	if c != nil {
-		top := c.Topic(topicID)
-		reporter, err := NewReporter(Client(c), Topic(top))
-		if err != nil {
-			t.Fatalf("failed creating reporter: %v", err)
-		}
-		span := makeNewSpan("avg1", 124, 457, 0, true)
-		reporter.Send(*span)
+	tcs := map[string]struct {
+		topicID string
+	}{
+		"with test-topic": {
+			topicID: "test-topic",
+		},
+		"with default topic": {
+			topicID: defaultPubSubTopic,
+		},
+	}
 
-		// Cleanup resources from the previous failed tests.
-		once.Do(func() {
-			ctx := context.Background()
-			topic := c.Topic(topicID)
-			ok, err := topic.Exists(ctx)
-			if err != nil {
-				fmt.Printf("failed to check if topic exists: %v", err)
-			}
-			if !ok {
-				return
-			}
-			if err := topic.Delete(ctx); err != nil {
-				fmt.Printf("failed to cleanup the topic (%q): %v", topicID, err)
+	for n, tc := range tcs {
+		t.Run(n, func(t *testing.T) {
+			c := setup(tc.topicID)
+			if c != nil {
+				top := c.Topic(topicID)
+				reporter, err := NewReporter(Client(c), Topic(top))
+				if err != nil {
+					t.Fatalf("failed creating reporter: %v", err)
+				}
+				span := makeNewSpan("avg1", 124, 457, 0, true)
+				reporter.Send(*span)
+
+				// Cleanup resources from the previous failed tests.
+				once.Do(func() {
+					ctx := context.Background()
+					topic := c.Topic(topicID)
+					_, err := topic.Exists(ctx)
+					if err != nil {
+						t.Fatalf("failed to check if topic exists: %v", err)
+					}
+
+					if err := topic.Delete(ctx); err != nil {
+						fmt.Printf("failed to cleanup the topic (%q): %v", topicID, err)
+					}
+				})
 			}
 		})
 	}
