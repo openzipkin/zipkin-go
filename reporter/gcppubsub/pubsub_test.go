@@ -23,12 +23,12 @@ func setup(t *testing.T, topicID string) *pubsub.Client {
 
 	client, err := pubsub.NewClient(ctx, proj)
 	if err != nil {
-		t.Errorf("failed to create client: %s\n", topicID)
+		t.Fatalf("failed to create client: %s\n", topicID)
 	}
 
 	_, err = client.CreateTopic(ctx, topicID)
 	if err != nil {
-		t.Errorf("failed to create topic: %v", err)
+		t.Fatalf("failed to create topic: %v", err)
 	}
 	fmt.Printf("Topic created: %s\n", topicID)
 	return client
@@ -67,7 +67,7 @@ func TestPublish(t *testing.T) {
 				}
 
 				if err := topic.Delete(ctx); err != nil {
-					fmt.Printf("failed to cleanup the topic (%q): %v", topicID, err)
+					t.Fatalf("failed to cleanup the topic (%q): %v", topicID, err)
 				}
 			})
 		})
