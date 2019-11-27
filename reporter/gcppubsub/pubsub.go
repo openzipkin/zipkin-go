@@ -11,7 +11,7 @@ import (
 	"os"
 )
 
-const defaultPubSubTopic = "defaultTopic"
+const DefaultPubSubTopic = "defaultTopic"
 
 var resultMsg = make(chan reporterResult)
 
@@ -86,7 +86,7 @@ func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
 		return nil, err
 	}
 	if r.topic == nil {
-		t := r.client.Topic(defaultPubSubTopic)
+		t := r.client.Topic(DefaultPubSubTopic)
 		r.topic = t
 	}
 	go r.checkResult()
