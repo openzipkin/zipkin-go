@@ -3,13 +3,14 @@ package gcppubsub
 import (
 	"context"
 	"fmt"
-	"github.com/openzipkin/zipkin-go/model"
+	"log"
 	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/openzipkin/zipkin-go/model"
 )
 
 var topicID string
@@ -103,5 +104,28 @@ func makeNewSpan(methodName string, traceID, spanID, parentSpanID uint64, debug 
 		},
 		Name:      methodName,
 		Timestamp: timestamp,
+	}
+}
+
+func TestLogger(t *testing.T) {
+	tcs := map[string]struct {
+		logger *log.Logger
+	}{
+		"with no logger": {
+			logger: nil,
+		},
+		"with default logger": {
+			logger: log.New(nil, "", 0),
+		},
+	}
+
+	for n, tc := range tcs {
+		t.Run(n, func(t *testing.T) {
+			c := setup(t, defaultPubSubTopic)
+			_, err := NewReporter(Client(c), Logger(tc.logger))
+			if err != nil {
+				t.Fatalf("failed creating reporter with logger: %v", err)
+			}
+		})
 	}
 }
