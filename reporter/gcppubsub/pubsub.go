@@ -82,12 +82,10 @@ func NewReporter(options ...ReporterOption) (reporter.Reporter, error) {
 	}
 
 	if r.client == nil {
-		err := errors.New("cannot create pubsub reporter without valid client")
-		return nil, err
+		return nil, errors.New("cannot create pubsub reporter without valid client")
 	}
 	if r.topic == nil {
-		t := r.client.Topic(defaultPubSubTopic)
-		r.topic = t
+		r.topic = r.client.Topic(defaultPubSubTopic)
 	}
 	go r.checkResult()
 	return r, nil
