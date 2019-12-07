@@ -2,6 +2,7 @@ package gcppubsub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	"github.com/openzipkin/zipkin-go/model"
+	"github.com/openzipkin/zipkin-go/reporter"
 )
 
 var topicID string
@@ -26,12 +28,6 @@ func setup(t *testing.T, topicID string) *pubsub.Client {
 	if err != nil {
 		t.Fatalf("failed to create client: %s\n", topicID)
 	}
-
-	_, err = client.CreateTopic(ctx, topicID)
-	if err != nil {
-		t.Fatalf("failed to create topic: %v", err)
-	}
-	fmt.Printf("Topic created: %s\n", topicID)
 	return client
 }
 
@@ -51,26 +47,12 @@ func TestPublish(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			c := setup(t, tc.topicID)
 			top := c.Topic(topicID)
-			reporter, err := NewReporter(Client(c), Topic(top))
+			reporter, err := newStubReporter(Client(c), Topic(top))
 			if err != nil {
 				t.Fatalf("failed creating reporter: %v", err)
 			}
 			span := makeNewSpan("avg1", 124, 457, 0, true)
 			reporter.Send(*span)
-
-			// Cleanup resources from the previous failed tests.
-			once.Do(func() {
-				ctx := context.Background()
-				topic := c.Topic(topicID)
-				_, err := topic.Exists(ctx)
-				if err != nil {
-					t.Fatalf("failed to check if topic exists: %v", err)
-				}
-
-				if err := topic.Delete(ctx); err != nil {
-					t.Fatalf("failed to cleanup the topic (%q): %v", topicID, err)
-				}
-			})
 		})
 	}
 }
@@ -85,6 +67,27 @@ func TestErrorNotProjEnv(t *testing.T) {
 	}
 	if err.Error() != "cannot create pubsub reporter without valid client" {
 		t.Fatal("NewReporter should return cannot create pubsub reporter without valid client error")
+	}
+}
+
+func TestClose(t *testing.T) {
+	tcs := map[string]struct {
+		willFail bool
+	}{
+		"will success": {true},
+		"will fail":    {false},
+	}
+
+	for n, tc := range tcs {
+		t.Run(n, func(t *testing.T) {
+			reporter, err := newStubReporter()
+			if err != nil {
+				t.Fatalf("failed creating reporter: %v", err)
+			}
+			if err := reporter.Close(); err != nil && tc.willFail {
+				t.Fatalf("failed to close reporter: %v", err)
+			}
+		})
 	}
 }
 
@@ -128,4 +131,39 @@ func TestLogger(t *testing.T) {
 			}
 		})
 	}
+}
+
+type stubReporter struct {
+	logger *log.Logger
+	client *stubClient
+	topic  *pubsub.Topic
+}
+
+type stubClient struct{}
+
+func (c *stubClient) Topic(name string) *pubsub.Topic {
+	return &pubsub.Topic{}
+}
+
+func (r *stubReporter) Send(span model.SpanModel) {
+
+}
+
+func (r *stubReporter) Close() error {
+	return nil
+}
+
+func newStubReporter(options ...ReporterOption) (reporter.Reporter, error) {
+	r := &stubReporter{
+		logger: log.New(os.Stderr, "", log.LstdFlags),
+		client: &stubClient{},
+	}
+
+	if r.client == nil {
+		return nil, errors.New("cannot create pubsub reporter without valid client")
+	}
+	if r.topic == nil {
+		r.topic = r.client.Topic(defaultPubSubTopic)
+	}
+	return r, nil
 }
