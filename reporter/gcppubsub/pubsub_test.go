@@ -122,7 +122,7 @@ func TestLogger(t *testing.T) {
 	for n, tc := range tcs {
 		t.Run(n, func(t *testing.T) {
 			c := setup(t, defaultPubSubTopic)
-			_, err := NewReporter(Client(c), Logger(tc.logger))
+			_, err := newStubReporter(Client(c), Logger(tc.logger))
 			if err != nil {
 				t.Fatalf("failed creating reporter with logger: %v", err)
 			}
@@ -148,7 +148,7 @@ func (r *stubReporter) Close() error {
 	return nil
 }
 
-func newStubReporter(...ReporterOption) (reporter.Reporter, error) {
+func newStubReporter(options ...ReporterOption) (reporter.Reporter, error) {
 	r := &stubReporter{
 		logger: log.New(os.Stderr, "", log.LstdFlags),
 		client: &stubClient{},
