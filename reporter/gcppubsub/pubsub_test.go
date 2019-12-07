@@ -145,9 +145,7 @@ func (c *stubClient) Topic(name string) *pubsub.Topic {
 	return &pubsub.Topic{}
 }
 
-func (r *stubReporter) Send(span model.SpanModel) {
-
-}
+func (r *stubReporter) Send(span model.SpanModel) {}
 
 func (r *stubReporter) Close() error {
 	return nil
