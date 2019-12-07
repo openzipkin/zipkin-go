@@ -1,9 +1,7 @@
 package gcppubsub
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -15,18 +13,6 @@ import (
 )
 
 var topicID string
-
-func setup(t *testing.T, topicID string) *pubsub.Client {
-	ctx := context.Background()
-	proj := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	fmt.Printf("GCP Project: %s\n", proj)
-
-	client, err := pubsub.NewClient(ctx, proj)
-	if err != nil {
-		t.Fatalf("failed to create client: %s\n", topicID)
-	}
-	return client
-}
 
 func TestPublish(t *testing.T) {
 	tcs := map[string]struct {
@@ -42,8 +28,8 @@ func TestPublish(t *testing.T) {
 
 	for n, tc := range tcs {
 		t.Run(n, func(t *testing.T) {
-			c := setup(t, tc.topicID)
-			top := c.Topic(topicID)
+			c := &pubsub.Client{}
+			top := c.Topic(tc.topicID)
 			reporter, err := newStubReporter(Client(c), Topic(top))
 			if err != nil {
 				t.Fatalf("failed creating reporter: %v", err)
@@ -121,7 +107,7 @@ func TestLogger(t *testing.T) {
 
 	for n, tc := range tcs {
 		t.Run(n, func(t *testing.T) {
-			c := setup(t, defaultPubSubTopic)
+			c := &pubsub.Client{}
 			_, err := newStubReporter(Client(c), Logger(tc.logger))
 			if err != nil {
 				t.Fatalf("failed creating reporter with logger: %v", err)
