@@ -148,7 +148,7 @@ func (r *stubReporter) Close() error {
 	return nil
 }
 
-func newStubReporter(options ...ReporterOption) (reporter.Reporter, error) {
+func newStubReporter(...ReporterOption) (reporter.Reporter, error) {
 	r := &stubReporter{
 		logger: log.New(os.Stderr, "", log.LstdFlags),
 		client: &stubClient{},
