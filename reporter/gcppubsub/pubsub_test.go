@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -16,8 +15,6 @@ import (
 )
 
 var topicID string
-
-var once sync.Once // guards cleanup related operations in setup.
 
 func setup(t *testing.T, topicID string) *pubsub.Client {
 	ctx := context.Background()
@@ -151,7 +148,7 @@ func (r *stubReporter) Close() error {
 	return nil
 }
 
-func newStubReporter(options ...ReporterOption) (reporter.Reporter, error) {
+func newStubReporter(...ReporterOption) (reporter.Reporter, error) {
 	r := &stubReporter{
 		logger: log.New(os.Stderr, "", log.LstdFlags),
 		client: &stubClient{},
