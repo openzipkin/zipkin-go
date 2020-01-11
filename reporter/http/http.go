@@ -32,8 +32,8 @@ import (
 
 // defaults
 const (
-	defaultTimeout       = time.Second * 5 // timeout for http request in seconds
-	defaultBatchInterval = time.Second * 1 // BatchInterval in seconds
+	defaultTimeout       = 5 * time.Second // timeout for http request in seconds
+	defaultBatchInterval = 1 * time.Second // BatchInterval in seconds
 	defaultBatchSize     = 100
 	defaultMaxBacklog    = 1000
 )
