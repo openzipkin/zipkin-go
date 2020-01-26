@@ -98,5 +98,8 @@ Producer digesting JSON V2 Spans. The reporter uses the
 [Sarama async producer](https://godoc.org/github.com/Shopify/sarama#AsyncProducer)
 underneath.
 
+#### GCP Pubsub Reporter
+Reporter transporting Spans to the Zipkin server using a Pubsub
+
 ## usage and examples
 [HTTP Server Example](example_httpserver_test.go)
