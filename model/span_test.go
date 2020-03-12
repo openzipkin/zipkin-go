@@ -285,7 +285,7 @@ func TestSpanUnmarshalScientificNotationTimestamp(t *testing.T) {
 		}
 
 		expected := 54500 * time.Microsecond
-		if span.Duration !=  expected {
+		if span.Duration != expected {
 			t.Errorf("Invalid unmarshaled duration, want: %v, have: %+v", span.Duration, expected)
 		}
 	})
