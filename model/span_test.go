@@ -268,7 +268,7 @@ func TestSpanUnmarshalScientificNotationTimestamp(t *testing.T) {
 		}
 
 		expected := time.Unix(1582662767, 960310000).UnixNano()
-		if span.Timestamp.UnixNano() !=  expected{
+		if span.Timestamp.UnixNano() != expected {
 			t.Errorf("Invalid unmarshaled timestamp, want: %v, have: %+v", expected, span.Timestamp.UnixNano())
 		}
 	})
