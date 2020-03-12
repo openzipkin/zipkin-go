@@ -140,7 +140,7 @@ func (s *SpanModel) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	s.Duration = time.Duration(d * 1e3) * time.Nanosecond
+	s.Duration = time.Duration(d*1e3) * time.Nanosecond
 
 	if s.LocalEndpoint.Empty() {
 		s.LocalEndpoint = nil
