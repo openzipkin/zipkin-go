@@ -17,8 +17,11 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"math"
 	"time"
 )
+
+const maxNanoDigitCount = 19
 
 // unmarshal errors
 var (
@@ -111,8 +114,8 @@ func (s SpanModel) MarshalJSON() ([]byte, error) {
 func (s *SpanModel) UnmarshalJSON(b []byte) error {
 	type Alias SpanModel
 	span := &struct {
-		T uint64 `json:"timestamp,omitempty"`
-		D uint64 `json:"duration,omitempty"`
+		T json.Number `json:"timestamp,omitempty"`
+		D json.Number `json:"duration,omitempty"`
 		*Alias
 	}{
 		Alias: (*Alias)(s),
@@ -123,10 +126,22 @@ func (s *SpanModel) UnmarshalJSON(b []byte) error {
 	if s.ID < 1 {
 		return ErrValidIDRequired
 	}
-	if span.T > 0 {
-		s.Timestamp = time.Unix(0, int64(span.T)*1e3)
+
+	t, err := decodeJsonNumber(span.T)
+	if err != nil {
+		return err
 	}
-	s.Duration = time.Duration(span.D*1e3) * time.Nanosecond
+	if t > 0 {
+		length := (int)(math.Log10(float64(t)) + 1)
+		s.Timestamp = time.Unix(0, t*int64(math.Pow10(maxNanoDigitCount-length)))
+	}
+
+	d, err := decodeJsonNumber(span.D)
+	if err != nil {
+		return err
+	}
+	s.Duration = time.Duration(d * 1e3) * time.Nanosecond
+
 	if s.LocalEndpoint.Empty() {
 		s.LocalEndpoint = nil
 	}
@@ -135,4 +150,22 @@ func (s *SpanModel) UnmarshalJSON(b []byte) error {
 		s.RemoteEndpoint = nil
 	}
 	return nil
+}
+
+// Decode json Number that could be represented using scientific annotation.
+func decodeJsonNumber(n json.Number) (int64, error) {
+	if n == "" {
+		return 0, nil
+	}
+
+	tint, err := n.Int64()
+	if err != nil {
+		tf, errf := n.Float64()
+		if errf != nil {
+			return 0, err
+		}
+		tint = int64(tf)
+	}
+
+	return tint, nil
 }
