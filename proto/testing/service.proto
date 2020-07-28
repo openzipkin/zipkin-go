@@ -16,6 +16,8 @@ syntax = "proto3";
 
 package zipkin.testing;
 
+option go_package = "github.com/openzipkin/zipkin-go/proto/testing";
+
 message HelloRequest {
   string payload = 1;
 }

@@ -16,7 +16,7 @@
 Package zipkin_proto3 adds support for the Zipkin protobuf definition to allow
 Go applications to consume model.SpanModel from protobuf serialized data.
 */
-package zipkin_proto3
+package v2
 
 import (
 	"encoding/binary"

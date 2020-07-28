@@ -20,6 +20,8 @@ package zipkin.proto3;
 option java_package = "zipkin2.proto3";
 option java_multiple_files = true;
 
+option go_package = "github.com/openzipkin/zipkin-go/proto/v2";
+
 // A span is a single-host view of an operation. A trace is a series of spans
 // (often RPC calls) which nest to form a latency tree. Spans are in the same
 // trace when they share the same trace ID. The parent_id field establishes the
