@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v2_test
+package zipkin_proto3_test
 
 import (
 	"bytes"
@@ -26,7 +26,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	zipkinmodel "github.com/openzipkin/zipkin-go/model"
-	zipkin_proto3 "github.com/openzipkin/zipkin-go/proto/v2"
+	zipkin_proto3 "github.com/openzipkin/zipkin-go/proto/zipkin_proto3"
 )
 
 func TestParseSpans(t *testing.T) {

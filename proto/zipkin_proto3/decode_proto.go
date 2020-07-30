@@ -13,10 +13,10 @@
 // limitations under the License.
 
 /*
-Package v2 adds support for the Zipkin protobuf definition to allow
+Package zipkin_proto3 adds support for the Zipkin protobuf definition to allow
 Go applications to consume model.SpanModel from protobuf serialized data.
 */
-package v2
+package zipkin_proto3
 
 import (
 	"encoding/binary"
