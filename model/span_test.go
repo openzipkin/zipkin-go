@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -83,6 +84,9 @@ func TestSpanJSON(t *testing.T) {
 	for idx := range span1.Annotations {
 		span1.Annotations[idx].Timestamp = span1.Annotations[idx].Timestamp.Round(time.Microsecond)
 	}
+
+	span1.Name = strings.ToLower(span1.Name)
+	span1.LocalEndpoint.ServiceName = strings.ToLower(span1.LocalEndpoint.ServiceName)
 
 	if !reflect.DeepEqual(span1, span2) {
 		t.Errorf("want SpanModel: %+v, have: %+v", span1, span2)
