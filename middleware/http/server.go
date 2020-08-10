@@ -145,10 +145,12 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		code := ri.getStatusCode()
 		sCode := strconv.Itoa(code)
-		if code > 399 {
-			h.errHandler(sp, nil, code)
+		if code < 200 || code > 299 {
+			zipkin.TagHTTPStatusCode.Set(sp, sCode)
+			if code > 399 {
+				h.errHandler(sp, nil, code)
+			}
 		}
-		zipkin.TagHTTPStatusCode.Set(sp, sCode)
 		if h.tagResponseSize && atomic.LoadUint64(&ri.size) > 0 {
 			zipkin.TagHTTPResponseSize.Set(sp, ri.getResponseSize())
 		}
