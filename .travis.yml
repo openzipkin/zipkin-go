@@ -4,8 +4,6 @@ dist: trusty
 services:
   - rabbitmq
 
-sudo: false
-
 matrix:
   include:
     - go: "1.9.x"
