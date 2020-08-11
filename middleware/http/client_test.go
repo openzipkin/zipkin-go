@@ -41,12 +41,14 @@ func TestHTTPClient(t *testing.T) {
 		"conf.timeout": "default",
 	}
 
+	remoteServiceName := "google-service"
 	client, err := httpclient.NewClient(
 		tracer,
 		httpclient.WithClient(&http.Client{}),
 		httpclient.ClientTrace(true),
 		httpclient.ClientTags(clientTags),
 		httpclient.TransportOptions(httpclient.TransportTags(transportTags)),
+		httpclient.WithRemoteServiceName(remoteServiceName),
 	)
 	if err != nil {
 		t.Fatalf("unable to create http client: %+v", err)
@@ -63,6 +65,11 @@ func TestHTTPClient(t *testing.T) {
 	spans := reporter.Flush()
 	if len(spans) < 2 {
 		t.Errorf("Span Count want 2+, have %d", len(spans))
+	}
+
+	remoteEndpoint := spans[0].RemoteEndpoint
+	if remoteEndpoint == nil || remoteEndpoint.ServiceName != remoteServiceName {
+		t.Errorf("Span remoteEndpoint ServiceName want %s, have %s", remoteServiceName, remoteEndpoint.ServiceName)
 	}
 
 	req, _ = http.NewRequest("GET", "https://www.google.com", nil)
