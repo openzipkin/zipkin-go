@@ -179,6 +179,7 @@ func TestHTTPDefaultSpanName(t *testing.T) {
 		httpRecorder = httptest.NewRecorder()
 		requestBuf   = bytes.NewBufferString("incoming data")
 		methodType   = "POST"
+		code         = ""
 	)
 
 	request, err := http.NewRequest(methodType, "/test", requestBuf)
@@ -202,6 +203,10 @@ func TestHTTPDefaultSpanName(t *testing.T) {
 
 	if want, have := methodType, span.Name; want != have {
 		t.Errorf("Expected span name %s, got %s", want, have)
+	}
+
+	if want, have := code, span.Tags["http.status_code"]; want != have {
+		t.Errorf("Expected span status code %s, got %s", want, have)
 	}
 }
 
