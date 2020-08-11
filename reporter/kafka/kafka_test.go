@@ -24,7 +24,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/openzipkin/zipkin-go/model"
-	zipkin_proto3 "github.com/openzipkin/zipkin-go/proto/v2"
+	zipkin_proto3 "github.com/openzipkin/zipkin-go/proto/zipkin_proto3"
 	"github.com/openzipkin/zipkin-go/reporter"
 	"github.com/openzipkin/zipkin-go/reporter/kafka"
 )

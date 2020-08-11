@@ -121,7 +121,9 @@ func (g *sequentialIdGenerator) reset() {
 	g.nextSpanId = g.start
 }
 
-type TestHelloService struct{}
+type TestHelloService struct{
+	service.UnimplementedHelloServiceServer
+}
 
 func (s *TestHelloService) Hello(ctx context.Context, req *service.HelloRequest) (*service.HelloResponse, error) {
 	if req.Payload == "fail" {

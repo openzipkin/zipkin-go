@@ -14,11 +14,15 @@
 
 syntax = "proto3";
 
+// This is the package for using protobuf with Zipkin API V2, but for historical
+// reasons uses the protoc syntax version instead.
 package zipkin.proto3;
 
 // In Java, the closest model type to this proto is in the "zipkin2" package
 option java_package = "zipkin2.proto3";
 option java_multiple_files = true;
+
+option go_package = "github.com/openzipkin/zipkin-go/proto/zipkin_proto3";
 
 // A span is a single-host view of an operation. A trace is a series of spans
 // (often RPC calls) which nest to form a latency tree. Spans are in the same
