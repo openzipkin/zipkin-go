@@ -30,11 +30,11 @@ var ErrValidTracerRequired = errors.New("valid tracer required")
 // Client holds a Zipkin instrumented HTTP Client.
 type Client struct {
 	*http.Client
-	tracer            *zipkin.Tracer
-	httpTrace         bool
-	defaultTags       map[string]string
-	transportOptions  []TransportOption
-	remoteServiceName string
+	tracer           *zipkin.Tracer
+	httpTrace        bool
+	defaultTags      map[string]string
+	transportOptions []TransportOption
+	remoteEndpoint   *model.Endpoint
 }
 
 // ClientOption allows optional configuration of Client.
@@ -72,11 +72,10 @@ func TransportOptions(options ...TransportOption) ClientOption {
 	}
 }
 
-// WithRemoteServiceName will set the value for the remote endpoint's service name on
-// all spans.
-func WithRemoteServiceName(name string) ClientOption {
+// WithRemoteEndpoint will set the remote endpoint for all spans.
+func WithRemoteEndpoint(remoteEndpoint *model.Endpoint) ClientOption {
 	return func(c *Client) {
-		c.remoteServiceName = name
+		c.remoteEndpoint = remoteEndpoint
 	}
 }
 
@@ -97,7 +96,7 @@ func NewClient(tracer *zipkin.Tracer, options ...ClientOption) (*Client, error) 
 		// the following Client settings override provided transport settings.
 		RoundTripper(c.Client.Transport),
 		TransportTrace(c.httpTrace),
-		TransportRemoteServiceName(c.remoteServiceName),
+		TransportRemoteEndpoint(c.remoteEndpoint),
 	)
 	transport, err := NewTransport(tracer, c.transportOptions...)
 	if err != nil {
@@ -116,8 +115,7 @@ func (c *Client) DoWithAppSpan(req *http.Request, name string) (res *http.Respon
 		parentContext = span.Context()
 	}
 
-	ep, _ := zipkin.NewEndpoint(c.remoteServiceName, req.Host)
-	appSpan := c.tracer.StartSpan(name, zipkin.Parent(parentContext), zipkin.RemoteEndpoint(ep))
+	appSpan := c.tracer.StartSpan(name, zipkin.Parent(parentContext), zipkin.RemoteEndpoint(c.remoteEndpoint))
 
 	zipkin.TagHTTPMethod.Set(appSpan, req.Method)
 	zipkin.TagHTTPPath.Set(appSpan, req.URL.Path)

@@ -41,14 +41,14 @@ func TestHTTPClient(t *testing.T) {
 		"conf.timeout": "default",
 	}
 
-	remoteServiceName := "google-service"
+	remoteEndpoint, _ := zipkin.NewEndpoint("google-service", "1.2.3.4:80")
 	client, err := httpclient.NewClient(
 		tracer,
 		httpclient.WithClient(&http.Client{}),
 		httpclient.ClientTrace(true),
 		httpclient.ClientTags(clientTags),
 		httpclient.TransportOptions(httpclient.TransportTags(transportTags)),
-		httpclient.WithRemoteServiceName(remoteServiceName),
+		httpclient.WithRemoteEndpoint(remoteEndpoint),
 	)
 	if err != nil {
 		t.Fatalf("unable to create http client: %+v", err)
@@ -67,9 +67,12 @@ func TestHTTPClient(t *testing.T) {
 		t.Errorf("Span Count want 2+, have %d", len(spans))
 	}
 
-	remoteEndpoint := spans[0].RemoteEndpoint
-	if remoteEndpoint == nil || remoteEndpoint.ServiceName != remoteServiceName {
-		t.Errorf("Span remoteEndpoint ServiceName want %s, have %s", remoteServiceName, remoteEndpoint.ServiceName)
+	rep := spans[0].RemoteEndpoint
+	if rep == nil {
+		t.Errorf("Span remoteEndpoint must not nil")
+	}
+	if rep.ServiceName != remoteEndpoint.ServiceName {
+		t.Errorf("Span remoteEndpoint ServiceName want %s, have %s", remoteEndpoint.ServiceName, rep.ServiceName)
 	}
 
 	req, _ = http.NewRequest("GET", "https://www.google.com", nil)

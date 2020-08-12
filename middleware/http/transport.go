@@ -58,7 +58,7 @@ type transport struct {
 	errResponseReader *ErrResponseReader
 	logger            *log.Logger
 	requestSampler    RequestSamplerFunc
-	remoteServiceName string
+	remoteEndpoint    *model.Endpoint
 }
 
 // TransportOption allows one to configure optional transport configuration.
@@ -101,11 +101,10 @@ func TransportErrResponseReader(r ErrResponseReader) TransportOption {
 	}
 }
 
-// TransportRemoteServiceName will set the value for the remote endpoint's service name on
-// all spans.
-func TransportRemoteServiceName(name string) TransportOption {
+// TransportRemoteEndpoint will set the remote endpoint for all spans.
+func TransportRemoteEndpoint(remoteEndpoint *model.Endpoint) TransportOption {
 	return func(c *transport) {
-		c.remoteServiceName = name
+		c.remoteEndpoint = remoteEndpoint
 	}
 }
 
@@ -151,9 +150,8 @@ func NewTransport(tracer *zipkin.Tracer, options ...TransportOption) (http.Round
 
 // RoundTrip satisfies the RoundTripper interface.
 func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error) {
-	ep, _ := zipkin.NewEndpoint(t.remoteServiceName, req.Host)
 	sp, _ := t.tracer.StartSpanFromContext(
-		req.Context(), req.URL.Scheme+"/"+req.Method, zipkin.Kind(model.Client), zipkin.RemoteEndpoint(ep),
+		req.Context(), req.URL.Scheme+"/"+req.Method, zipkin.Kind(model.Client), zipkin.RemoteEndpoint(t.remoteEndpoint),
 	)
 
 	for k, v := range t.defaultTags {
