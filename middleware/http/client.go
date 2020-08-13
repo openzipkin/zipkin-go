@@ -34,6 +34,7 @@ type Client struct {
 	httpTrace        bool
 	defaultTags      map[string]string
 	transportOptions []TransportOption
+	remoteEndpoint   *model.Endpoint
 }
 
 // ClientOption allows optional configuration of Client.
@@ -71,6 +72,13 @@ func TransportOptions(options ...TransportOption) ClientOption {
 	}
 }
 
+// WithRemoteEndpoint will set the remote endpoint for all spans.
+func WithRemoteEndpoint(remoteEndpoint *model.Endpoint) ClientOption {
+	return func(c *Client) {
+		c.remoteEndpoint = remoteEndpoint
+	}
+}
+
 // NewClient returns an HTTP Client adding Zipkin instrumentation around an
 // embedded standard Go http.Client.
 func NewClient(tracer *zipkin.Tracer, options ...ClientOption) (*Client, error) {
@@ -88,6 +96,7 @@ func NewClient(tracer *zipkin.Tracer, options ...ClientOption) (*Client, error) 
 		// the following Client settings override provided transport settings.
 		RoundTripper(c.Client.Transport),
 		TransportTrace(c.httpTrace),
+		TransportRemoteEndpoint(c.remoteEndpoint),
 	)
 	transport, err := NewTransport(tracer, c.transportOptions...)
 	if err != nil {
@@ -106,7 +115,7 @@ func (c *Client) DoWithAppSpan(req *http.Request, name string) (res *http.Respon
 		parentContext = span.Context()
 	}
 
-	appSpan := c.tracer.StartSpan(name, zipkin.Parent(parentContext))
+	appSpan := c.tracer.StartSpan(name, zipkin.Parent(parentContext), zipkin.RemoteEndpoint(c.remoteEndpoint))
 
 	zipkin.TagHTTPMethod.Set(appSpan, req.Method)
 	zipkin.TagHTTPPath.Set(appSpan, req.URL.Path)
