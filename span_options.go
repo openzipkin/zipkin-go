@@ -59,6 +59,13 @@ func StartTime(start time.Time) SpanOption {
 	}
 }
 
+// LocalEndpoint sets the local endpoint of the span being created.
+func LocalEndpoint(e *model.Endpoint) SpanOption {
+	return func(t *Tracer, s *spanImpl) {
+		s.LocalEndpoint = e
+	}
+}
+
 // RemoteEndpoint sets the remote endpoint of the span being created.
 func RemoteEndpoint(e *model.Endpoint) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
