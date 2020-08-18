@@ -19,7 +19,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	zipkinmodel "github.com/openzipkin/zipkin-go/model"
 )
 
