@@ -25,7 +25,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	zipkinmodel "github.com/openzipkin/zipkin-go/model"
 )
