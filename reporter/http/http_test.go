@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -166,4 +167,92 @@ func TestSpanIsReportedAfterBatchSize(t *testing.T) {
 	if aNumSpans != eNumSpans {
 		t.Errorf("unexpected number of spans received\nhave: %d, want: %d", aNumSpans, eNumSpans)
 	}
+}
+
+func TestSpanCustomHeaders(t *testing.T) {
+	serializer := reporter.JSONSerializer{}
+
+	hc := headerClient{
+		headers: http.Header{
+			"Key1": []string{"val1a", "val1b"},
+			"Key2": []string{"val2"},
+		},
+	}
+	var haveHeaders http.Header
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		haveHeaders = r.Header
+	}))
+	defer ts.Close()
+
+	spans := generateSpans(1)
+
+	rep := zipkinhttp.NewReporter(
+		ts.URL,
+		zipkinhttp.Serializer(serializer),
+		zipkinhttp.Client(hc),
+	)
+	for _, span := range spans {
+		rep.Send(*span)
+	}
+	rep.Close()
+
+	for _, key := range []string{"Key1", "Key2"} {
+		if want, have := hc.headers[key], haveHeaders[key]; !reflect.DeepEqual(want, have) {
+			t.Errorf("header %s: want: %v, have: %v\n", key, want, have)
+		}
+	}
+}
+
+func TestB3SamplingHeader(t *testing.T) {
+	serializer := reporter.JSONSerializer{}
+
+	var haveHeaders map[string][]string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		haveHeaders = r.Header
+	}))
+	defer ts.Close()
+
+	spans := generateSpans(1)
+
+	rep := zipkinhttp.NewReporter(
+		ts.URL,
+		zipkinhttp.Serializer(serializer),
+		zipkinhttp.AllowSamplingReporterCalls(true),
+	)
+	for _, span := range spans {
+		rep.Send(*span)
+	}
+	rep.Close()
+
+	if len(haveHeaders["B3"]) > 0 {
+		t.Errorf("Expected B3 header to not exist, got %v", haveHeaders["B3"])
+	}
+
+	rep = zipkinhttp.NewReporter(
+		ts.URL,
+		zipkinhttp.Serializer(serializer),
+	)
+	for _, span := range spans {
+		rep.Send(*span)
+	}
+	rep.Close()
+
+	if want, have := []string{"0"}, haveHeaders["B3"]; !reflect.DeepEqual(want, have) {
+		t.Errorf("B3 header: want: %v, have %v", want, have)
+	}
+
+}
+
+type headerClient struct {
+	client  http.Client
+	headers map[string][]string
+}
+
+func (h headerClient) Do(req *http.Request) (*http.Response, error) {
+	for key, item := range h.headers {
+		for _, val := range item {
+			req.Header.Add(key, val)
+		}
+	}
+	return h.client.Do(req)
 }
