@@ -27,6 +27,12 @@ import (
 	"github.com/openzipkin/zipkin-go/model"
 )
 
+type handleRPCParser struct {
+	inPayload func(*stats.InPayload, zipkin.Span)
+	inTrailer func(*stats.InTrailer, zipkin.Span)
+	inHeader  func(*stats.InHeader, zipkin.Span)
+}
+
 // A RPCHandler can be registered using WithClientRPCHandler or WithServerRPCHandler to intercept calls to HandleRPC of
 // a handler for additional span customization.
 type RPCHandler func(span zipkin.Span, rpcStats stats.RPCStats)
@@ -37,10 +43,22 @@ func spanName(rti *stats.RPCTagInfo) string {
 	return name
 }
 
-func handleRPC(ctx context.Context, rs stats.RPCStats) {
+func handleRPC(ctx context.Context, rs stats.RPCStats, h handleRPCParser) {
 	span := zipkin.SpanFromContext(ctx)
 
 	switch rs := rs.(type) {
+	case *stats.InPayload:
+		if h.inPayload != nil {
+			h.inPayload(rs, span)
+		}
+	case *stats.InHeader:
+		if h.inHeader != nil {
+			h.inHeader(rs, span)
+		}
+	case *stats.InTrailer:
+		if h.inTrailer != nil {
+			h.inTrailer(rs, span)
+		}
 	case *stats.End:
 		s, ok := status.FromError(rs.Error)
 		// rs.Error should always be convertable to a status, this is just a defensive check.

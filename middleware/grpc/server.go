@@ -25,8 +25,9 @@ import (
 )
 
 type serverHandler struct {
-	tracer      *zipkin.Tracer
-	defaultTags map[string]string
+	tracer          *zipkin.Tracer
+	defaultTags     map[string]string
+	handleRPCParser handleRPCParser
 }
 
 // A ServerOption can be passed to NewServerHandler to customize the returned handler.
@@ -36,6 +37,30 @@ type ServerOption func(*serverHandler)
 func ServerTags(tags map[string]string) ServerOption {
 	return func(h *serverHandler) {
 		h.defaultTags = tags
+	}
+}
+
+// WithServerInPayloadParser adds a parser for the stats.InPayload to be able to access
+// the request payload
+func WithServerInPayloadParser(parser func(*stats.InPayload, zipkin.Span)) ServerOption {
+	return func(h *serverHandler) {
+		h.handleRPCParser.inPayload = parser
+	}
+}
+
+// WithserverInTrailerParser adds a parser for the stats.InTrailer to be able to access
+// the request trailer
+func WithserverInTrailerParser(parser func(*stats.InTrailer, zipkin.Span)) ServerOption {
+	return func(h *serverHandler) {
+		h.handleRPCParser.inTrailer = parser
+	}
+}
+
+// WithServerInHeaderParser adds a parser for the stats.InHeader to be able to access
+// the request payload
+func WithServerInHeaderParser(parser func(*stats.InHeader, zipkin.Span)) ServerOption {
+	return func(h *serverHandler) {
+		h.handleRPCParser.inHeader = parser
 	}
 }
 
@@ -66,7 +91,7 @@ func (s *serverHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) con
 
 // HandleRPC implements per-RPC tracing and stats instrumentation.
 func (s *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	handleRPC(ctx, rs)
+	handleRPC(ctx, rs, s.handleRPCParser)
 }
 
 // TagRPC implements per-RPC context management.
