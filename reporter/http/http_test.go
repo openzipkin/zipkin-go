@@ -197,7 +197,7 @@ func TestSpanCustomHeaders(t *testing.T) {
 	rep.Close()
 
 	for _, key := range []string{"Key1", "Key2"} {
-		if want, have := hc.headers.Values(key), haveHeaders.Values(key); !reflect.DeepEqual(want, have) {
+		if want, have := hc.headers[key], haveHeaders[key]; !reflect.DeepEqual(want, have) {
 			t.Errorf("header %s: want: %v, have: %v\n", key, want, have)
 		}
 	}
@@ -206,7 +206,7 @@ func TestSpanCustomHeaders(t *testing.T) {
 func TestB3SamplingHeader(t *testing.T) {
 	serializer := reporter.JSONSerializer{}
 
-	var haveHeaders http.Header
+	var haveHeaders map[string][]string
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		haveHeaders = r.Header
 	}))
@@ -224,8 +224,8 @@ func TestB3SamplingHeader(t *testing.T) {
 	}
 	rep.Close()
 
-	if len(haveHeaders.Values("B3")) > 0 {
-		t.Errorf("Expected B3 header to not exist, got %v", haveHeaders.Values("B3"))
+	if len(haveHeaders["B3"]) > 0 {
+		t.Errorf("Expected B3 header to not exist, got %v", haveHeaders["B3"])
 	}
 
 	rep = zipkinhttp.NewReporter(
@@ -237,7 +237,7 @@ func TestB3SamplingHeader(t *testing.T) {
 	}
 	rep.Close()
 
-	if want, have := []string{"0"}, haveHeaders.Values("B3"); !reflect.DeepEqual(want, have) {
+	if want, have := []string{"0"}, haveHeaders["B3"]; !reflect.DeepEqual(want, have) {
 		t.Errorf("B3 header: want: %v, have %v", want, have)
 	}
 
@@ -245,7 +245,7 @@ func TestB3SamplingHeader(t *testing.T) {
 
 type headerClient struct {
 	client  http.Client
-	headers http.Header
+	headers map[string][]string
 }
 
 func (h headerClient) Do(req *http.Request) (*http.Response, error) {
