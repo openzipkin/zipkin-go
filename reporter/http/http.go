@@ -178,7 +178,7 @@ func (r *httpReporter) sendBatch() error {
 
 	// Remove sent spans from the batch even if they were not saved
 	r.batchMtx.Lock()
-	r.batch = r.batch[len(sendBatch):]
+	r.batch = r.batch[:0]
 	r.batchMtx.Unlock()
 
 	return nil
