@@ -60,7 +60,6 @@ type httpReporter struct {
 	reqCallback   RequestCallbackFn
 	reqTimeout    time.Duration
 	serializer    reporter.SpanSerializer
-	doNotSample   bool
 }
 
 // Send implements reporter
@@ -153,9 +152,12 @@ func (r *httpReporter) sendBatch() error {
 		r.logger.Printf("failed when creating the request: %s\n", err.Error())
 		return err
 	}
-	if r.doNotSample {
-		req.Header.Set("b3", "0")
-	}
+
+	// By default we send b3:0 header to mitigate trace reporting amplification in
+	// service mesh environments where the sidecar proxies might trace the call
+	// we do here towards the Zipkin collector.
+	req.Header.Set("b3", "0")
+
 	req.Header.Set("Content-Type", r.serializer.ContentType())
 	if r.reqCallback != nil {
 		r.reqCallback(req)
@@ -241,17 +243,6 @@ func Serializer(serializer reporter.SpanSerializer) ReporterOption {
 	}
 }
 
-// AllowSamplingReporterCalls if set to true will remove the b3:0 header on
-// outgoing calls to the Zipkin collector.
-// By default we send b3:0 header to mitigate trace reporting amplification in
-// service mesh environments where the sidecar proxies might trace the call
-// we do here towards the Zipkin collector.
-func AllowSamplingReporterCalls(allow bool) ReporterOption {
-	return func(r *httpReporter) {
-		r.doNotSample = !allow
-	}
-}
-
 // NewReporter returns a new HTTP Reporter.
 // url should be the endpoint to send the spans to, e.g.
 // http://localhost:9411/api/v2/spans
@@ -271,7 +262,6 @@ func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 		batchMtx:      &sync.Mutex{},
 		serializer:    reporter.JSONSerializer{},
 		reqTimeout:    defaultTimeout,
-		doNotSample:   true,
 	}
 
 	for _, opt := range opts {
