@@ -217,20 +217,6 @@ func TestB3SamplingHeader(t *testing.T) {
 	rep := zipkinhttp.NewReporter(
 		ts.URL,
 		zipkinhttp.Serializer(serializer),
-		zipkinhttp.AllowSamplingReporterCalls(true),
-	)
-	for _, span := range spans {
-		rep.Send(*span)
-	}
-	rep.Close()
-
-	if len(haveHeaders["B3"]) > 0 {
-		t.Errorf("Expected B3 header to not exist, got %v", haveHeaders["B3"])
-	}
-
-	rep = zipkinhttp.NewReporter(
-		ts.URL,
-		zipkinhttp.Serializer(serializer),
 	)
 	for _, span := range spans {
 		rep.Send(*span)
@@ -240,7 +226,6 @@ func TestB3SamplingHeader(t *testing.T) {
 	if want, have := []string{"0"}, haveHeaders["B3"]; !reflect.DeepEqual(want, have) {
 		t.Errorf("B3 header: want: %v, have %v", want, have)
 	}
-
 }
 
 type headerClient struct {
