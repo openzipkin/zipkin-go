@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package grpc_test
 import (
 	"context"
 	"errors"
+	"log"
 	"net"
 	"testing"
 
@@ -26,6 +27,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/openzipkin/zipkin-go"
 	zipkingrpc "github.com/openzipkin/zipkin-go/middleware/grpc"
@@ -121,8 +123,10 @@ func (g *sequentialIdGenerator) reset() {
 	g.nextSpanId = g.start
 }
 
-type TestHelloService struct{
+type TestHelloService struct {
 	service.UnimplementedHelloServiceServer
+	responseHeader  metadata.MD
+	responseTrailer metadata.MD
 }
 
 func (s *TestHelloService) Hello(ctx context.Context, req *service.HelloRequest) (*service.HelloResponse, error) {
@@ -156,5 +160,42 @@ func (s *TestHelloService) Hello(ctx context.Context, req *service.HelloRequest)
 		}
 	}
 
+	grpc.SetTrailer(ctx, s.responseTrailer)
+	grpc.SendHeader(ctx, s.responseHeader)
+
 	return resp, nil
+}
+
+func initListener(s *grpc.Server) func(context.Context, string) (net.Conn, error) {
+	const bufSize = 1024 * 1024
+
+	listener := bufconn.Listen(bufSize)
+	bufDialer := func(context.Context, string) (net.Conn, error) {
+		return listener.Dial()
+	}
+
+	go func() {
+		if err := s.Serve(listener); err != nil {
+			log.Fatalf("Server exited with error: %v", err)
+		}
+	}()
+
+	return bufDialer
+}
+
+func createTracer(joinSpans bool) (*zipkin.Tracer, func() []model.SpanModel) {
+	recorder := recorder.NewReporter()
+	ep, _ := zipkin.NewEndpoint("grpc-server", "")
+
+	serverIdGenerator = newSequentialIdGenerator(0x1000000)
+
+	tracer, _ := zipkin.NewTracer(
+		recorder,
+		zipkin.WithLocalEndpoint(ep),
+		zipkin.WithSharedSpans(joinSpans),
+		zipkin.WithIDGenerator(serverIdGenerator),
+	)
+	return tracer, func() []model.SpanModel {
+		return recorder.Flush()
+	}
 }

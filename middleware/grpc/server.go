@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@ import (
 )
 
 type serverHandler struct {
-	tracer      *zipkin.Tracer
-	defaultTags map[string]string
+	tracer          *zipkin.Tracer
+	defaultTags     map[string]string
+	handleRPCParser handleRPCParser
 }
 
 // A ServerOption can be passed to NewServerHandler to customize the returned handler.
@@ -36,6 +37,46 @@ type ServerOption func(*serverHandler)
 func ServerTags(tags map[string]string) ServerOption {
 	return func(h *serverHandler) {
 		h.defaultTags = tags
+	}
+}
+
+// WithServerInPayloadParser adds a parser for the stats.InPayload to be able to access
+// the incoming request payload
+func WithServerInPayloadParser(parser func(*stats.InPayload, zipkin.SpanCustomizer)) ServerOption {
+	return func(h *serverHandler) {
+		h.handleRPCParser.inPayload = parser
+	}
+}
+
+// WithServerInHeaderParser adds a parser for the stats.InHeader to be able to access
+// the incoming request header
+func WithServerInHeaderParser(parser func(*stats.InHeader, zipkin.SpanCustomizer)) ServerOption {
+	return func(h *serverHandler) {
+		h.handleRPCParser.inHeader = parser
+	}
+}
+
+// WithServerOutPayloadParser adds a parser for the stats.OutPayload to be able to access
+// the outgoing response payload
+func WithServerOutPayloadParser(parser func(*stats.OutPayload, zipkin.SpanCustomizer)) ServerOption {
+	return func(h *serverHandler) {
+		h.handleRPCParser.outPayload = parser
+	}
+}
+
+// WithServerOutTrailerParser adds a parser for the stats.OutTrailer to be able to access
+// the outgoing response trailer
+func WithServerOutTrailerParser(parser func(*stats.OutTrailer, zipkin.SpanCustomizer)) ServerOption {
+	return func(h *serverHandler) {
+		h.handleRPCParser.outTrailer = parser
+	}
+}
+
+// WithServerOutHeaderParser adds a parser for the stats.OutHeader to be able to access
+// the outgoing response payload
+func WithServerOutHeaderParser(parser func(*stats.OutHeader, zipkin.SpanCustomizer)) ServerOption {
+	return func(h *serverHandler) {
+		h.handleRPCParser.outHeader = parser
 	}
 }
 
@@ -66,7 +107,7 @@ func (s *serverHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) con
 
 // HandleRPC implements per-RPC tracing and stats instrumentation.
 func (s *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	handleRPC(ctx, rs)
+	handleRPC(ctx, rs, s.handleRPCParser)
 }
 
 // TagRPC implements per-RPC context management.

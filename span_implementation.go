@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -98,4 +98,8 @@ func (s *spanImpl) Flush() {
 	if s.SpanModel.Debug || (s.SpanModel.Sampled != nil && *s.SpanModel.Sampled) {
 		s.tracer.reporter.Send(s.SpanModel)
 	}
+}
+
+func (s *spanImpl) IsNoop() bool {
+	return false
 }

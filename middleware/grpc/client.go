@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import (
 type clientHandler struct {
 	tracer            *zipkin.Tracer
 	remoteServiceName string
+	handleRPCParser   handleRPCParser
 }
 
 // A ClientOption can be passed to NewClientHandler to customize the returned handler.
@@ -38,6 +39,46 @@ type ClientOption func(*clientHandler)
 func WithRemoteServiceName(name string) ClientOption {
 	return func(c *clientHandler) {
 		c.remoteServiceName = name
+	}
+}
+
+// WithClientOutPayloadParser adds a parser for the stats.OutPayload to be able to access
+// the outgoing request payload
+func WithClientOutPayloadParser(parser func(*stats.OutPayload, zipkin.SpanCustomizer)) ClientOption {
+	return func(h *clientHandler) {
+		h.handleRPCParser.outPayload = parser
+	}
+}
+
+// WithClientOutHeaderParser adds a parser for the stats.OutHeader to be able to access
+// the outgoing request payload
+func WithClientOutHeaderParser(parser func(*stats.OutHeader, zipkin.SpanCustomizer)) ClientOption {
+	return func(h *clientHandler) {
+		h.handleRPCParser.outHeader = parser
+	}
+}
+
+// WithClientInPayloadParser adds a parser for the stats.InPayload to be able to access
+// the incoming response payload
+func WithClientInPayloadParser(parser func(*stats.InPayload, zipkin.SpanCustomizer)) ClientOption {
+	return func(h *clientHandler) {
+		h.handleRPCParser.inPayload = parser
+	}
+}
+
+// WithClientInTrailerParser adds a parser for the stats.InTrailer to be able to access
+// the incoming response trailer
+func WithClientInTrailerParser(parser func(*stats.InTrailer, zipkin.SpanCustomizer)) ClientOption {
+	return func(h *clientHandler) {
+		h.handleRPCParser.inTrailer = parser
+	}
+}
+
+// WithClientInHeaderParser adds a parser for the stats.InHeader to be able to access
+// the incoming response header
+func WithClientInHeaderParser(parser func(*stats.InHeader, zipkin.SpanCustomizer)) ClientOption {
+	return func(h *clientHandler) {
+		h.handleRPCParser.inHeader = parser
 	}
 }
 
@@ -67,7 +108,7 @@ func (c *clientHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) con
 
 // HandleRPC implements per-RPC tracing and stats instrumentation.
 func (c *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	handleRPC(ctx, rs)
+	handleRPC(ctx, rs, c.handleRPCParser)
 }
 
 // TagRPC implements per-RPC context management.
