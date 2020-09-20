@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -125,6 +125,8 @@ func (g *sequentialIdGenerator) reset() {
 
 type TestHelloService struct {
 	service.UnimplementedHelloServiceServer
+	responseHeader  metadata.MD
+	responseTrailer metadata.MD
 }
 
 func (s *TestHelloService) Hello(ctx context.Context, req *service.HelloRequest) (*service.HelloResponse, error) {
@@ -157,6 +159,9 @@ func (s *TestHelloService) Hello(ctx context.Context, req *service.HelloRequest)
 			resp.GetSpanContext()[b3.ParentSpanID] = spanCtx.ParentID.String()
 		}
 	}
+
+	grpc.SetTrailer(ctx, s.responseTrailer)
+	grpc.SendHeader(ctx, s.responseHeader)
 
 	return resp, nil
 }

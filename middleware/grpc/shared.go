@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,9 +28,21 @@ import (
 )
 
 type handleRPCParser struct {
-	inPayload func(*stats.InPayload, zipkin.Span)
-	inTrailer func(*stats.InTrailer, zipkin.Span)
-	inHeader  func(*stats.InHeader, zipkin.Span)
+	inPayload  func(*stats.InPayload, zipkin.SpanCustomizer)
+	inTrailer  func(*stats.InTrailer, zipkin.SpanCustomizer)
+	inHeader   func(*stats.InHeader, zipkin.SpanCustomizer)
+	outPayload func(*stats.OutPayload, zipkin.SpanCustomizer)
+	outTrailer func(*stats.OutTrailer, zipkin.SpanCustomizer)
+	outHeader  func(*stats.OutHeader, zipkin.SpanCustomizer)
+}
+
+func (h handleRPCParser) IsZero() bool {
+	return h.inPayload == nil &&
+		h.inTrailer == nil &&
+		h.inHeader == nil &&
+		h.outPayload == nil &&
+		h.outTrailer == nil &&
+		h.outHeader == nil
 }
 
 // A RPCHandler can be registered using WithClientRPCHandler or WithServerRPCHandler to intercept calls to HandleRPC of
@@ -45,19 +57,39 @@ func spanName(rti *stats.RPCTagInfo) string {
 
 func handleRPC(ctx context.Context, rs stats.RPCStats, h handleRPCParser) {
 	span := zipkin.SpanFromContext(ctx)
+	if span.IsNoop() {
+		return
+	}
+
+	var spanCustomizer zipkin.SpanCustomizer
+	if !h.IsZero() {
+		spanCustomizer = zipkin.WrapWithSpanCustomizerShield(span)
+	}
 
 	switch rs := rs.(type) {
 	case *stats.InPayload:
 		if h.inPayload != nil {
-			h.inPayload(rs, span)
+			h.inPayload(rs, spanCustomizer)
 		}
 	case *stats.InHeader:
 		if h.inHeader != nil {
-			h.inHeader(rs, span)
+			h.inHeader(rs, spanCustomizer)
 		}
 	case *stats.InTrailer:
 		if h.inTrailer != nil {
-			h.inTrailer(rs, span)
+			h.inTrailer(rs, spanCustomizer)
+		}
+	case *stats.OutPayload:
+		if h.outPayload != nil {
+			h.outPayload(rs, spanCustomizer)
+		}
+	case *stats.OutHeader:
+		if h.outHeader != nil {
+			h.outHeader(rs, spanCustomizer)
+		}
+	case *stats.OutTrailer:
+		if h.outTrailer != nil {
+			h.outTrailer(rs, spanCustomizer)
 		}
 	case *stats.End:
 		s, ok := status.FromError(rs.Error)

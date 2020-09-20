@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,25 +42,41 @@ func WithRemoteServiceName(name string) ClientOption {
 	}
 }
 
+// WithClientOutPayloadParser adds a parser for the stats.OutPayload to be able to access
+// the outgoing request payload
+func WithClientOutPayloadParser(parser func(*stats.OutPayload, zipkin.SpanCustomizer)) ClientOption {
+	return func(h *clientHandler) {
+		h.handleRPCParser.outPayload = parser
+	}
+}
+
+// WithClientOutHeaderParser adds a parser for the stats.OutHeader to be able to access
+// the outgoing request payload
+func WithClientOutHeaderParser(parser func(*stats.OutHeader, zipkin.SpanCustomizer)) ClientOption {
+	return func(h *clientHandler) {
+		h.handleRPCParser.outHeader = parser
+	}
+}
+
 // WithClientInPayloadParser adds a parser for the stats.InPayload to be able to access
-// the request payload
-func WithClientInPayloadParser(parser func(*stats.InPayload, zipkin.Span)) ClientOption {
+// the incoming response payload
+func WithClientInPayloadParser(parser func(*stats.InPayload, zipkin.SpanCustomizer)) ClientOption {
 	return func(h *clientHandler) {
 		h.handleRPCParser.inPayload = parser
 	}
 }
 
 // WithClientInTrailerParser adds a parser for the stats.InTrailer to be able to access
-// the request trailer
-func WithClientInTrailerParser(parser func(*stats.InTrailer, zipkin.Span)) ClientOption {
+// the incoming response trailer
+func WithClientInTrailerParser(parser func(*stats.InTrailer, zipkin.SpanCustomizer)) ClientOption {
 	return func(h *clientHandler) {
 		h.handleRPCParser.inTrailer = parser
 	}
 }
 
 // WithClientInHeaderParser adds a parser for the stats.InHeader to be able to access
-// the request payload
-func WithClientInHeaderParser(parser func(*stats.InHeader, zipkin.Span)) ClientOption {
+// the incoming response header
+func WithClientInHeaderParser(parser func(*stats.InHeader, zipkin.SpanCustomizer)) ClientOption {
 	return func(h *clientHandler) {
 		h.handleRPCParser.inHeader = parser
 	}

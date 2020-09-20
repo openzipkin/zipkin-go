@@ -39,3 +39,5 @@ func (*noopSpan) Finish() {}
 func (*noopSpan) FinishedWithDuration(duration time.Duration) {}
 
 func (*noopSpan) Flush() {}
+
+func (*noopSpan) IsNoop() bool { return true }

@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,4 +55,8 @@ type Span interface {
 	// This can be used if the DelaySend SpanOption was set or when dealing with
 	// one-way RPC tracing where duration might not be measured.
 	Flush()
+
+	// IsNoop tells whether the span is noop or not. Usually used to avoid resource misusage
+	// when customizing a span
+	IsNoop() bool
 }
