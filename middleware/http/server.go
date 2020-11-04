@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -123,6 +123,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := zipkin.NewContext(r.Context(), sp)
 
 	if sp.IsNoop() {
+		// While the span is not being recorded, we still want to propagate the context.
 		h.next.ServeHTTP(w, r.WithContext(ctx))
 		return
 	}
