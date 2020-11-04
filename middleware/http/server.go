@@ -107,8 +107,6 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	remoteEndpoint, _ := zipkin.NewEndpoint("", r.RemoteAddr)
-
 	if len(h.name) == 0 {
 		spanName = r.Method
 	} else {
@@ -120,15 +118,21 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		spanName,
 		zipkin.Kind(model.Server),
 		zipkin.Parent(sc),
-		zipkin.RemoteEndpoint(remoteEndpoint),
 	)
+	// add our span to context
+	ctx := zipkin.NewContext(r.Context(), sp)
+
+	if sp.IsNoop() {
+		h.next.ServeHTTP(w, r.WithContext(ctx))
+		return
+	}
+
+	remoteEndpoint, _ := zipkin.NewEndpoint("", r.RemoteAddr)
+	sp.SetRemoteEndpoint(remoteEndpoint)
 
 	for k, v := range h.defaultTags {
 		sp.Tag(k, v)
 	}
-
-	// add our span to context
-	ctx := zipkin.NewContext(r.Context(), sp)
 
 	// tag typical HTTP request items
 	zipkin.TagHTTPMethod.Set(sp, r.Method)

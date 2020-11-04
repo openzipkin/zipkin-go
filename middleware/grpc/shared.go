@@ -39,6 +39,9 @@ func spanName(rti *stats.RPCTagInfo) string {
 
 func handleRPC(ctx context.Context, rs stats.RPCStats) {
 	span := zipkin.SpanFromContext(ctx)
+	if span.IsNoop() {
+		return
+	}
 
 	switch rs := rs.(type) {
 	case *stats.End:
