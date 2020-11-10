@@ -40,4 +40,9 @@ func (*noopSpan) FinishedWithDuration(duration time.Duration) {}
 
 func (*noopSpan) Flush() {}
 
-func (*noopSpan) IsNoop() bool { return true }
+// IsNoop tells whether the span is noop or not. Usually used to avoid resource misusage
+// when customizing a span as data won't be recorded
+func IsNoop(s Span) bool {
+	_, ok := s.(*noopSpan)
+	return ok
+}

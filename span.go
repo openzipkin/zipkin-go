@@ -55,8 +55,4 @@ type Span interface {
 	// This can be used if the DelaySend SpanOption was set or when dealing with
 	// one-way RPC tracing where duration might not be measured.
 	Flush()
-
-	// IsNoop tells whether the span is noop or not. Usually used to avoid resource misusage
-	// when customizing a span as data won't be recorded
-	IsNoop() bool
 }

@@ -154,7 +154,7 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		req.Context(), req.URL.Scheme+"/"+req.Method, zipkin.Kind(model.Client), zipkin.RemoteEndpoint(t.remoteEndpoint),
 	)
 
-	if sp.IsNoop() {
+	if zipkin.IsNoop(sp) {
 		// While the span is not being recorded, we still want to propagate the context.
 		_ = b3.InjectHTTP(req)(sp.Context())
 		return t.rt.RoundTrip(req)

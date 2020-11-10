@@ -83,7 +83,7 @@ func (s *serverHandler) TagRPC(ctx context.Context, rti *stats.RPCTagInfo) conte
 
 	span := s.tracer.StartSpan(name, zipkin.Kind(model.Server), zipkin.Parent(sc), zipkin.RemoteEndpoint(remoteEndpointFromContext(ctx, "")))
 
-	if !span.IsNoop() {
+	if !zipkin.IsNoop(span) {
 		for k, v := range s.defaultTags {
 			span.Tag(k, v)
 		}

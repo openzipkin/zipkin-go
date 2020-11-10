@@ -99,7 +99,3 @@ func (s *spanImpl) Flush() {
 		s.tracer.reporter.Send(s.SpanModel)
 	}
 }
-
-func (s *spanImpl) IsNoop() bool {
-	return false
-}

@@ -122,7 +122,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// add our span to context
 	ctx := zipkin.NewContext(r.Context(), sp)
 
-	if sp.IsNoop() {
+	if zipkin.IsNoop(sp) {
 		// While the span is not being recorded, we still want to propagate the context.
 		h.next.ServeHTTP(w, r.WithContext(ctx))
 		return
