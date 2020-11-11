@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -153,6 +153,12 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	sp, _ := t.tracer.StartSpanFromContext(
 		req.Context(), req.URL.Scheme+"/"+req.Method, zipkin.Kind(model.Client), zipkin.RemoteEndpoint(t.remoteEndpoint),
 	)
+
+	if zipkin.IsNoop(sp) {
+		// While the span is not being recorded, we still want to propagate the context.
+		_ = b3.InjectHTTP(req)(sp.Context())
+		return t.rt.RoundTrip(req)
+	}
 
 	for k, v := range t.defaultTags {
 		sp.Tag(k, v)

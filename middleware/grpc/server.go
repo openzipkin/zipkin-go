@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -83,8 +83,10 @@ func (s *serverHandler) TagRPC(ctx context.Context, rti *stats.RPCTagInfo) conte
 
 	span := s.tracer.StartSpan(name, zipkin.Kind(model.Server), zipkin.Parent(sc), zipkin.RemoteEndpoint(remoteEndpointFromContext(ctx, "")))
 
-	for k, v := range s.defaultTags {
-		span.Tag(k, v)
+	if !zipkin.IsNoop(span) {
+		for k, v := range s.defaultTags {
+			span.Tag(k, v)
+		}
 	}
 
 	return zipkin.NewContext(ctx, span)

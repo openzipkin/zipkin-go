@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,6 +39,9 @@ func spanName(rti *stats.RPCTagInfo) string {
 
 func handleRPC(ctx context.Context, rs stats.RPCStats) {
 	span := zipkin.SpanFromContext(ctx)
+	if zipkin.IsNoop(span) {
+		return
+	}
 
 	switch rs := rs.(type) {
 	case *stats.End:

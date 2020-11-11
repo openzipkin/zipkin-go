@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2020 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -107,8 +107,6 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	remoteEndpoint, _ := zipkin.NewEndpoint("", r.RemoteAddr)
-
 	if len(h.name) == 0 {
 		spanName = r.Method
 	} else {
@@ -120,15 +118,22 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		spanName,
 		zipkin.Kind(model.Server),
 		zipkin.Parent(sc),
-		zipkin.RemoteEndpoint(remoteEndpoint),
 	)
+	// add our span to context
+	ctx := zipkin.NewContext(r.Context(), sp)
+
+	if zipkin.IsNoop(sp) {
+		// While the span is not being recorded, we still want to propagate the context.
+		h.next.ServeHTTP(w, r.WithContext(ctx))
+		return
+	}
+
+	remoteEndpoint, _ := zipkin.NewEndpoint("", r.RemoteAddr)
+	sp.SetRemoteEndpoint(remoteEndpoint)
 
 	for k, v := range h.defaultTags {
 		sp.Tag(k, v)
 	}
-
-	// add our span to context
-	ctx := zipkin.NewContext(r.Context(), sp)
 
 	// tag typical HTTP request items
 	zipkin.TagHTTPMethod.Set(sp, r.Method)
