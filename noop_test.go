@@ -61,3 +61,23 @@ func TestNoopContext(t *testing.T) {
 	span.SetRemoteEndpoint(nil)
 	span.Flush()
 }
+
+func TestIsNoop(t *testing.T) {
+	sc := model.SpanContext{
+		TraceID: model.TraceID{High: 1, Low: 2},
+		ID:      model.ID(3),
+		Sampled: new(bool),
+	}
+
+	ns := &noopSpan{sc}
+
+	if want, have := true, IsNoop(ns); want != have {
+		t.Error("unexpected noop")
+	}
+
+	span := &spanImpl{SpanModel: model.SpanModel{SpanContext: sc}}
+
+	if want, have := false, IsNoop(span); want != have {
+		t.Error("expected noop")
+	}
+}
