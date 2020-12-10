@@ -138,7 +138,7 @@ func (r *rmqReporter) Send(s model.SpanModel) {
 		Body: m,
 	}
 
-	err = r.channel.Publish(defaultRmqExchange, defaultRmqRoutingKey, false, false, msg)
+	err = r.channel.Publish(r.exchange, r.queue, false, false, msg)
 	if err != nil {
 		r.e <- fmt.Errorf("failed when publishing the span: %s\n", err.Error())
 	}
@@ -146,16 +146,16 @@ func (r *rmqReporter) Send(s model.SpanModel) {
 
 func (r *rmqReporter) queueBindVerify() error {
 	return r.channel.QueueBind(
-		defaultRmqRoutingKey,
-		defaultRmqRoutingKey,
-		defaultRmqExchange,
+		r.queue,
+		r.queue,
+		r.exchange,
 		false,
 		nil)
 }
 
 func (r *rmqReporter) exchangeVerify() error {
 	err := r.channel.ExchangeDeclare(
-		defaultRmqExchange,
+		r.exchange,
 		defaultExchangeKind,
 		true,
 		false,
@@ -173,7 +173,7 @@ func (r *rmqReporter) exchangeVerify() error {
 
 func (r *rmqReporter) queueVerify() error {
 	_, err := r.channel.QueueDeclare(
-		defaultRmqExchange,
+		r.queue,
 		true,
 		false,
 		false,
