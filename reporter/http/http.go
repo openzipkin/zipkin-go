@@ -32,10 +32,11 @@ import (
 
 // defaults
 const (
-	defaultTimeout       = 5 * time.Second // timeout for http request in seconds
-	defaultBatchInterval = 1 * time.Second // BatchInterval in seconds
-	defaultBatchSize     = 100
-	defaultMaxBacklog    = 1000
+	defaultTimeout        = 5 * time.Second // timeout for http request in seconds
+	defaultBatchInterval  = 1 * time.Second // BatchInterval in seconds
+	defaultBatchSize      = 100
+	defaultMaxBacklog     = 1000
+	defaultAsyncReporting = true
 )
 
 // HTTPDoer will do a request to the Zipkin HTTP Collector
@@ -60,17 +61,27 @@ type httpReporter struct {
 	reqCallback   RequestCallbackFn
 	reqTimeout    time.Duration
 	serializer    reporter.SpanSerializer
+	asyncReport   bool
+
 }
 
 // Send implements reporter
 func (r *httpReporter) Send(s model.SpanModel) {
-	r.spanC <- &s
+	if r.asyncReport {
+		r.spanC <- &s
+		return
+	}
+	r.append(&s)
+	r.sendBatch()
 }
 
 // Close implements reporter
 func (r *httpReporter) Close() error {
 	close(r.quit)
-	return <-r.shutdown
+	if r.asyncReport {
+		return <-r.shutdown
+	}
+	return nil
 }
 
 func (r *httpReporter) loop() {
@@ -215,6 +226,12 @@ func BatchInterval(d time.Duration) ReporterOption {
 	return func(r *httpReporter) { r.batchInterval = d }
 }
 
+// AsyncReporting if set to true sends traces to collector in asynchronously
+// default to 1 second. If we set it to false, we send trace to collector synchronously.
+func AsyncReporting(asyncReport bool) ReporterOption {
+	return func(r *httpReporter) { r.asyncReport = asyncReport }
+}
+
 // Client sets a custom http client to use under the interface HTTPDoer
 // which includes a `Do` method with same signature as the *http.Client
 func Client(client HTTPDoer) ReporterOption {
@@ -252,24 +269,27 @@ func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 		logger:        log.New(os.Stderr, "", log.LstdFlags),
 		client:        &http.Client{},
 		batchInterval: defaultBatchInterval,
-		batchSize:     defaultBatchSize,
-		maxBacklog:    defaultMaxBacklog,
-		batch:         []*model.SpanModel{},
-		spanC:         make(chan *model.SpanModel),
-		sendC:         make(chan struct{}, 1),
-		quit:          make(chan struct{}, 1),
-		shutdown:      make(chan error, 1),
-		batchMtx:      &sync.Mutex{},
-		serializer:    reporter.JSONSerializer{},
-		reqTimeout:    defaultTimeout,
+		batchSize:   defaultBatchSize,
+		maxBacklog:  defaultMaxBacklog,
+		batch:       []*model.SpanModel{},
+		spanC:       make(chan *model.SpanModel),
+		sendC:       make(chan struct{}, 1),
+		quit:        make(chan struct{}, 1),
+		shutdown:    make(chan error, 1),
+		batchMtx:    &sync.Mutex{},
+		serializer:  reporter.JSONSerializer{},
+		reqTimeout:  defaultTimeout,
+		asyncReport: defaultAsyncReporting,
 	}
 
 	for _, opt := range opts {
 		opt(&r)
 	}
 
-	go r.loop()
-	go r.sendLoop()
+	if r.asyncReport {
+		go r.loop()
+		go r.sendLoop()
+	}
 
 	return &r
 }

@@ -16,7 +16,9 @@ package http_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"github.com/openzipkin/zipkin-go"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -226,6 +228,56 @@ func TestB3SamplingHeader(t *testing.T) {
 	if want, have := []string{"0"}, haveHeaders["B3"]; !reflect.DeepEqual(want, have) {
 		t.Errorf("B3 header: want: %v, have %v", want, have)
 	}
+}
+
+func TestSpanSentSynchronously(t *testing.T) {
+	reporterCalled := false
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reporterCalled = true
+	}))
+	defer ts.Close()
+	reporter := zipkinhttp.NewReporter(ts.URL, zipkinhttp.AsyncReporting(false))
+	endpoint, err := zipkin.NewEndpoint("myService", "")
+	if err != nil {
+		t.Errorf("error creating endpoint: %v", err)
+	}
+	tracer, err := zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(endpoint))
+	if err != nil {
+		t.Errorf("error creating tracer: %v", err)
+	}
+	span, _ := tracer.StartSpanFromContext(context.Background(), "my_test")
+	span.Finish()
+	if reporterCalled == false {
+		t.Error("not reporting synchronously")
+	}
+	reporter.Close()
+	endpoint.Empty()
+}
+
+func TestSpanSentAsynchronously(t *testing.T) {
+	reporterCalled := false
+	done := make(chan struct{})
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer close(done)
+		reporterCalled = true
+	}))
+	defer ts.Close()
+	reporter := zipkinhttp.NewReporter(ts.URL, zipkinhttp.AsyncReporting(true))
+	endpoint, err := zipkin.NewEndpoint("myService", "")
+	if err != nil {
+		t.Errorf("error creating endpoint : %v", err)
+	}
+	tracer, err := zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(endpoint))
+	if err != nil {
+		t.Errorf("error creating tracer : %v", err)
+	}
+	span, _ := tracer.StartSpanFromContext(context.Background(), "my_test")
+	span.Finish()
+	if reporterCalled == true {
+		t.Error("not reporting asynchronously")
+	}
+	reporter.Close()
+	endpoint.Empty()
 }
 
 type headerClient struct {
