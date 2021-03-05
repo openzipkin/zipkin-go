@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/Shopify/sarama"
+	"github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 )
@@ -35,7 +36,7 @@ const defaultKafkaTopic = "zipkin"
 // broker.
 type kafkaReporter struct {
 	producer   sarama.AsyncProducer
-	logger     *log.Logger
+	logger     zipkin.Logger
 	topic      string
 	serializer reporter.SpanSerializer
 }
@@ -46,6 +47,14 @@ type ReporterOption func(c *kafkaReporter)
 // Logger sets the logger used to report errors in the collection
 // process.
 func Logger(logger *log.Logger) ReporterOption {
+	return func(c *kafkaReporter) {
+		c.logger = logger
+	}
+}
+
+// GenericLogger sets the logger used to report errors in the collection
+// process.
+func GenericLogger(logger zipkin.Logger) ReporterOption {
 	return func(c *kafkaReporter) {
 		c.logger = logger
 	}

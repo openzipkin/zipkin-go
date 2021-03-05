@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 )
@@ -47,7 +48,7 @@ type HTTPDoer interface {
 type httpReporter struct {
 	url           string
 	client        HTTPDoer
-	logger        *log.Logger
+	logger        zipkin.Logger
 	batchInterval time.Duration
 	batchSize     int
 	maxBacklog    int
@@ -230,6 +231,12 @@ func RequestCallback(rc RequestCallbackFn) ReporterOption {
 // Logger sets the logger used to report errors in the collection
 // process.
 func Logger(l *log.Logger) ReporterOption {
+	return func(r *httpReporter) { r.logger = l }
+}
+
+// GenericLogger sets the logger used to report errors in the collection
+// process.
+func GenericLogger(l zipkin.Logger) ReporterOption {
 	return func(r *httpReporter) { r.logger = l }
 }
 
