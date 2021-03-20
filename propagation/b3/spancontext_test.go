@@ -27,13 +27,13 @@ func TestParseHeaderSuccess(t *testing.T) {
 		expectedErr     error
 	}{
 		{"d", &model.SpanContext{Debug: true}, nil},
-		{"1", &model.SpanContext{Sampled: pointerBool(true)}, nil},
+		{"1", &model.SpanContext{Sampled: samplingVal(true)}, nil},
 		{"000000000000007b00000000000001c8-000000000000007b", &model.SpanContext{TraceID: model.TraceID{High: 123, Low: 456}, ID: model.ID(123)}, nil},
-		{"000000000000007b00000000000001c8-000000000000007b-0", &model.SpanContext{TraceID: model.TraceID{High: 123, Low: 456}, ID: model.ID(123), Sampled: pointerBool(false)}, nil},
-		{"000000000000007b00000000000001c8-000000000000007b-1-00000000000001c8", &model.SpanContext{TraceID: model.TraceID{High: 123, Low: 456}, ID: model.ID(123), ParentID: pointerID(model.ID(456)), Sampled: pointerBool(true)}, nil},
+		{"000000000000007b00000000000001c8-000000000000007b-0", &model.SpanContext{TraceID: model.TraceID{High: 123, Low: 456}, ID: model.ID(123), Sampled: samplingVal(false)}, nil},
+		{"000000000000007b00000000000001c8-000000000000007b-1-00000000000001c8", &model.SpanContext{TraceID: model.TraceID{High: 123, Low: 456}, ID: model.ID(123), ParentID: parentIDVal(456), Sampled: samplingVal(true)}, nil},
 		{"", nil, ErrEmptyContext},
-		{"80f198ee56343ba864fe8b2a57d3eff7-e457b5a2e4d86bd1-1-05e3ac9a4f6e3b90", &model.SpanContext{TraceID: model.TraceID{High: 9291375655657946024, Low: 7277407061855694839}, ID: model.ID(16453819474850114513), ParentID: pointerID(model.ID(424372568660523920)), Sampled: pointerBool(true)}, nil},
-		{"d4c3c787ce202dc5-77c6a763a5a72544-0-6a3211d95bed2c99", &model.SpanContext{TraceID: model.TraceID{High: 0, Low: 15331316942592028101}, ID: model.ID(8630769782324929860), ParentID: pointerID(model.ID(7652198342103739545)), Sampled: pointerBool(false)}, nil},
+		{"80f198ee56343ba864fe8b2a57d3eff7-e457b5a2e4d86bd1-1-05e3ac9a4f6e3b90", &model.SpanContext{TraceID: model.TraceID{High: 9291375655657946024, Low: 7277407061855694839}, ID: model.ID(16453819474850114513), ParentID: parentIDVal(424372568660523920), Sampled: samplingVal(true)}, nil},
+		{"d4c3c787ce202dc5-77c6a763a5a72544-0-6a3211d95bed2c99", &model.SpanContext{TraceID: model.TraceID{High: 0, Low: 15331316942592028101}, ID: model.ID(8630769782324929860), ParentID: parentIDVal(7652198342103739545), Sampled: samplingVal(false)}, nil},
 	}
 
 	for _, testCase := range testCases {
@@ -49,12 +49,16 @@ func TestParseHeaderSuccess(t *testing.T) {
 				((actualContext.Sampled == nil && testCase.expectedContext.Sampled == nil) ||
 					*actualContext.Sampled == *testCase.expectedContext.Sampled) &&
 				actualContext.Debug == testCase.expectedContext.Debug) {
-				t.Fatalf("unexpected context for header %q, want: %v, have %v", testCase.header, *testCase.expectedContext, *actualContext)
+				t.Fatalf("unexpected context for header %q, want: %+v, have %+v", testCase.header, *testCase.expectedContext, *actualContext)
 			}
 		}
 
 		if want, have := actualErr, testCase.expectedErr; want != have {
-			t.Fatalf("unexpected error for header %q, want: %v, have %v", testCase.header, want, have)
+			if testCase.expectedErr == nil {
+				t.Fatalf("unexpected error for header %q: %v", testCase.header, have)
+			} else {
+				t.Fatalf("expected error for header %q: %v", testCase.header, testCase.expectedErr)
+			}
 		}
 	}
 }
@@ -90,14 +94,14 @@ func TestBuildHeader(t *testing.T) {
 	}{
 		{model.SpanContext{ID: model.ID(123)}, ""},
 		{model.SpanContext{Debug: true}, "d"},
-		{model.SpanContext{Sampled: pointerBool(true)}, "1"},
+		{model.SpanContext{Sampled: samplingVal(true)}, "1"},
 		{model.SpanContext{TraceID: model.TraceID{High: 123, Low: 456}, ID: model.ID(123)}, "000000000000007b00000000000001c8-000000000000007b"},
-		{model.SpanContext{TraceID: model.TraceID{High: 123, Low: 456}, ID: model.ID(123), Sampled: pointerBool(false)}, "000000000000007b00000000000001c8-000000000000007b-0"},
+		{model.SpanContext{TraceID: model.TraceID{High: 123, Low: 456}, ID: model.ID(123), Sampled: samplingVal(false)}, "000000000000007b00000000000001c8-000000000000007b-0"},
 		{model.SpanContext{
 			TraceID:  model.TraceID{High: 123, Low: 456},
 			ID:       model.ID(123),
-			ParentID: pointerID(model.ID(456)),
-			Sampled:  pointerBool(false),
+			ParentID: parentIDVal(456),
+			Sampled:  samplingVal(false),
 		}, "000000000000007b00000000000001c8-000000000000007b-0-00000000000001c8"},
 	}
 
@@ -109,10 +113,11 @@ func TestBuildHeader(t *testing.T) {
 	}
 }
 
-func pointerID(value model.ID) *model.ID {
-	return &value
+func parentIDVal(value int) *model.ID {
+	parentIDVal := model.ID(value)
+	return &parentIDVal
 }
 
-func pointerBool(value bool) *bool {
+func samplingVal(value bool) *bool {
 	return &value
 }
