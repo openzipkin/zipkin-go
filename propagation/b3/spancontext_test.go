@@ -49,7 +49,7 @@ func TestParseHeaderSuccess(t *testing.T) {
 				((actualContext.Sampled == nil && testCase.expectedContext.Sampled == nil) ||
 					*actualContext.Sampled == *testCase.expectedContext.Sampled) &&
 				actualContext.Debug == testCase.expectedContext.Debug) {
-				t.Fatalf("unexpected context for header %q, want: %+v, have %+v", testCase.header, *testCase.expectedContext, *actualContext)
+				t.Fatalf("unexpected context for header %q, want: %+v, have: %+v", testCase.header, *testCase.expectedContext, *actualContext)
 			}
 		}
 
@@ -57,7 +57,7 @@ func TestParseHeaderSuccess(t *testing.T) {
 			if testCase.expectedErr == nil {
 				t.Fatalf("unexpected error for header %q: %v", testCase.header, have)
 			} else {
-				t.Fatalf("expected error for header %q: %v", testCase.header, testCase.expectedErr)
+				t.Fatalf("unexpected error for header %q, want: %v, have: %v", testCase.header, want, have)
 			}
 		}
 	}
