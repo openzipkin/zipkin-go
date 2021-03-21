@@ -9,8 +9,6 @@ require (
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/golang/protobuf v1.4.2
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
-	github.com/gorilla/context v1.1.1 // indirect
-	github.com/gorilla/mux v1.6.2
 	github.com/onsi/ginkgo v1.7.0
 	github.com/onsi/gomega v1.4.3
 	github.com/pierrec/lz4 v1.0.2-0.20190131084431-473cd7ce01a1 // indirect

@@ -99,4 +99,4 @@ Producer digesting JSON V2 Spans. The reporter uses the
 underneath.
 
 ## usage and examples
-[HTTP Server Example](example_httpserver_test.go)
+[HTTP Server Example](examples/httpserver_test.go)
