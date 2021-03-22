@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/openzipkin/zipkin-go/reporter/recorder"
+
 	"github.com/openzipkin/zipkin-go/idgenerator"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
@@ -806,5 +808,51 @@ func TestLocalEndpoint(t *testing.T) {
 
 	if !want.IPv6.Equal(have.IPv6) {
 		t.Errorf("IPv6 endpoint want %+v, have %+v", want.IPv6, have.IPv6)
+	}
+}
+
+func TestFinishedSpanHandlerAvoidsReporting(t *testing.T) {
+	rep := recorder.NewReporter()
+	defer rep.Close()
+
+	tracer, _ := NewTracer(
+		rep,
+		WithNoopSpan(false),
+		WithSampler(AlwaysSample),
+		WithFinishedSpanHandler(func(s *model.SpanModel) bool {
+			return false
+		}),
+	)
+	sp := tracer.StartSpan("test")
+	sp.Finish()
+
+	if want, have := 0, len(rep.Flush()); want != have {
+		t.Errorf("unexpected number of spans, want: %d, have: %d", want, have)
+	}
+}
+
+func TestFinishedSpanAddsTagsToSpan(t *testing.T) {
+	rep := recorder.NewReporter()
+	defer rep.Close()
+
+	tracer, _ := NewTracer(
+		rep,
+		WithNoopSpan(false),
+		WithSampler(AlwaysSample),
+		WithFinishedSpanHandler(func(s *model.SpanModel) bool {
+			s.Tags["my_key"] = "my_value"
+			return true
+		}),
+	)
+	sp := tracer.StartSpan("test")
+	sp.Finish()
+
+	repSans := rep.Flush()
+	if want, have := 1, len(repSans); want != have {
+		t.Errorf("unexpected number of spans, want: %d, have: %d", want, have)
+	}
+
+	if want, have := "my_value", repSans[0].Tags["my_key"]; want != have {
+		t.Errorf("unexpected number of spans, want: %q, have: %q", want, have)
 	}
 }

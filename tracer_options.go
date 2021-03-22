@@ -136,3 +136,13 @@ func WithNoopTracer(tracerNoop bool) TracerOption {
 		return nil
 	}
 }
+
+// WithFinishedSpanHandler if set, can mutate all span data and decide if a span
+// should be recorded or not. E.g. user could decide to sample all requests having
+// an error tag set or duration over certain value.
+func WithFinishedSpanHandler(handler func(*model.SpanModel) bool) TracerOption {
+	return func(o *Tracer) error {
+		o.finishedSpanHandler = handler
+		return nil
+	}
+}
