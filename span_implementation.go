@@ -99,3 +99,5 @@ func (s *spanImpl) Flush() {
 		s.tracer.reporter.Send(s.SpanModel)
 	}
 }
+
+var _ Span = (*spanImpl)(nil)
