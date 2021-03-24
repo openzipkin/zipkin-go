@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2021 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -114,7 +114,7 @@ func protoEndpointToModelEndpoint(zpe *Endpoint) *zipkinmodel.Endpoint {
 	}
 }
 
-func protoSpanIDToModelSpanID(spanId []byte) (zid *zipkinmodel.ID, blank bool, err error) {
+func protoSpanIDToModelSpanID(spanId []byte) (*zipkinmodel.ID, bool, error) {
 	if len(spanId) == 0 {
 		return nil, true, nil
 	}
@@ -124,8 +124,8 @@ func protoSpanIDToModelSpanID(spanId []byte) (zid *zipkinmodel.ID, blank bool, e
 
 	// Converting [8]byte --> uint64
 	u64 := binary.BigEndian.Uint64(spanId)
-	zid_ := zipkinmodel.ID(u64)
-	return &zid_, false, nil
+	zid := zipkinmodel.ID(u64)
+	return &zid, false, nil
 }
 
 func protoAnnotationsToModelAnnotations(zpa []*Annotation) (zma []zipkinmodel.Annotation) {

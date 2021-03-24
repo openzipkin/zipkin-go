@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2021 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -78,9 +78,10 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 
 		ginkgo.It("propagates parent", func() {
 			// Manually create a client context
-			tracer, err := zipkin.NewTracer(
+			tracer, _ := zipkin.NewTracer(
 				reporter.NewNoopReporter(),
-				zipkin.WithIDGenerator(newSequentialIdGenerator(1)))
+				zipkin.WithIDGenerator(newSequentialIdGenerator(1)),
+			)
 			testSpan := tracer.StartSpan("test")
 			md := metadata.New(nil)
 			_ = b3.InjectGRPC(&md)(testSpan.Context())
@@ -156,7 +157,7 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 
 		ginkgo.It("joins with caller", func() {
 			// Manually create a client context
-			tracer, err := zipkin.NewTracer(
+			tracer, _ := zipkin.NewTracer(
 				reporter.NewNoopReporter(),
 				zipkin.WithIDGenerator(newSequentialIdGenerator(1)))
 			testSpan := tracer.StartSpan("test")
