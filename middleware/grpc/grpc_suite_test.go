@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2021 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ var _ = ginkgo.BeforeSuite(func() {
 	serverReporter = recorder.NewReporter()
 	ep, _ := zipkin.NewEndpoint("grpcServer", "")
 	serverIdGenerator = newSequentialIdGenerator(0x1000000)
-	tracer, err := zipkin.NewTracer(
+	tracer, _ := zipkin.NewTracer(
 		serverReporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(serverIdGenerator), zipkin.WithSharedSpans(false))
 
 	lis, err := net.Listen("tcp", ":0")
@@ -73,8 +73,12 @@ var _ = ginkgo.BeforeSuite(func() {
 	customLis, err := net.Listen("tcp", ":0")
 	gomega.Expect(customLis, err).ToNot(gomega.BeNil(), "failed to listen to tcp port")
 
-	tracer, err = zipkin.NewTracer(
-		serverReporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(serverIdGenerator), zipkin.WithSharedSpans(true))
+	tracer, _ = zipkin.NewTracer(
+		serverReporter,
+		zipkin.WithLocalEndpoint(ep),
+		zipkin.WithIDGenerator(serverIdGenerator),
+		zipkin.WithSharedSpans(true),
+	)
 	customServer = grpc.NewServer(grpc.StatsHandler(zipkingrpc.NewServerHandler(
 		tracer,
 		zipkingrpc.ServerTags(map[string]string{"default": "tag"}))))
@@ -121,7 +125,7 @@ func (g *sequentialIdGenerator) reset() {
 	g.nextSpanId = g.start
 }
 
-type TestHelloService struct{
+type TestHelloService struct {
 	service.UnimplementedHelloServiceServer
 }
 

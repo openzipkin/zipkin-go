@@ -19,8 +19,8 @@ import (
 	"errors"
 	"time"
 
-	"google.golang.org/protobuf/proto"
 	zipkinmodel "github.com/openzipkin/zipkin-go/model"
+	"google.golang.org/protobuf/proto"
 )
 
 var errNilProtoSpan = errors.New("expecting a non-nil Span")

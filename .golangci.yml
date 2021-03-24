@@ -6,7 +6,6 @@ linters:
   enable:
     - dupl
     - goconst
-    - gocyclo
     - gofmt
     - golint
     - govet
@@ -21,10 +20,18 @@ linters:
 
 linters-settings:
   dupl:
-    threshold: 400 
-  lll:   
+    threshold: 400
+  lll:
     line-length: 170
   gocyclo:
     min-complexity: 15
   golint:
     min-confidence: 0.85
+
+issues:
+  exclude-rules:
+    - # zipkin_proto3 package contains an underscore and we can't change it.
+      path: proto/zipkin_proto3
+      text: "don't use an underscore in package name"
+      linters:
+        - golint

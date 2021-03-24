@@ -1,4 +1,4 @@
-// Copyright 2020 The OpenZipkin Authors
+// Copyright 2021 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -149,7 +149,7 @@ func NewTransport(tracer *zipkin.Tracer, options ...TransportOption) (http.Round
 }
 
 // RoundTrip satisfies the RoundTripper interface.
-func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error) {
+func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	sp, _ := t.tracer.StartSpanFromContext(
 		req.Context(), req.URL.Scheme+"/"+req.Method, zipkin.Kind(model.Client), zipkin.RemoteEndpoint(t.remoteEndpoint),
 	)
@@ -202,11 +202,11 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 
 	_ = b3.InjectHTTP(req)(spCtx)
 
-	res, err = t.rt.RoundTrip(req)
+	res, err := t.rt.RoundTrip(req)
 	if err != nil {
 		t.errHandler(sp, err, 0)
 		sp.Finish()
-		return
+		return res, err
 	}
 
 	if res.ContentLength > 0 {
@@ -231,5 +231,5 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		}
 	}
 	sp.Finish()
-	return
+	return res, err
 }
