@@ -56,7 +56,7 @@ type transport struct {
 	defaultTags       map[string]string
 	errHandler        ErrHandler
 	errResponseReader *ErrResponseReader
-	logger            *log.Logger
+	logger            zipkin.Logger
 	requestSampler    RequestSamplerFunc
 	remoteEndpoint    *model.Endpoint
 }
@@ -110,6 +110,13 @@ func TransportRemoteEndpoint(remoteEndpoint *model.Endpoint) TransportOption {
 
 // TransportLogger allows to plug a logger into the transport
 func TransportLogger(l *log.Logger) TransportOption {
+	return func(t *transport) {
+		t.logger = l
+	}
+}
+
+// TransportZipkinLogger allows to plug a logger into the transport
+func TransportZipkinLogger(l zipkin.Logger) TransportOption {
 	return func(t *transport) {
 		t.logger = l
 	}

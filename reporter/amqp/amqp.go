@@ -11,6 +11,7 @@ import (
 
 	"github.com/streadway/amqp"
 
+	"github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 )
@@ -29,7 +30,7 @@ type rmqReporter struct {
 	conn     *amqp.Connection
 	exchange string
 	queue    string
-	logger   *log.Logger
+	logger   zipkin.Logger
 }
 
 // ReporterOption sets a parameter for the rmqReporter
@@ -38,6 +39,14 @@ type ReporterOption func(c *rmqReporter)
 // Logger sets the logger used to report errors in the collection
 // process.
 func Logger(logger *log.Logger) ReporterOption {
+	return func(c *rmqReporter) {
+		c.logger = logger
+	}
+}
+
+// GenericLogger sets the logger used to report errors in the collection
+// process.
+func GenericLogger(logger zipkin.Logger) ReporterOption {
 	return func(c *rmqReporter) {
 		c.logger = logger
 	}
