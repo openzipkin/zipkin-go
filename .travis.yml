@@ -6,24 +6,16 @@ services:
 
 matrix:
   include:
-    - go: "1.12.x"
-      env:
-        - GO111MODULE=on
-    - go: "1.13.x"
-      env:
-        - GO111MODULE=on
     - go: "1.14.x"
     - go: "1.15.x"
     - go: "1.16.x"
     - go: "tip"
 
 before_install:
-  - go get golang.org/x/tools/cmd/cover
-  - go get github.com/mattn/goveralls
+  - make install-tools
 
 install:
   - go get -d -t ./...
-  - go get -u golang.org/x/lint/golint
 
 script:
   - make test vet lint bench

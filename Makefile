@@ -27,4 +27,8 @@ vet:
 .PHONY: all
 all: vet lint test bench
 
+.PHONY: install-tools
+install-tools:
+	$(MAKE) -C ./tools install
+
 .PHONY: example
