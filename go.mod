@@ -1,5 +1,7 @@
 module github.com/openzipkin/zipkin-go
 
+go 1.16
+
 require (
 	github.com/Shopify/sarama v1.19.0
 	github.com/Shopify/toxiproxy v2.1.4+incompatible // indirect
@@ -17,5 +19,3 @@ require (
 	google.golang.org/grpc v1.30.0
 	google.golang.org/protobuf v1.26.0
 )
-
-go 1.12
