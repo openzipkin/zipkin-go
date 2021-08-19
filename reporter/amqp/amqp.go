@@ -9,7 +9,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"

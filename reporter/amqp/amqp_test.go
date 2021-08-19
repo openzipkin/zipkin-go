@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package amqp_test
@@ -9,7 +10,7 @@ import (
 
 	"github.com/openzipkin/zipkin-go/model"
 	zipkinamqp "github.com/openzipkin/zipkin-go/reporter/amqp"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 var spans = []*model.SpanModel{
