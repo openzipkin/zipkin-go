@@ -9,9 +9,10 @@ import (
 	"log"
 	"os"
 
+	amqp "github.com/rabbitmq/amqp091-go"
+
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // defaultRmqRoutingKey/Exchange/Kind sets the standard RabbitMQ queue our Reporter will publish on.
