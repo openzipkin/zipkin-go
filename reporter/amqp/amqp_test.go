@@ -10,7 +10,7 @@ import (
 
 	"github.com/openzipkin/zipkin-go/model"
 	zipkinamqp "github.com/openzipkin/zipkin-go/reporter/amqp"
-	"github.com/rabbitmq/amqp091-go"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 var spans = []*model.SpanModel{
@@ -56,9 +56,9 @@ func TestRabbitClose(t *testing.T) {
 	}
 }
 
-func setupRabbit(t *testing.T, address string) (conn *amqp091.Connection, ch *amqp091.Channel, close func()) {
+func setupRabbit(t *testing.T, address string) (conn *amqp.Connection, ch *amqp.Channel, close func()) {
 	var err error
-	conn, err = amqp091.Dial(address)
+	conn, err = amqp.Dial(address)
 	failOnError(t, err, "Failed to connect to RabbitMQ")
 
 	ch, err = conn.Channel()
@@ -71,7 +71,7 @@ func setupRabbit(t *testing.T, address string) (conn *amqp091.Connection, ch *am
 	return
 }
 
-func setupConsume(t *testing.T, ch *amqp091.Channel) <-chan amqp091.Delivery {
+func setupConsume(t *testing.T, ch *amqp.Channel) <-chan amqp.Delivery {
 	csm, err := ch.Consume(
 		"zipkin",
 		"",
