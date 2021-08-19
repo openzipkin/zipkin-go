@@ -9,10 +9,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/streadway/amqp"
-
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
+	"github.com/rabbitmq/amqp091-go"
 )
 
 // defaultRmqRoutingKey/Exchange/Kind sets the standard RabbitMQ queue our Reporter will publish on.
@@ -25,8 +24,8 @@ const (
 // rmqReporter implements Reporter by publishing spans to a RabbitMQ exchange
 type rmqReporter struct {
 	e        chan error
-	channel  *amqp.Channel
-	conn     *amqp.Connection
+	channel  *amqp091.Channel
+	conn     *amqp091.Connection
 	exchange string
 	queue    string
 	logger   *log.Logger
@@ -60,14 +59,14 @@ func Queue(queue string) ReporterOption {
 }
 
 // Channel sets the Channel used to send messages
-func Channel(ch *amqp.Channel) ReporterOption {
+func Channel(ch *amqp091.Channel) ReporterOption {
 	return func(c *rmqReporter) {
 		c.channel = ch
 	}
 }
 
 // Connection sets the Connection used to send messages
-func Connection(conn *amqp.Connection) ReporterOption {
+func Connection(conn *amqp091.Connection) ReporterOption {
 	return func(c *rmqReporter) {
 		c.conn = conn
 	}
@@ -95,7 +94,7 @@ func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, 
 	var err error
 
 	if r.conn == nil {
-		r.conn, err = amqp.Dial(address)
+		r.conn, err = amqp091.Dial(address)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +133,7 @@ func (r *rmqReporter) Send(s model.SpanModel) {
 		return
 	}
 
-	msg := amqp.Publishing{
+	msg := amqp091.Publishing{
 		Body: m,
 	}
 

@@ -12,8 +12,8 @@ require (
 	github.com/onsi/ginkgo v1.7.0
 	github.com/onsi/gomega v1.4.3
 	github.com/pierrec/lz4 v1.0.2-0.20190131084431-473cd7ce01a1 // indirect
+	github.com/rabbitmq/amqp091-go v0.0.0-20210812094702-b2a427eb7d17
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a // indirect
-	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	google.golang.org/grpc v1.30.0
 	google.golang.org/protobuf v1.25.0
 )
