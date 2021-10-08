@@ -1,4 +1,4 @@
-// Copyright 2019 The OpenZipkin Authors
+// Copyright 2021 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -121,7 +121,7 @@ func (g *sequentialIdGenerator) reset() {
 	g.nextSpanId = g.start
 }
 
-type TestHelloService struct{
+type TestHelloService struct {
 	service.UnimplementedHelloServiceServer
 }
 
