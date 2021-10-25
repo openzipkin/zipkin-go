@@ -13,4 +13,4 @@ jobs:
       - run: sudo apt-get install rabbitmq-server
       - run: sudo service rabbitmq-server start
       - run: go get -t -v -d ./...
-      - run: make vet test bench
+      - run: AMQP_ADDR=amqp://guest:guest@localhost:5672/ make vet test bench

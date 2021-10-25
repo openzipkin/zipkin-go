@@ -36,7 +36,7 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 	)
 
 	ginkgo.BeforeEach(func() {
-		serverIdGenerator.reset()
+		serverIDGenerator.reset()
 		serverReporter.Flush()
 	})
 
@@ -80,7 +80,9 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 			// Manually create a client context
 			tracer, err := zipkin.NewTracer(
 				reporter.NewNoopReporter(),
-				zipkin.WithIDGenerator(newSequentialIdGenerator(1)))
+				zipkin.WithIDGenerator(newSequentialIDGenerator(1)))
+			gomega.Expect(tracer, err).ToNot(gomega.BeNil(), "failed to create Zipkin tracer")
+
 			testSpan := tracer.StartSpan("test")
 			md := metadata.New(nil)
 			_ = b3.InjectGRPC(&md)(testSpan.Context())
@@ -158,13 +160,17 @@ var _ = ginkgo.Describe("gRPC Server", func() {
 			// Manually create a client context
 			tracer, err := zipkin.NewTracer(
 				reporter.NewNoopReporter(),
-				zipkin.WithIDGenerator(newSequentialIdGenerator(1)))
+				zipkin.WithIDGenerator(newSequentialIDGenerator(1)))
+			gomega.Expect(tracer, err).ToNot(gomega.BeNil(), "failed to create Zipkin tracer")
+
 			testSpan := tracer.StartSpan("test")
+
 			md := metadata.New(nil)
 			_ = b3.InjectGRPC(&md)(testSpan.Context())
 			ctx := metadata.NewOutgoingContext(context.Background(), md)
 
-			resp, err := client.Hello(ctx, &service.HelloRequest{Payload: "Hello"})
+			var resp *service.HelloResponse
+			resp, err = client.Hello(ctx, &service.HelloRequest{Payload: "Hello"})
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			spanCtx := resp.GetSpanContext()
