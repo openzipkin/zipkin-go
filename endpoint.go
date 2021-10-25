@@ -15,6 +15,7 @@
 package zipkin
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -54,7 +55,7 @@ func NewEndpoint(serviceName string, hostPort string) (*model.Endpoint, error) {
 
 	addrs, err := net.LookupIP(host)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("host lookup failure: %w", err)
 	}
 
 	for i := range addrs {
