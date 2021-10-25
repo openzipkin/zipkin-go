@@ -16,7 +16,6 @@ limitations under the License.
 
 # Zipkin Library for Go
 
-[![Travis CI](https://travis-ci.org/openzipkin/zipkin-go.svg?branch=master)](https://travis-ci.org/openzipkin/zipkin-go)
 [![CircleCI](https://circleci.com/gh/openzipkin/zipkin-go.svg?style=shield)](https://circleci.com/gh/openzipkin/zipkin-go)
 [![Appveyor CI](https://ci.appveyor.com/api/projects/status/1d0e5k96g10ajl63/branch/master?svg=true)](https://ci.appveyor.com/project/basvanbeek/zipkin-go)
 [![Coverage Status](https://img.shields.io/coveralls/github/openzipkin/zipkin-go.svg)](https://coveralls.io/github/openzipkin/zipkin-go?branch=master)
