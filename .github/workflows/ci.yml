@@ -43,7 +43,7 @@ jobs:
           version: latest
 
       - name: Run tests
-        run: go test -coverprofile=coverage.txt -v ./...
+        run: go test -coverprofile coverage.txt -v ./...
         env:
           CGO_ENABLED: 1
 
