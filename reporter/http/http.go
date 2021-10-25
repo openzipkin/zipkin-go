@@ -39,7 +39,7 @@ const (
 )
 
 // HTTPDoer will do a request to the Zipkin HTTP Collector
-type HTTPDoer interface {
+type HTTPDoer interface { // nolint: revive // keep as is, we don't want to break dependendants
 	Do(req *http.Request) (*http.Response, error)
 }
 

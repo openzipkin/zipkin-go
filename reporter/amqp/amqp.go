@@ -144,7 +144,7 @@ func (r *rmqReporter) Send(s model.SpanModel) {
 	ss := []model.SpanModel{s}
 	m, err := json.Marshal(ss)
 	if err != nil {
-		r.e <- fmt.Errorf("failed when marshalling the span: %s\n", err.Error())
+		r.e <- fmt.Errorf("failed when marshalling the span: %s", err.Error())
 		return
 	}
 
@@ -154,7 +154,7 @@ func (r *rmqReporter) Send(s model.SpanModel) {
 
 	err = r.channel.Publish(defaultRmqExchange, defaultRmqRoutingKey, false, false, msg)
 	if err != nil {
-		r.e <- fmt.Errorf("failed when publishing the span: %s\n", err.Error())
+		r.e <- fmt.Errorf("failed when publishing the span: %s", err.Error())
 	}
 }
 

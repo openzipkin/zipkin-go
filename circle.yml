@@ -7,10 +7,13 @@ jobs:
       - image: circleci/golang
     steps:
       - checkout
-      - run: echo 'deb http://www.rabbitmq.com/debian/ testing main' | sudo tee /etc/apt/sources.list.d/rabbitmq.list
-      - run: wget -O- https://www.rabbitmq.com/rabbitmq-release-signing-key.asc | sudo apt-key add -
-      - run: sudo apt-get update
-      - run: sudo apt-get install rabbitmq-server
-      - run: sudo service rabbitmq-server start
-      - run: go get -t -v -d ./...
+      - run: go mod download
       - run: make vet test bench
+# RabbitMQ install currently broken
+#      - run: echo 'deb http://www.rabbitmq.com/debian/ testing main' | sudo tee /etc/apt/sources.list.d/rabbitmq.list
+#      - run: wget -O- https://www.rabbitmq.com/rabbitmq-release-signing-key.asc | sudo apt-key add -
+#      - run: sudo apt-get update
+#      - run: sudo apt-get install rabbitmq-server
+#      - run: sudo service rabbitmq-server start
+#      - run: go get -t -v -d ./...
+#      - run: AMQP_ADDR=amqp://guest:guest@localhost:5672/ make vet test bench

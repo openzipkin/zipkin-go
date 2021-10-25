@@ -44,7 +44,7 @@ var _ = ginkgo.Describe("gRPC Client", func() {
 		reporter = recorder.NewReporter()
 		ep, _ := zipkin.NewEndpoint("grpcClient", "")
 		tracer, err = zipkin.NewTracer(
-			reporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(newSequentialIdGenerator(1)))
+			reporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(newSequentialIDGenerator(1)))
 		gomega.Expect(tracer, err).ToNot(gomega.BeNil())
 	})
 

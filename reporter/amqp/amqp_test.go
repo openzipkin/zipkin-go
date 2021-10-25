@@ -19,6 +19,7 @@ package amqp_test
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 	"time"
 
@@ -34,7 +35,10 @@ var spans = []*model.SpanModel{
 }
 
 func TestRabbitProduce(t *testing.T) {
-	address := "amqp://guest:guest@localhost:5672/"
+	address := os.Getenv("AMQP_ADDR")
+	if address == "" {
+		t.Skip("AMQP_ADDR not set, skipping test...")
+	}
 	_, ch, closeFunc := setupRabbit(t, address)
 	defer closeFunc()
 
@@ -57,7 +61,10 @@ func TestRabbitProduce(t *testing.T) {
 }
 
 func TestRabbitClose(t *testing.T) {
-	address := "amqp://guest:guest@127.0.0.1:5672/"
+	address := os.Getenv("AMQP_ADDR")
+	if address == "" {
+		t.Skip("AMQP_ADDR not set, skipping test...")
+	}
 	conn, ch, closeFunc := setupRabbit(t, address)
 	defer closeFunc()
 

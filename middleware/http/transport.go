@@ -206,7 +206,7 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	if err != nil {
 		t.errHandler(sp, err, 0)
 		sp.Finish()
-		return
+		return nil, err
 	}
 
 	if res.ContentLength > 0 {
@@ -231,5 +231,5 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		}
 	}
 	sp.Finish()
-	return
+	return res, err
 }

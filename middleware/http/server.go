@@ -197,7 +197,7 @@ func (r *rwInterceptor) getResponseSize() string {
 	return strconv.FormatUint(atomic.LoadUint64(&r.size), 10)
 }
 
-func (r *rwInterceptor) wrap() http.ResponseWriter {
+func (r *rwInterceptor) wrap() http.ResponseWriter { // nolint:gocyclo
 	var (
 		hj, i0 = r.w.(http.Hijacker)
 		cn, i1 = r.w.(http.CloseNotifier)

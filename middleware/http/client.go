@@ -149,5 +149,5 @@ func (c *Client) DoWithAppSpan(req *http.Request, name string) (res *http.Respon
 		sp:           appSpan,
 		traceEnabled: c.httpTrace,
 	}
-	return
+	return res, err
 }

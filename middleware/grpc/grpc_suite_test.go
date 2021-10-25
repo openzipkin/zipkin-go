@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	serverIdGenerator *sequentialIdGenerator
+	serverIDGenerator *sequentialIDGenerator
 	serverReporter    *recorder.ReporterRecorder
 
 	server     *grpc.Server
@@ -52,15 +52,25 @@ func TestGrpc(t *testing.T) {
 }
 
 var _ = ginkgo.BeforeSuite(func() {
-	var err error
+	var (
+		err       error
+		tracer    *zipkin.Tracer
+		lis       net.Listener
+		customLis net.Listener
+	)
 
 	serverReporter = recorder.NewReporter()
 	ep, _ := zipkin.NewEndpoint("grpcServer", "")
-	serverIdGenerator = newSequentialIdGenerator(0x1000000)
-	tracer, err := zipkin.NewTracer(
-		serverReporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(serverIdGenerator), zipkin.WithSharedSpans(false))
+	serverIDGenerator = newSequentialIDGenerator(0x1000000)
 
-	lis, err := net.Listen("tcp", ":0")
+	tracer, err = zipkin.NewTracer(
+		serverReporter, zipkin.WithLocalEndpoint(ep),
+		zipkin.WithIDGenerator(serverIDGenerator),
+		zipkin.WithSharedSpans(false),
+	)
+	gomega.Expect(tracer, err).ToNot(gomega.BeNil(), "failed to create Zipkin tracer")
+
+	lis, err = net.Listen("tcp", ":0")
 	gomega.Expect(lis, err).ToNot(gomega.BeNil(), "failed to listen to tcp port")
 
 	server = grpc.NewServer(grpc.StatsHandler(zipkingrpc.NewServerHandler(tracer)))
@@ -70,14 +80,24 @@ var _ = ginkgo.BeforeSuite(func() {
 	}()
 	serverAddr = lis.Addr().String()
 
-	customLis, err := net.Listen("tcp", ":0")
+	customLis, err = net.Listen("tcp", ":0")
 	gomega.Expect(customLis, err).ToNot(gomega.BeNil(), "failed to listen to tcp port")
 
 	tracer, err = zipkin.NewTracer(
-		serverReporter, zipkin.WithLocalEndpoint(ep), zipkin.WithIDGenerator(serverIdGenerator), zipkin.WithSharedSpans(true))
-	customServer = grpc.NewServer(grpc.StatsHandler(zipkingrpc.NewServerHandler(
-		tracer,
-		zipkingrpc.ServerTags(map[string]string{"default": "tag"}))))
+		serverReporter,
+		zipkin.WithLocalEndpoint(ep),
+		zipkin.WithIDGenerator(serverIDGenerator),
+		zipkin.WithSharedSpans(true),
+	)
+	gomega.Expect(tracer, err).ToNot(gomega.BeNil(), "failed to create Zipkin tracer")
+
+	customServer = grpc.NewServer(
+		grpc.StatsHandler(
+			zipkingrpc.NewServerHandler(
+				tracer, zipkingrpc.ServerTags(map[string]string{"default": "tag"}),
+			),
+		),
+	)
 	service.RegisterHelloServiceServer(customServer, &TestHelloService{})
 	go func() {
 		_ = customServer.Serve(customLis)
@@ -91,34 +111,34 @@ var _ = ginkgo.AfterSuite(func() {
 	_ = serverReporter.Close()
 })
 
-type sequentialIdGenerator struct {
-	nextTraceId uint64
-	nextSpanId  uint64
+type sequentialIDGenerator struct {
+	nextTraceID uint64
+	nextSpanID  uint64
 	start       uint64
 }
 
-func newSequentialIdGenerator(start uint64) *sequentialIdGenerator {
-	return &sequentialIdGenerator{start, start, start}
+func newSequentialIDGenerator(start uint64) *sequentialIDGenerator {
+	return &sequentialIDGenerator{start, start, start}
 }
 
-func (g *sequentialIdGenerator) SpanID(traceID model.TraceID) model.ID {
-	id := model.ID(g.nextSpanId)
-	g.nextSpanId++
+func (g *sequentialIDGenerator) SpanID(_ model.TraceID) model.ID {
+	id := model.ID(g.nextSpanID)
+	g.nextSpanID++
 	return id
 }
 
-func (g *sequentialIdGenerator) TraceID() model.TraceID {
+func (g *sequentialIDGenerator) TraceID() model.TraceID {
 	id := model.TraceID{
 		High: 0,
-		Low:  g.nextTraceId,
+		Low:  g.nextTraceID,
 	}
-	g.nextTraceId++
+	g.nextTraceID++
 	return id
 }
 
-func (g *sequentialIdGenerator) reset() {
-	g.nextTraceId = g.start
-	g.nextSpanId = g.start
+func (g *sequentialIDGenerator) reset() {
+	g.nextTraceID = g.start
+	g.nextSpanID = g.start
 }
 
 type TestHelloService struct {
