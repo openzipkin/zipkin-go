@@ -22,7 +22,7 @@ import (
 	"time"
 
 	zipkinmodel "github.com/openzipkin/zipkin-go/model"
-	zipkin_proto3 "github.com/openzipkin/zipkin-go/proto/zipkin_proto3"
+	"github.com/openzipkin/zipkin-go/proto/zipkin_proto3"
 )
 
 func TestExportSpans(t *testing.T) {
