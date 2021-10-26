@@ -1,8 +1,8 @@
-name: test
+name: gha
 on:
   push:
     branches:
-      - main
+      - master
     paths-ignore:
       - "**/*.md"
       - "LICENSE"
