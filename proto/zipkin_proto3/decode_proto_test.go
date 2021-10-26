@@ -23,9 +23,10 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	zipkinmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/proto/zipkin_proto3"
-	"google.golang.org/protobuf/proto"
 )
 
 func TestParseSpans(t *testing.T) {
