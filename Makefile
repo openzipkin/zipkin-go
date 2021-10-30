@@ -16,7 +16,7 @@
 
 .PHONY: test
 test:
-	// Added MallocNanoZone env var, see: https://github.com/golang/go/issues/49138
+	# Added MallocNanoZone env var, see: https://github.com/golang/go/issues/49138
 	MallocNanoZone=0 go test -v -race -cover ./...
 
 .PHONY: bench
