@@ -83,7 +83,11 @@ func (t *Tracer) StartSpanFromContext(ctx context.Context, name string, options 
 // StartSpan creates and starts a span.
 func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 	if atomic.LoadInt32(&t.noop) == 1 {
-		return &noopSpan{}
+		s := &spanImpl{}
+		for _, option := range options {
+			option(t, s)
+		}
+		return &noopSpan{SpanContext: s.SpanContext}
 	}
 	s := &spanImpl{
 		SpanModel: model.SpanModel{
