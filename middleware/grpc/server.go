@@ -64,12 +64,12 @@ func NewServerHandler(tracer *zipkin.Tracer, options ...ServerOption) stats.Hand
 }
 
 // HandleConn exists to satisfy gRPC stats.Handler.
-func (s *serverHandler) HandleConn(ctx context.Context, cs stats.ConnStats) {
+func (s *serverHandler) HandleConn(_ context.Context, _ stats.ConnStats) {
 	// no-op
 }
 
 // TagConn exists to satisfy gRPC stats.Handler.
-func (s *serverHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) context.Context {
+func (s *serverHandler) TagConn(ctx context.Context, _ *stats.ConnTagInfo) context.Context {
 	// no-op
 	return ctx
 }

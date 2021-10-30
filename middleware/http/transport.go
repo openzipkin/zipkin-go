@@ -24,7 +24,7 @@ import (
 	"os"
 	"strconv"
 
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 )

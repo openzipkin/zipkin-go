@@ -146,7 +146,8 @@ func ParseSingleHeader(contextHeader string) (*model.SpanContext, error) {
 			} else if headerLen == pos+16+1+16+1+1+1+16 {
 				sampling = string(contextHeader[pos+16+1+16+1])
 
-				rawParentID, err := strconv.ParseUint(contextHeader[pos+16+1+16+1+1+1:], 16, 64)
+				var rawParentID uint64
+				rawParentID, err = strconv.ParseUint(contextHeader[pos+16+1+16+1+1+1:], 16, 64)
 				if err != nil {
 					return nil, ErrInvalidParentSpanIDValue
 				}
@@ -179,7 +180,7 @@ func ParseSingleHeader(contextHeader string) (*model.SpanContext, error) {
 
 // BuildSingleHeader takes the values from the SpanContext and builds the B3 header
 func BuildSingleHeader(sc model.SpanContext) string {
-	header := []string{}
+	var header []string
 	if !sc.TraceID.Empty() && sc.ID > 0 {
 		header = append(header, sc.TraceID.String(), sc.ID.String())
 	}

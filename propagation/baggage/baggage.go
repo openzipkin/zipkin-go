@@ -48,7 +48,7 @@ func (b *baggage) Init() model.Baggage {
 }
 
 func (b *baggage) AddHeader(key string, val ...string) bool {
-	if len(val) == 0 || !b.wl[key] {
+	if len(val) == 0 || !b.wl[strings.ToLower(key)] {
 		return false
 	}
 	// multiple values for a header is allowed
@@ -58,10 +58,15 @@ func (b *baggage) AddHeader(key string, val ...string) bool {
 }
 
 func (b *baggage) DeleteHeader(key string) bool {
+	key = strings.ToLower(key)
 	if !b.wl[key] {
 		return false
 	}
-	delete(b.c, key)
+	for k := range b.c {
+		if strings.EqualFold(key, k) {
+			delete(b.c, k)
+		}
+	}
 	return true
 }
 
@@ -74,7 +79,7 @@ func (b *baggage) IterateHeaders(f func(key string, vals []string)) {
 }
 
 func (b *baggage) IterateWhiteList(f func(key string)) {
-	for k, _ := range b.wl {
+	for k := range b.wl {
 		f(k)
 	}
 }
