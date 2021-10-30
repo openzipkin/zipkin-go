@@ -24,7 +24,7 @@ import (
 // the Span to be created with tracer.StartSpan().
 type SpanOption func(t *Tracer, s *spanImpl)
 
-// Kind sets the kind of the span being created..
+// Kind sets the kind of the span being created.
 func Kind(kind model.Kind) SpanOption {
 	return func(t *Tracer, s *spanImpl) {
 		s.Kind = kind

@@ -17,16 +17,18 @@ package grpc
 import (
 	"context"
 
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/stats"
+
 	"github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/stats"
 )
 
 type serverHandler struct {
 	tracer      *zipkin.Tracer
 	defaultTags map[string]string
+	baggage     model.Baggage
 }
 
 // A ServerOption can be passed to NewServerHandler to customize the returned handler.
@@ -36,6 +38,14 @@ type ServerOption func(*serverHandler)
 func ServerTags(tags map[string]string) ServerOption {
 	return func(h *serverHandler) {
 		h.defaultTags = tags
+	}
+}
+
+// EnableBaggage can be passed to NewServerHandler to enable propagation of
+// whitelisted headers through the SpanContext object.
+func EnableBaggage(b model.Baggage) ServerOption {
+	return func(h *serverHandler) {
+		h.baggage = b
 	}
 }
 
@@ -81,7 +91,23 @@ func (s *serverHandler) TagRPC(ctx context.Context, rti *stats.RPCTagInfo) conte
 
 	sc := s.tracer.Extract(b3.ExtractGRPC(&md))
 
-	span := s.tracer.StartSpan(name, zipkin.Kind(model.Server), zipkin.Parent(sc), zipkin.RemoteEndpoint(remoteEndpointFromContext(ctx, "")))
+	// store whitelisted headers to be propagated in spanContext
+	if s.baggage != nil {
+		sc.Baggage = s.baggage.Init()
+		sc.Baggage.IterateWhiteList(func(key string) {
+			vals := md.Get(key)
+			if len(vals) > 0 {
+				sc.Baggage.AddHeader(key, vals...)
+			}
+		})
+	}
+
+	span := s.tracer.StartSpan(
+		name,
+		zipkin.Kind(model.Server),
+		zipkin.Parent(sc),
+		zipkin.RemoteEndpoint(remoteEndpointFromContext(ctx, "")),
+	)
 
 	if !zipkin.IsNoop(span) {
 		for k, v := range s.defaultTags {

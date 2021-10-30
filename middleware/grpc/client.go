@@ -86,6 +86,14 @@ func (c *clientHandler) TagRPC(ctx context.Context, rti *stats.RPCTagInfo) conte
 		md = metadata.New(nil)
 	}
 	_ = b3.InjectGRPC(&md)(span.Context())
+
+	// inject whitelisted headers from spancontext into the outgoing gRPC request metadata
+	if span.Context().Baggage != nil {
+		span.Context().Baggage.IterateHeaders(func(key string, values []string) {
+			md.Set(key, values...)
+		})
+	}
+
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	return ctx
 }

@@ -33,6 +33,7 @@ type handler struct {
 	defaultTags     map[string]string
 	requestSampler  RequestSamplerFunc
 	errHandler      ErrHandler
+	baggage         model.Baggage
 }
 
 // ServerOption allows Middleware to be optionally configured.
@@ -79,6 +80,14 @@ func ServerErrHandler(eh ErrHandler) ServerOption {
 	}
 }
 
+// EnableBaggage can be passed to NewServerHandler to enable propagation of
+// whitelisted headers through the SpanContext object.
+func EnableBaggage(b model.Baggage) ServerOption {
+	return func(h *handler) {
+		h.baggage = b
+	}
+}
+
 // NewServerMiddleware returns a http.Handler middleware with Zipkin tracing.
 func NewServerMiddleware(t *zipkin.Tracer, options ...ServerOption) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -100,6 +109,17 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// try to extract B3 Headers from upstream
 	sc := h.tracer.Extract(b3.ExtractHTTP(r))
+
+	// store whitelisted headers to be propagated in spanContext
+	if h.baggage != nil {
+		sc.Baggage = h.baggage.Init()
+		sc.Baggage.IterateWhiteList(func(key string) {
+			vals := r.Header.Values(key)
+			if len(vals) > 0 {
+				sc.Baggage.AddHeader(key, vals...)
+			}
+		})
+	}
 
 	if h.requestSampler != nil {
 		if sample := h.requestSampler(r); sample != nil {

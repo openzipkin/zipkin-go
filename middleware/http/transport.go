@@ -154,6 +154,15 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		req.Context(), req.URL.Scheme+"/"+req.Method, zipkin.Kind(model.Client), zipkin.RemoteEndpoint(t.remoteEndpoint),
 	)
 
+	// inject whitelisted headers from spancontext into the outgoing HTTP request headers
+	if sp.Context().Baggage != nil {
+		sp.Context().Baggage.IterateHeaders(func(key string, vals []string) {
+			for _, val := range vals {
+				req.Header.Add(key, val)
+			}
+		})
+	}
+
 	if zipkin.IsNoop(sp) {
 		// While the span is not being recorded, we still want to propagate the context.
 		_ = b3.InjectHTTP(req)(sp.Context())
