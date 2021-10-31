@@ -16,7 +16,7 @@
 
 .PHONY: test
 test:
-	# Added MallocNanoZone env var, see: https://github.com/golang/go/issues/49138
+	# MallocNanoZone env var avoids problems in macOS Monterey: golang/go#49138
 	MallocNanoZone=0 go test -v -race -cover ./...
 
 .PHONY: bench
