@@ -26,8 +26,8 @@ bench:
 .PHONY: protoc
 protoc:
 	protoc --go_out=module=github.com/openzipkin/zipkin-go:. proto/zipkin_proto3/zipkin.proto
-	protoc --go_out=module=github.com/openzipkin/zipkin-go:. proto/testing/service.proto
-	protoc --go-grpc_out=module=github.com/openzipkin/zipkin-go:. proto/testing/service.proto
+	protoc --go_out=module=github.com/openzipkin/zipkin-go:. proto/testing/*.proto
+	protoc --go-grpc_out=module=github.com/openzipkin/zipkin-go:. proto/testing/*.proto
 
 .PHONY: lint
 lint:
