@@ -154,10 +154,10 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		req.Context(), req.URL.Scheme+"/"+req.Method, zipkin.Kind(model.Client), zipkin.RemoteEndpoint(t.remoteEndpoint),
 	)
 
-	// inject whitelisted headers from spancontext into the outgoing HTTP request headers
+	// inject registered headers from span context into the outgoing HTTP request headers
 	if sp.Context().Baggage != nil {
-		sp.Context().Baggage.IterateHeaders(func(key string, vals []string) {
-			for _, val := range vals {
+		sp.Context().Baggage.Iterate(func(key string, values []string) {
+			for _, val := range values {
 				req.Header.Add(key, val)
 			}
 		})

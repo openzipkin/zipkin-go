@@ -19,58 +19,50 @@ import (
 	"testing"
 )
 
-func TestBaggageWhiteList(t *testing.T) {
-	b := New("X-Request-Id", "some-header", "x-request-id")
+func TestBaggageRegistry(t *testing.T) {
+	baggageHandler := New("X-Request-Id", "some-header", "x-request-id")
 
 	var items int
-	b.IterateWhiteList(func(key string) {
+	baggageHandler.(*baggage).IterateKeys(func(key string) {
 		if key != "some-header" && key != "x-request-id" {
-			t.Errorf("Unexpected whitelist item: %s", key)
+			t.Errorf("Unexpected registry item: %s", key)
 		}
 		items++
 	})
 
 	if items != 2 {
-		t.Errorf("Unexpected whitelist count: want %d, have %d", 2, items)
-	}
-
-	items = 0
-	b.Init().IterateWhiteList(func(key string) {
-		if key != "some-header" && key != "x-request-id" {
-			t.Errorf("Unexpected whitelist item: %s", key)
-		}
-		items++
-	})
-
-	if items != 2 {
-		t.Errorf("Unexpected whitelist count: want %d, have %d", 2, items)
+		t.Errorf("Unexpected registration count: want %d, have %d", 2, items)
 	}
 }
 
 func TestBaggageValues(t *testing.T) {
-	b := New("X-Request-Id", "Some-Header")
+	// register the baggage fields we'll propagate
+	baggageHandler := New("X-Request-Id", "Some-Header")
+
+	// initialize fresh BaggageFields container
+	baggage := baggageHandler.New()
 
 	t.Run("AddHeader", func(t *testing.T) {
-		if b.AddHeader("Invalid-Key", "Invalid-Key-Value") {
+		if baggage.Add("Invalid-Key", "Invalid-Key-Value") {
 			t.Errorf("expected Invalid-Key to return false")
 		}
-		if !b.AddHeader("X-Request-Id", "X-Request-Id-Value") {
+		if !baggage.Add("X-Request-Id", "X-Request-Id-Value") {
 			t.Errorf("expected X-Request-Id to return true")
 		}
-		if !b.AddHeader("Some-Header", "Some-Header-Value1", "Some-Header-Value2") {
+		if !baggage.Add("Some-Header", "Some-Header-Value1", "Some-Header-Value2") {
 			t.Errorf("expected Some-Header to return true")
 		}
-		if !b.AddHeader("Some-Header", "Some-Header-Value3") {
+		if !baggage.Add("Some-Header", "Some-Header-Value3") {
 			t.Errorf("expected Some-Header to return true")
 		}
 	})
 
-	b.Init().IterateHeaders(func(key string, values []string) {
+	baggageHandler.New().Iterate(func(key string, values []string) {
 		t.Errorf("expected no header data to exist, have: key=%s values=%v", key, values)
 	})
 
 	t.Run("IterateHeaders", func(t *testing.T) {
-		b.IterateHeaders(func(key string, have []string) {
+		baggage.Iterate(func(key string, have []string) {
 			if strings.EqualFold(key, "x-request-id") {
 				want := 1
 				if len(have) != want {
@@ -105,15 +97,15 @@ func TestBaggageValues(t *testing.T) {
 	})
 
 	t.Run("DeleteHeader", func(t *testing.T) {
-		if b.DeleteHeader("Invalid-Key") {
+		if baggage.Delete("Invalid-Key") {
 			t.Errorf("expected Invalid-Key to return false")
 		}
 
-		if !b.DeleteHeader("some-header") {
+		if !baggage.Delete("some-header") {
 			t.Errorf("expected some-header to return true")
 		}
 
-		b.IterateHeaders(func(key string, have []string) {
+		baggage.Iterate(func(key string, have []string) {
 			if strings.EqualFold(key, "x-request-id") {
 				want := 1
 				if len(have) != want {

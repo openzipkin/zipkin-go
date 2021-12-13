@@ -28,34 +28,34 @@ var (
 	ErrValidDurationRequired = errors.New("valid duration required")
 )
 
-// Baggage holds the interface for interacting with baggage context propagation
-// implementations.
-type Baggage interface {
-	// Init returns a fresh Baggage primed for usage in a request lifecycle.
-	Init() Baggage
-	// AddHeader adds the provided values to a header designated by key. If key
-	// is not in the whitelist it will be a noop and return false.
-	AddHeader(key string, value ...string) bool
-	// DeleteHeader removes the header data designated by key. If key is not
-	// in the whitelist it will be a noop and return false.
-	DeleteHeader(key string) bool
-	// IterateHeaders will iterate over the whitelist headers and for each found
-	// header with data it will trigger the callback function.
-	IterateHeaders(f func(key string, values []string))
-	// IterateWhiteList iterates over the whitelist headers and trigger the
-	// callback function providing it with each header key.
-	IterateWhiteList(f func(key string))
+// BaggageFields holds the interface for consumers needing to interact with
+// the fields in application logic.
+type BaggageFields interface {
+	// Get returns the values for a field identified by its key.
+	Get(key string) []string
+	// Add adds the provided values to a header designated by key. If not
+	// accepted by the baggage implementation, it will return false.
+	Add(key string, value ...string) bool
+	// Set sets the provided values to a header designated by key. If not
+	// accepted by the baggage implementation, it will return false.
+	Set(key string, value ...string) bool
+	// Delete removes the field data designated by key. If not accepted by the
+	// baggage implementation, it will return false.
+	Delete(key string) bool
+	// Iterate will iterate over the available fields and for each one it will
+	// trigger the callback function.
+	Iterate(f func(key string, values []string))
 }
 
 // SpanContext holds the context of a Span.
 type SpanContext struct {
-	TraceID  TraceID `json:"traceId"`
-	ID       ID      `json:"id"`
-	ParentID *ID     `json:"parentId,omitempty"`
-	Debug    bool    `json:"debug,omitempty"`
-	Sampled  *bool   `json:"-"`
-	Err      error   `json:"-"`
-	Baggage  Baggage `json:"-"`
+	TraceID  TraceID       `json:"traceId"`
+	ID       ID            `json:"id"`
+	ParentID *ID           `json:"parentId,omitempty"`
+	Debug    bool          `json:"debug,omitempty"`
+	Sampled  *bool         `json:"-"`
+	Err      error         `json:"-"`
+	Baggage  BaggageFields `json:"-"`
 }
 
 // SpanModel structure.

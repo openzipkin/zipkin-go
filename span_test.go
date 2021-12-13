@@ -105,7 +105,7 @@ func TestTagsSpanOption(t *testing.T) {
 	}
 
 	if want, have := allTags, span.(*spanImpl).Tags; !reflect.DeepEqual(want, have) {
-		t.Errorf("Tags want: %+v, have: %+v", want, have)
+		t.Errorf("Tags don't match:\nwant: %+v\nhave: %+v", want, have)
 	}
 }
 

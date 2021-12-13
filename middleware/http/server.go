@@ -20,7 +20,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go/middleware"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 )
@@ -33,7 +34,7 @@ type handler struct {
 	defaultTags     map[string]string
 	requestSampler  RequestSamplerFunc
 	errHandler      ErrHandler
-	baggage         model.Baggage
+	baggage         middleware.BaggageHandler
 }
 
 // ServerOption allows Middleware to be optionally configured.
@@ -81,8 +82,8 @@ func ServerErrHandler(eh ErrHandler) ServerOption {
 }
 
 // EnableBaggage can be passed to NewServerHandler to enable propagation of
-// whitelisted headers through the SpanContext object.
-func EnableBaggage(b model.Baggage) ServerOption {
+// registered fields through the SpanContext object.
+func EnableBaggage(b middleware.BaggageHandler) ServerOption {
 	return func(h *handler) {
 		h.baggage = b
 	}
@@ -108,22 +109,19 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var spanName string
 
 	// try to extract B3 Headers from upstream
-	sc := h.tracer.Extract(b3.ExtractHTTP(r))
+	spanContext := h.tracer.Extract(b3.ExtractHTTP(r))
 
-	// store whitelisted headers to be propagated in spanContext
+	// store registered headers to be propagated in spanContext
 	if h.baggage != nil {
-		sc.Baggage = h.baggage.Init()
-		sc.Baggage.IterateWhiteList(func(key string) {
-			vals := r.Header.Values(key)
-			if len(vals) > 0 {
-				sc.Baggage.AddHeader(key, vals...)
-			}
-		})
+		spanContext.Baggage = h.baggage.New()
+		for key, values := range r.Header {
+			spanContext.Baggage.Add(key, values...)
+		}
 	}
 
 	if h.requestSampler != nil {
 		if sample := h.requestSampler(r); sample != nil {
-			sc.Sampled = sample
+			spanContext.Sampled = sample
 		}
 	}
 
@@ -137,7 +135,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sp := h.tracer.StartSpan(
 		spanName,
 		zipkin.Kind(model.Server),
-		zipkin.Parent(sc),
+		zipkin.Parent(spanContext),
 	)
 	// add our span to context
 	ctx := zipkin.NewContext(r.Context(), sp)
@@ -186,7 +184,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.next.ServeHTTP(ri.wrap(), r.WithContext(ctx))
 }
 
-// rwInterceptor intercepts the ResponseWriter so it can track response size
+// rwInterceptor intercepts the ResponseWriter, so it can track response size
 // and returned status code.
 type rwInterceptor struct {
 	w          http.ResponseWriter

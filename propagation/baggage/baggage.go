@@ -12,74 +12,104 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package baggage holds a Baggage propagation implementation based on
+// explicit allowList semantics.
 package baggage
 
 import (
 	"strings"
 
+	"github.com/openzipkin/zipkin-go/middleware"
 	"github.com/openzipkin/zipkin-go/model"
 )
 
-var _ model.Baggage = (*baggage)(nil)
+var (
+	_ middleware.BaggageHandler = (*baggage)(nil)
+	_ model.BaggageFields       = (*baggage)(nil)
+)
 
 type baggage struct {
-	wl map[string]bool
-	c  map[string][]string
+	// registry holds our registry of allowed fields to propagate
+	registry map[string]struct{}
+	// fields holds the retrieved key-values pairs to propagate
+	fields map[string][]string
 }
 
-// New returns a new Baggage interface which is configured for the provided
-// whitelisted headers.
-func New(headers ...string) model.Baggage {
+// New returns a new Baggage interface which is configured to propagate the
+// registered fields.
+func New(keys ...string) middleware.BaggageHandler {
 	b := &baggage{
-		wl: make(map[string]bool),
-		c:  make(map[string][]string),
+		registry: make(map[string]struct{}),
 	}
-	for _, hdr := range headers {
-		b.wl[strings.ToLower(hdr)] = true
+	for _, key := range keys {
+		b.registry[strings.ToLower(key)] = struct{}{}
 	}
 	return b
 }
 
-func (b *baggage) Init() model.Baggage {
+// New is called by server middlewares and returns a fresh initialized
+// baggage implementation.
+func (b *baggage) New() model.BaggageFields {
 	return &baggage{
-		wl: b.wl,
-		c:  make(map[string][]string),
+		registry: b.registry,
+		fields:   make(map[string][]string),
 	}
 }
 
-func (b *baggage) AddHeader(key string, val ...string) bool {
-	if len(val) == 0 || !b.wl[strings.ToLower(key)] {
+func (b *baggage) Get(key string) []string {
+	return b.fields[strings.ToLower(key)]
+}
+
+func (b *baggage) Add(key string, values ...string) bool {
+	if len(values) == 0 {
+		return false
+	}
+	key = strings.ToLower(key)
+	if _, ok := b.registry[key]; !ok {
 		return false
 	}
 	// multiple values for a header is allowed
-	b.c[key] = append(b.c[key], val...)
+	b.fields[key] = append(b.fields[key], values...)
 
 	return true
 }
 
-func (b *baggage) DeleteHeader(key string) bool {
-	key = strings.ToLower(key)
-	if !b.wl[key] {
+func (b *baggage) Set(key string, values ...string) bool {
+	if len(values) == 0 {
 		return false
 	}
-	for k := range b.c {
-		if strings.EqualFold(key, k) {
-			delete(b.c, k)
+	key = strings.ToLower(key)
+	if _, ok := b.registry[key]; !ok {
+		return false
+	}
+	b.fields[key] = values
+
+	return true
+}
+
+func (b *baggage) Delete(key string) bool {
+	key = strings.ToLower(key)
+	if _, ok := b.registry[key]; !ok {
+		return false
+	}
+	for k := range b.fields {
+		if key == k {
+			delete(b.fields, k)
 		}
 	}
 	return true
 }
 
-func (b *baggage) IterateHeaders(f func(key string, vals []string)) {
-	for k, v := range b.c {
-		vals := make([]string, len(v))
-		copy(vals, v)
-		f(k, vals)
+func (b *baggage) Iterate(f func(key string, values []string)) {
+	for key, v := range b.fields {
+		values := make([]string, len(v))
+		copy(values, v)
+		f(key, values)
 	}
 }
 
-func (b *baggage) IterateWhiteList(f func(key string)) {
-	for k := range b.wl {
-		f(k)
+func (b *baggage) IterateKeys(f func(key string)) {
+	for key := range b.registry {
+		f(key)
 	}
 }
