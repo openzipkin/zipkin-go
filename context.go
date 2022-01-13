@@ -16,6 +16,8 @@ package zipkin
 
 import (
 	"context"
+
+	"github.com/openzipkin/zipkin-go/model"
 )
 
 var defaultNoopSpan = &noopSpan{}
@@ -45,6 +47,15 @@ func SpanOrNoopFromContext(ctx context.Context) Span {
 // NewContext stores a Zipkin Span into Go's context propagation mechanism.
 func NewContext(ctx context.Context, s Span) context.Context {
 	return context.WithValue(ctx, spanKey, s)
+}
+
+// BaggageFromContext takes a context and returns access to BaggageFields if
+// available. Returns nil if there are no BaggageFields found in context.
+func BaggageFromContext(ctx context.Context) model.BaggageFields {
+	if span := SpanFromContext(ctx); span != nil {
+		return span.Context().Baggage
+	}
+	return nil
 }
 
 type ctxKey struct{}
