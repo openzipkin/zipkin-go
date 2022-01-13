@@ -1,4 +1,4 @@
-// Copyright 2021 The OpenZipkin Authors
+// Copyright 2022 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
@@ -42,7 +42,7 @@ func TestRoundTripErrHandlingForRoundTripError(t *testing.T) {
 		t.Fatalf("unexpected error when creating tracer: %v", err)
 	}
 	req, _ := http.NewRequest("GET", "localhost", nil)
-	transport, _ := NewTransport(
+	tr, _ := NewTransport(
 		tracer,
 		TransportErrHandler(func(_ zipkin.Span, err error, statusCode int) {
 			if want, have := expectedErr, err; want != have {
@@ -52,7 +52,7 @@ func TestRoundTripErrHandlingForRoundTripError(t *testing.T) {
 		RoundTripper(&errRoundTripper{err: expectedErr}),
 	)
 
-	_, err = transport.RoundTrip(req)
+	_, err = tr.RoundTrip(req)
 	if err == nil {
 		t.Fatalf("expected error: %v", expectedErr)
 	}
@@ -90,7 +90,7 @@ func TestRoundTripErrHandlingForStatusCode(t *testing.T) {
 			t.Fatalf("unexpected error when creating tracer: %v", err)
 		}
 		req, _ := http.NewRequest("GET", srv.URL, nil)
-		transport, _ := NewTransport(
+		tr, _ := NewTransport(
 			tracer,
 			TransportErrHandler(func(_ zipkin.Span, err error, statusCode int) {
 				if want, have := tc.expectedError, statusCode; want != 0 && want != have {
@@ -99,7 +99,7 @@ func TestRoundTripErrHandlingForStatusCode(t *testing.T) {
 			}),
 		)
 
-		_, err = transport.RoundTrip(req)
+		_, err = tr.RoundTrip(req)
 		if err != nil {
 			t.Fatalf("unexpected error in the round trip: %v", err)
 		}
@@ -112,7 +112,7 @@ func TestRoundTripErrResponseReadingSuccess(t *testing.T) {
 	expectedBody := []byte("message")
 	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.WriteHeader(500)
-		rw.Write(expectedBody)
+		_, _ = rw.Write(expectedBody)
 	}))
 	defer srv.Close()
 
@@ -121,7 +121,7 @@ func TestRoundTripErrResponseReadingSuccess(t *testing.T) {
 		t.Fatalf("unexpected error when creating tracer: %v", err)
 	}
 	req, _ := http.NewRequest("GET", srv.URL, nil)
-	transport, _ := NewTransport(
+	tr, _ := NewTransport(
 		tracer,
 		TransportErrResponseReader(func(_ zipkin.Span, br io.Reader) {
 			body, _ := ioutil.ReadAll(br)
@@ -131,7 +131,7 @@ func TestRoundTripErrResponseReadingSuccess(t *testing.T) {
 		}),
 	)
 
-	res, err := transport.RoundTrip(req)
+	res, err := tr.RoundTrip(req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -206,21 +206,21 @@ func TestTransportRequestSamplerOverridesSamplingFromContext(t *testing.T) {
 		}
 
 		sp := tracer.StartSpan("op1")
-		defer sp.Finish()
 		ctx := zipkin.NewContext(context.Background(), sp)
 
 		req, _ := http.NewRequest("GET", srv.URL, nil)
-		transport, _ := NewTransport(
+		tr, _ := NewTransport(
 			tracer,
 			TransportRequestSampler(c.RequestSampler),
 		)
 
-		_, err = transport.RoundTrip(req.WithContext(ctx))
+		_, err = tr.RoundTrip(req.WithContext(ctx))
+		sp.Finish()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		rep.Close()
+		_ = rep.Close()
 		srv.Close()
 	}
 }

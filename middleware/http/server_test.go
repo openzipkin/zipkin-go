@@ -1,4 +1,4 @@
-// Copyright 2021 The OpenZipkin Authors
+// Copyright 2022 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"testing"
 
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go"
 	mw "github.com/openzipkin/zipkin-go/middleware/http"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
@@ -36,7 +36,7 @@ func httpHandler(code int, headers http.Header, body *bytes.Buffer) http.Handler
 		for key, value := range headers {
 			w.Header().Add(key, value[0])
 		}
-		w.Write(body.Bytes())
+		_, _ = w.Write(body.Bytes())
 	}
 }
 
@@ -96,7 +96,7 @@ func TestHTTPHandlerWrapping(t *testing.T) {
 			t.Fatalf("unable to create request")
 		}
 
-		httpHandlerFunc := http.HandlerFunc(httpHandler(code, headers, c.responseBody))
+		httpHandlerFunc := httpHandler(code, headers, c.responseBody)
 
 		tags := map[string]string{
 			"component": "testServer",
@@ -187,7 +187,7 @@ func TestHTTPDefaultSpanName(t *testing.T) {
 		t.Fatalf("unable to create request")
 	}
 
-	httpHandlerFunc := http.HandlerFunc(httpHandler(200, nil, bytes.NewBufferString("")))
+	httpHandlerFunc := httpHandler(200, nil, bytes.NewBufferString(""))
 
 	handler := mw.NewServerMiddleware(tr)(httpHandlerFunc)
 
@@ -216,10 +216,10 @@ func TestHTTPRequestSampler(t *testing.T) {
 		httpRecorder    = httptest.NewRecorder()
 		requestBuf      = bytes.NewBufferString("incoming data")
 		methodType      = "POST"
-		httpHandlerFunc = http.HandlerFunc(httpHandler(200, nil, bytes.NewBufferString("")))
+		httpHandlerFunc = httpHandler(200, nil, bytes.NewBufferString(""))
 	)
 
-	samplers := [](func(r *http.Request) *bool){
+	samplers := []func(r *http.Request) *bool{
 		nil,
 		func(r *http.Request) *bool { return mw.Sample() },
 		func(r *http.Request) *bool { return mw.Discard() },

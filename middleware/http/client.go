@@ -1,4 +1,4 @@
-// Copyright 2021 The OpenZipkin Authors
+// Copyright 2022 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"time"
 
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
 )
 
@@ -98,11 +98,11 @@ func NewClient(tracer *zipkin.Tracer, options ...ClientOption) (*Client, error) 
 		TransportTrace(c.httpTrace),
 		TransportRemoteEndpoint(c.remoteEndpoint),
 	)
-	transport, err := NewTransport(tracer, c.transportOptions...)
+	tr, err := NewTransport(tracer, c.transportOptions...)
 	if err != nil {
 		return nil, err
 	}
-	c.Client.Transport = transport
+	c.Client.Transport = tr
 
 	return c, nil
 }

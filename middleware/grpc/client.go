@@ -1,4 +1,4 @@
-// Copyright 2021 The OpenZipkin Authors
+// Copyright 2022 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,12 +55,12 @@ func NewClientHandler(tracer *zipkin.Tracer, options ...ClientOption) stats.Hand
 }
 
 // HandleConn exists to satisfy gRPC stats.Handler.
-func (c *clientHandler) HandleConn(ctx context.Context, cs stats.ConnStats) {
+func (c *clientHandler) HandleConn(_ context.Context, _ stats.ConnStats) {
 	// no-op
 }
 
 // TagConn exists to satisfy gRPC stats.Handler.
-func (c *clientHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) context.Context {
+func (c *clientHandler) TagConn(ctx context.Context, _ *stats.ConnTagInfo) context.Context {
 	// no-op
 	return ctx
 }
@@ -86,6 +86,14 @@ func (c *clientHandler) TagRPC(ctx context.Context, rti *stats.RPCTagInfo) conte
 		md = metadata.New(nil)
 	}
 	_ = b3.InjectGRPC(&md)(span.Context())
+
+	// inject baggage fields from span context into the outgoing gRPC request metadata
+	if span.Context().Baggage != nil {
+		span.Context().Baggage.Iterate(func(key string, values []string) {
+			md.Set(key, values...)
+		})
+	}
+
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	return ctx
 }

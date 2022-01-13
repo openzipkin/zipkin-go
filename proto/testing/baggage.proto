@@ -12,7 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*
-Package grpc contains several gRPC handlers which can be used for instrumenting calls with Zipkin.
-*/
-package grpc
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package zipkin.testing;
+
+option go_package = "github.com/openzipkin/zipkin-go/proto/testing";
+
+service BaggageService {
+  rpc Handler1(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Handler2(google.protobuf.Empty) returns (google.protobuf.Empty);
+}

@@ -1,4 +1,4 @@
-// Copyright 2021 The OpenZipkin Authors
+// Copyright 2022 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,14 +18,16 @@ import (
 	"net/http"
 	"testing"
 
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go"
 	httpclient "github.com/openzipkin/zipkin-go/middleware/http"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
 func TestHTTPClient(t *testing.T) {
 	reporter := recorder.NewReporter()
-	defer reporter.Close()
+	defer func() {
+		_ = reporter.Close()
+	}()
 
 	ep, _ := zipkin.NewEndpoint("httpClient", "")
 	tracer, err := zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(ep))
@@ -60,7 +62,7 @@ func TestHTTPClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to execute client request: %+v", err)
 	}
-	res.Body.Close()
+	_ = res.Body.Close()
 
 	spans := reporter.Flush()
 	if len(spans) < 2 {
@@ -81,7 +83,7 @@ func TestHTTPClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to execute client request: %+v", err)
 	}
-	res.Body.Close()
+	_ = res.Body.Close()
 
 	spans = reporter.Flush()
 	if len(spans) == 0 {
@@ -100,6 +102,5 @@ func TestHTTPClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to execute client request: %+v", err)
 	}
-	res.Body.Close()
-
+	_ = res.Body.Close()
 }

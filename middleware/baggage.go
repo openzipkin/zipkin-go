@@ -12,19 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*
-Package propagation holds the required function signatures for Injection and
-Extraction as used by the Zipkin Tracer.
-
-Subpackages of this package contain officially supported standard propagation
-implementations.
-*/
-package propagation
+package middleware
 
 import "github.com/openzipkin/zipkin-go/model"
 
-// Extractor function signature
-type Extractor func() (*model.SpanContext, error)
-
-// Injector function signature
-type Injector func(model.SpanContext) error
+// BaggageHandler holds the interface for server and client middlewares
+// interacting with baggage context propagation implementations.
+// A reference implementation can be found in package:
+// github.com/openzipkin/zipkin-go/propagation/baggage
+type BaggageHandler interface {
+	// New returns a fresh BaggageFields implementation primed for usage in a
+	// request lifecycle.
+	// This method needs to be called by incoming transport middlewares. See
+	// middlewares/grpc/server.go and middlewares/http/server.go
+	New() model.BaggageFields
+}

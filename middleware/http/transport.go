@@ -1,4 +1,4 @@
-// Copyright 2021 The OpenZipkin Authors
+// Copyright 2022 The OpenZipkin Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 	"os"
 	"strconv"
 
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 )
@@ -153,6 +153,15 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	sp, _ := t.tracer.StartSpanFromContext(
 		req.Context(), req.URL.Scheme+"/"+req.Method, zipkin.Kind(model.Client), zipkin.RemoteEndpoint(t.remoteEndpoint),
 	)
+
+	// inject registered headers from span context into the outgoing HTTP request headers
+	if sp.Context().Baggage != nil {
+		sp.Context().Baggage.Iterate(func(key string, values []string) {
+			for _, val := range values {
+				req.Header.Add(key, val)
+			}
+		})
+	}
 
 	if zipkin.IsNoop(sp) {
 		// While the span is not being recorded, we still want to propagate the context.
