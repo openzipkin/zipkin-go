@@ -23,7 +23,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/openzipkin/zipkin-go/model"
-	zipkin_proto3 "github.com/openzipkin/zipkin-go/proto/zipkin_proto3"
+	zp3 "github.com/openzipkin/zipkin-go/proto/zipkin_proto3"
 	"github.com/openzipkin/zipkin-go/reporter"
 	"github.com/openzipkin/zipkin-go/reporter/kafka"
 )
@@ -33,6 +33,34 @@ type stubProducer struct {
 	err       chan *sarama.ProducerError
 	kafkaDown bool
 	closed    bool
+}
+
+func (p *stubProducer) IsTransactional() bool {
+	return false
+}
+
+func (p *stubProducer) TxnStatus() sarama.ProducerTxnStatusFlag {
+	return sarama.ProducerTxnFlagEndTransaction
+}
+
+func (p *stubProducer) BeginTxn() error {
+	return nil
+}
+
+func (p *stubProducer) CommitTxn() error {
+	return nil
+}
+
+func (p *stubProducer) AbortTxn() error {
+	return nil
+}
+
+func (p *stubProducer) AddOffsetsToTxn(_ map[string][]*sarama.PartitionOffsetMetadata, _ string) error {
+	return nil
+}
+
+func (p *stubProducer) AddMessageToTxn(_ *sarama.ConsumerMessage, _ string, _ *string) error {
+	return nil
 }
 
 func (p *stubProducer) AsyncClose() {}
@@ -63,13 +91,13 @@ var spans = []*model.SpanModel{
 }
 
 func jsonDeserializer(body []byte) ([]*model.SpanModel, error) {
-	spans := []*model.SpanModel{}
+	spans := make([]*model.SpanModel, 0)
 	err := json.Unmarshal(body, &spans)
 	return spans, err
 }
 
 func protoDeserializer(body []byte) ([]*model.SpanModel, error) {
-	spans, err := zipkin_proto3.ParseSpans(body, true)
+	spans, err := zp3.ParseSpans(body, true)
 	return spans, err
 }
 
@@ -96,7 +124,7 @@ func TestKafkaProduceProto(t *testing.T) {
 	c, err := kafka.NewReporter(
 		[]string{"192.0.2.10:9092"},
 		kafka.Producer(p),
-		kafka.Serializer(zipkin_proto3.SpanSerializer{}),
+		kafka.Serializer(zp3.SpanSerializer{}),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -170,7 +198,7 @@ func TestKafkaErrors(t *testing.T) {
 			t.Errorf("unexpected error: %s", err.Error())
 		}
 
-		json.Unmarshal(messageBody, &have)
+		_ = json.Unmarshal(messageBody, &have)
 		testEqual(t, want, &have[0])
 	}
 
