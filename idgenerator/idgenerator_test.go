@@ -121,10 +121,9 @@ func TestRandomTimeStamped(t *testing.T) {
 
 	var latestTS uint64
 	for idx, traceID := range ids {
-		if new, old := traceID.High>>32, latestTS; new < old {
-			t.Errorf("[%d] expected a higher timestamp part in traceid but got: old: %d new: %d", idx, old, new)
+		if newVal, oldVal := traceID.High>>32, latestTS; newVal < oldVal {
+			t.Errorf("[%d] expected a higher timestamp part in traceid but got: old: %d new: %d", idx, oldVal, newVal)
 		}
 		latestTS = traceID.High >> 32
 	}
-
 }

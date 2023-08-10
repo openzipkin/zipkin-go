@@ -21,7 +21,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
+
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 )

@@ -21,7 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
+
 	"github.com/openzipkin/zipkin-go/model"
 	zp3 "github.com/openzipkin/zipkin-go/proto/zipkin_proto3"
 	"github.com/openzipkin/zipkin-go/reporter"
@@ -279,7 +280,7 @@ func testEqual(t *testing.T, want *model.SpanModel, have *model.SpanModel) {
 
 func makeNewSpan(methodName string, traceID, spanID, parentSpanID uint64, debug bool) *model.SpanModel {
 	timestamp := time.Now()
-	var parentID = new(model.ID)
+	parentID := new(model.ID)
 	if parentSpanID != 0 {
 		*parentID = model.ID(parentSpanID)
 	}

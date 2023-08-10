@@ -77,19 +77,15 @@ func TestRabbitClose(t *testing.T) {
 	}
 }
 
-func setupRabbit(t *testing.T, address string) (conn *amqp.Connection, ch *amqp.Channel, close func()) {
+func setupRabbit(t *testing.T, address string) (*amqp.Connection, *amqp.Channel, func()) {
 	var err error
-	conn, err = amqp.Dial(address)
+	conn, err := amqp.Dial(address)
 	failOnError(t, err, "Failed to connect to RabbitMQ")
 
-	ch, err = conn.Channel()
+	ch, err := conn.Channel()
 	failOnError(t, err, "Failed to open a channel")
 
-	close = func() {
-		conn.Close()
-		ch.Close()
-	}
-	return
+	return conn, ch, func() { conn.Close(); ch.Close() }
 }
 
 func setupConsume(t *testing.T, ch *amqp.Channel) <-chan amqp.Delivery {
@@ -139,7 +135,7 @@ func testEqual(t *testing.T, want *model.SpanModel, have *model.SpanModel) {
 
 func makeNewSpan(methodName string, traceID, spanID, parentSpanID uint64, debug bool) *model.SpanModel {
 	timestamp := time.Now()
-	var parentID = new(model.ID)
+	parentID := new(model.ID)
 	if parentSpanID != 0 {
 		*parentID = model.ID(parentSpanID)
 	}
