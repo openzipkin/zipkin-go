@@ -25,9 +25,10 @@ import (
 type spanImpl struct {
 	mtx sync.RWMutex
 	model.SpanModel
-	tracer        *Tracer
-	mustCollect   int32 // used as atomic bool (1 = true, 0 = false)
-	flushOnFinish bool
+	tracer              *Tracer
+	mustCollect         int32 // used as atomic bool (1 = true, 0 = false)
+	flushOnFinish       bool
+	finishedSpanHandler func(*model.SpanModel) bool
 }
 
 func (s *spanImpl) Context() model.SpanContext {
@@ -77,21 +78,83 @@ func (s *spanImpl) Tag(key, value string) {
 }
 
 func (s *spanImpl) Finish() {
+	d := time.Since(s.Timestamp)
 	if atomic.CompareAndSwapInt32(&s.mustCollect, 1, 0) {
-		s.Duration = time.Since(s.Timestamp)
-		if s.flushOnFinish {
+		s.mtx.Lock()
+		s.Duration = d
+		s.mtx.Unlock()
+
+		shouldRecord := true
+		if s.finishedSpanHandler != nil {
+			shouldRecord = s.finishedSpanHandler(&s.SpanModel)
+		}
+
+		if shouldRecord && s.flushOnFinish {
 			s.tracer.reporter.Send(s.SpanModel)
 		}
+		return
 	}
+
+	var hasDuration bool
+	s.mtx.Lock()
+	hasDuration = s.Duration == 0
+	s.mtx.Unlock()
+
+	if hasDuration {
+		// it was not meant to be recorded because the CompareAndSwap
+		// did not happen (meaning that s.mustCollect is 0 at this moment)
+		// and duration is still zero value.
+		s.mtx.Lock()
+		s.Duration = d
+		s.mtx.Unlock()
+
+		shouldRecord := false
+		if s.finishedSpanHandler != nil {
+			shouldRecord = s.finishedSpanHandler(&s.SpanModel)
+		}
+
+		if shouldRecord && s.flushOnFinish {
+			s.tracer.reporter.Send(s.SpanModel)
+		}
+	} // else the span is being finished concurrently by another goroutine
 }
 
 func (s *spanImpl) FinishedWithDuration(d time.Duration) {
 	if atomic.CompareAndSwapInt32(&s.mustCollect, 1, 0) {
+		s.mtx.Lock()
 		s.Duration = d
-		if s.flushOnFinish {
+		s.mtx.Unlock()
+
+		shouldRecord := true
+		if s.finishedSpanHandler != nil {
+			shouldRecord = s.finishedSpanHandler(&s.SpanModel)
+		}
+
+		if shouldRecord && s.flushOnFinish {
 			s.tracer.reporter.Send(s.SpanModel)
 		}
+		return
 	}
+
+	var hasDuration bool
+	s.mtx.Lock()
+	hasDuration = s.Duration == 0
+	s.mtx.Unlock()
+
+	if hasDuration {
+		// it was not meant to be recorded because the CompareAndSwap
+		// did not happen (meaning that s.mustCollect is 0 at this moment)
+		// and duration is still zero value.
+		s.Duration = d
+		shouldRecord := false
+		if s.finishedSpanHandler != nil {
+			shouldRecord = s.finishedSpanHandler(&s.SpanModel)
+		}
+
+		if shouldRecord && s.flushOnFinish {
+			s.tracer.reporter.Send(s.SpanModel)
+		}
+	} // else the span is being finished concurrently by another goroutine
 }
 
 func (s *spanImpl) Flush() {

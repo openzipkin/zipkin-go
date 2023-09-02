@@ -37,6 +37,7 @@ type Tracer struct {
 	noop                 int32 // used as atomic bool (1 = true, 0 = false)
 	sharedSpans          bool
 	unsampledNoop        bool
+	finishedSpanHandler  func(*model.SpanModel) bool
 }
 
 // NewTracer returns a new Zipkin Tracer.
@@ -106,8 +107,9 @@ func (t *Tracer) StartSpan(name string, options ...SpanOption) Span {
 			Annotations:   make([]model.Annotation, 0),
 			Tags:          make(map[string]string),
 		},
-		flushOnFinish: true,
-		tracer:        t,
+		flushOnFinish:       true,
+		tracer:              t,
+		finishedSpanHandler: t.finishedSpanHandler,
 	}
 
 	// add default tracer tags to span
