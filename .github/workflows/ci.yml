@@ -10,8 +10,6 @@ on:
 
 jobs:
   "CI":
-    env:
-      GO111MODULE: on
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -25,17 +23,17 @@ jobs:
     steps:
       # Set fetch-depth: 0 to fetch commit history and tags for use in version calculation
       - name: Check out code
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
 
       - name: Lint files
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v4
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
           version: latest
@@ -46,7 +44,7 @@ jobs:
           CGO_ENABLED: 1
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:

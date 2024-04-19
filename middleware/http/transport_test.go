@@ -44,7 +44,7 @@ func TestRoundTripErrHandlingForRoundTripError(t *testing.T) {
 	req, _ := http.NewRequest("GET", "localhost", nil)
 	tr, _ := NewTransport(
 		tracer,
-		TransportErrHandler(func(_ zipkin.Span, err error, statusCode int) {
+		TransportErrHandler(func(_ zipkin.Span, err error, _ int) {
 			if want, have := expectedErr, err; want != have {
 				t.Errorf("unexpected error, want %q, have %q", want, have)
 			}
@@ -81,7 +81,7 @@ func TestRoundTripErrHandlingForStatusCode(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 			rw.WriteHeader(tc.actualStatusCode)
 		}))
 
@@ -92,7 +92,7 @@ func TestRoundTripErrHandlingForStatusCode(t *testing.T) {
 		req, _ := http.NewRequest("GET", srv.URL, nil)
 		tr, _ := NewTransport(
 			tracer,
-			TransportErrHandler(func(_ zipkin.Span, err error, statusCode int) {
+			TransportErrHandler(func(_ zipkin.Span, _ error, statusCode int) {
 				if want, have := tc.expectedError, statusCode; want != 0 && want != have {
 					t.Errorf("unexpected status code, want %d, have %d", want, have)
 				}
@@ -163,19 +163,19 @@ func TestTransportRequestSamplerOverridesSamplingFromContext(t *testing.T) {
 		// Test RequestSampler override sample -> no sample
 		{
 			Sampler:          zipkin.AlwaysSample,
-			RequestSampler:   func(_ *http.Request) *bool { return Discard() },
+			RequestSampler:   func(*http.Request) *bool { return Discard() },
 			ExpectedSampling: "0",
 		},
 		// Test RequestSampler override no sample -> sample
 		{
 			Sampler:          zipkin.NeverSample,
-			RequestSampler:   func(_ *http.Request) *bool { return Sample() },
+			RequestSampler:   func(*http.Request) *bool { return Sample() },
 			ExpectedSampling: "1",
 		},
 		// Test RequestSampler pass through of sampled decision
 		{
 			Sampler: zipkin.AlwaysSample,
-			RequestSampler: func(r *http.Request) *bool {
+			RequestSampler: func(*http.Request) *bool {
 				return nil
 			},
 			ExpectedSampling: "1",
@@ -183,7 +183,7 @@ func TestTransportRequestSamplerOverridesSamplingFromContext(t *testing.T) {
 		// Test RequestSampler pass through of not sampled decision
 		{
 			Sampler: zipkin.NeverSample,
-			RequestSampler: func(r *http.Request) *bool {
+			RequestSampler: func(*http.Request) *bool {
 				return nil
 			},
 			ExpectedSampling: "0",

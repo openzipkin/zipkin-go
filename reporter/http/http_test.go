@@ -53,7 +53,7 @@ func generateSpans(n int) []*model.SpanModel {
 
 func newTestServer(t *testing.T, spans []*model.SpanModel, serializer reporter.SpanSerializer, onReceive func(int)) *httptest.Server {
 	sofar := 0
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			t.Errorf("expected 'POST' request, got '%s'", r.Method)
 		}
@@ -179,7 +179,7 @@ func TestSpanCustomHeaders(t *testing.T) {
 		},
 	}
 	var haveHeaders http.Header
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		haveHeaders = r.Header
 	}))
 	defer ts.Close()
@@ -207,7 +207,7 @@ func TestB3SamplingHeader(t *testing.T) {
 	serializer := reporter.JSONSerializer{}
 
 	var haveHeaders map[string][]string
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		haveHeaders = r.Header
 	}))
 	defer ts.Close()
