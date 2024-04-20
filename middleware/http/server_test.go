@@ -31,7 +31,7 @@ var (
 )
 
 func httpHandler(code int, headers http.Header, body *bytes.Buffer) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(code)
 		for key, value := range headers {
 			w.Header().Add(key, value[0])
@@ -221,9 +221,9 @@ func TestHTTPRequestSampler(t *testing.T) {
 
 	samplers := []func(r *http.Request) *bool{
 		nil,
-		func(r *http.Request) *bool { return mw.Sample() },
-		func(r *http.Request) *bool { return mw.Discard() },
-		func(r *http.Request) *bool { return nil },
+		func(*http.Request) *bool { return mw.Sample() },
+		func(*http.Request) *bool { return mw.Discard() },
+		func(*http.Request) *bool { return nil },
 	}
 
 	for idx, sampler := range samplers {
