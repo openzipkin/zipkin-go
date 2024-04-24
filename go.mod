@@ -1,6 +1,6 @@
 module github.com/openzipkin/zipkin-go
 
-go 1.18
+go 1.20
 
 require (
 	github.com/IBM/sarama v1.40.1

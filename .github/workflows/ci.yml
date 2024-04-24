@@ -12,14 +12,14 @@ jobs:
   "CI":
     runs-on: ${{ matrix.os }}
     strategy:
-      matrix:
+      matrix:  # Use versions consistent with zipkin-go's Go support policy.
         os: [macos-latest, windows-latest, ubuntu-latest]
-        go: ["1.20"]
+        go: ["1.22"]  # Current Go version
         include:
           - os: ubuntu-latest
-            go: "1.18"
+            go: "1.21"
           - os: ubuntu-latest
-            go: "1.19"
+            go: "1.20"  # Floor Go version of zipkin-go (current - 2)
     steps:
       # Set fetch-depth: 0 to fetch commit history and tags for use in version calculation
       - name: Check out code
