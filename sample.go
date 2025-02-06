@@ -61,6 +61,8 @@ func NewBoundarySampler(rate float64, salt int64) (Sampler, error) {
 	}
 
 	var (
+		// convert rate into a proportional boundary where values below it are sampled
+		//   (e.g., 1% rate ≈ first 1% of space)
 		boundary = uint64(rate * (1 << 63))
 		usalt    = uint64(salt)
 	)
