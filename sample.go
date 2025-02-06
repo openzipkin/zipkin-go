@@ -61,11 +61,15 @@ func NewBoundarySampler(rate float64, salt int64) (Sampler, error) {
 	}
 
 	var (
-		boundary = int64(rate * 10000)
+		// convert rate into a proportional boundary where values below it are sampled
+		//   (e.g., 1% rate ≈ first 1% of space)
+		boundary = uint64(rate * (1 << 63))
 		usalt    = uint64(salt)
 	)
 	return func(id uint64) bool {
-		return int64(math.Abs(float64(id^usalt)))%10000 < boundary
+		// XOR with salt provides deterministic randomization
+		//   right shift ensures uniform distribution across [0, 2^63)
+		return ((id ^ usalt) >> 1) < boundary
 	}, nil
 }
 

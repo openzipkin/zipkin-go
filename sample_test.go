@@ -31,21 +31,16 @@ func TestBoundarySampler(t *testing.T) {
 		hasError bool
 	}
 	for input, sampled := range map[triple]bool{
-		{123, 456, 1.0, false}:    true,
-		{123, 456, 999, true}:     true,
-		{123, 456, 0.0, false}:    false,
-		{123, 456, -42, true}:     false,
-		{1229998, 0, 0.01, false}: false,
-		{1229999, 0, 0.01, false}: false,
-		{1230000, 0, 0.01, false}: true,
-		{1230001, 0, 0.01, false}: true,
-		{1230098, 0, 0.01, false}: true,
-		{1230099, 0, 0.01, false}: true,
-		{1230100, 0, 0.01, false}: false,
-		{1230101, 0, 0.01, false}: false,
-		{1, 9999999, 0.01, false}: false,
-		{999, 0, 0.99, false}:     true,
-		{9999, 0, 0.99, false}:    false,
+		{123, 456, 1.0, false}:               true,
+		{123, 456, 999, true}:                true,
+		{123, 456, 0.0, false}:               false,
+		{123, 456, -42, true}:                false,
+		{0xffffffffffffffff, 0, 0.01, false}: false,
+		{0xa000000000000000, 0, 0.01, false}: false,
+		{0x028f5c28f5c28f5f, 0, 0.01, false}: true,
+		{0x028f5c28f5c28f60, 0, 0.01, false}: false,
+		{1, 0xfffffffffffffff, 0.01, false}:  false,
+		{999, 0, 0.99, false}:                true,
 	} {
 		sampler, err := zipkin.NewBoundarySampler(input.rate, input.salt)
 		if want, have := input.hasError, (err != nil); want != have {
@@ -61,6 +56,23 @@ func TestBoundarySampler(t *testing.T) {
 		if want, have := sampled, sampler(input.id); want != have {
 			t.Errorf("%#+v: want %v, have %v", input, want, have)
 		}
+
+	}
+}
+
+func TestBoundarySamplerProducesSamplingDecisionsTrueToTheRate(t *testing.T) {
+	rand.Uint64()
+	c := 0
+	sampler, _ := zipkin.NewBoundarySampler(0.01, 0)
+	n := 10000
+	for i := 0; i < n; i++ {
+		id := rand.Uint64()
+		if sampler(id) {
+			c++
+		}
+	}
+	if !(c > 50 && c < 150) {
+		t.Error("should sample at 1%, should be in vicinity of 100")
 	}
 }
 
