@@ -67,6 +67,8 @@ func NewBoundarySampler(rate float64, salt int64) (Sampler, error) {
 		usalt    = uint64(salt)
 	)
 	return func(id uint64) bool {
+		// XOR with salt provides deterministic randomization
+		//   right shift ensures uniform distribution across [0, 2^63)
 		return ((id ^ usalt) >> 1) < boundary
 	}, nil
 }
