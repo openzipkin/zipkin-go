@@ -61,11 +61,11 @@ func NewBoundarySampler(rate float64, salt int64) (Sampler, error) {
 	}
 
 	var (
-		boundary = int64(rate * 10000)
+		boundary = uint64(rate * (1 << 63))
 		usalt    = uint64(salt)
 	)
 	return func(id uint64) bool {
-		return int64(math.Abs(float64(id^usalt)))%10000 < boundary
+		return ((id ^ usalt) >> 1) < boundary
 	}, nil
 }
 
