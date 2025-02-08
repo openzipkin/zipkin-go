@@ -112,6 +112,11 @@ Producer digesting JSON V2 Spans. The reporter uses the
 [Sarama async producer](https://pkg.go.dev/github.com/IBM/sarama#AsyncProducer)
 underneath.
 
+#### Pulsar Reporter
+You can use the Pulsar Reporter to send spans to the Zipkin server. The reporter
+uses the [Pulsar go client async producer](https://pkg.go.dev/github.com/apache/pulsar-client-go) 
+underneath.
+
 ## Usage and Examples
 [HTTP Server Example](examples/httpserver_test.go)
 
