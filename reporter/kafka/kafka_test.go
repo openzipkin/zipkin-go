@@ -15,14 +15,18 @@
 package kafka_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"log"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/IBM/sarama"
 
+	"github.com/openzipkin/zipkin-go/logging"
 	"github.com/openzipkin/zipkin-go/model"
 	zp3 "github.com/openzipkin/zipkin-go/proto/zipkin_proto3"
 	"github.com/openzipkin/zipkin-go/reporter"
@@ -294,5 +298,78 @@ func makeNewSpan(methodName string, traceID, spanID, parentSpanID uint64, debug 
 		},
 		Name:      methodName,
 		Timestamp: timestamp,
+	}
+}
+
+// syncBuffer is a concurrency-safe bytes.Buffer for capturing logs written by
+// the reporter's background goroutines.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *syncBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *syncBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
+
+func TestKafkaLoggerOption(t *testing.T) {
+	p := newStubProducer(false)
+	var sb syncBuffer
+	c, err := kafka.NewReporter(
+		[]string{"192.0.2.10:9092"},
+		kafka.Producer(p),
+		kafka.Logger(log.New(&sb, "", 0)),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+
+	p.err <- &sarama.ProducerError{
+		Msg: &sarama.ProducerMessage{Topic: "zipkin"},
+		Err: errors.New("produce failed"),
+	}
+
+	// logErrors runs in its own goroutine, wait for it to consume the error.
+	deadline := time.Now().Add(5 * time.Second)
+	for !strings.Contains(sb.String(), "failed to produce msg") {
+		if time.Now().After(deadline) {
+			t.Fatalf("expected error log, got: %q", sb.String())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func TestKafkaLogLevelOptionSuppressesErrorsAtOutOfRange(t *testing.T) {
+	p := newStubProducer(false)
+	var sb syncBuffer
+	c, err := kafka.NewReporter(
+		[]string{"192.0.2.10:9092"},
+		kafka.Producer(p),
+		kafka.Logger(log.New(&sb, "", 0)),
+		kafka.LogLevel(logging.Level(99)),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+
+	p.err <- &sarama.ProducerError{
+		Msg: &sarama.ProducerMessage{Topic: "zipkin"},
+		Err: errors.New("produce failed"),
+	}
+
+	// give logErrors a chance to (wrongly) write something
+	time.Sleep(100 * time.Millisecond)
+	if sb.String() != "" {
+		t.Errorf("expected no output at level above ErrorLevel, got: %q", sb.String())
 	}
 }

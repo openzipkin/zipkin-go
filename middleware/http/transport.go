@@ -21,10 +21,10 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptrace"
-	"os"
 	"strconv"
 
 	"github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go/logging"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 )
@@ -56,7 +56,7 @@ type transport struct {
 	defaultTags       map[string]string
 	errHandler        ErrHandler
 	errResponseReader *ErrResponseReader
-	logger            *log.Logger
+	logger            *logging.Logger
 	requestSampler    RequestSamplerFunc
 	remoteEndpoint    *model.Endpoint
 }
@@ -110,9 +110,12 @@ func TransportRemoteEndpoint(remoteEndpoint *model.Endpoint) TransportOption {
 
 // TransportLogger allows to plug a logger into the transport
 func TransportLogger(l *log.Logger) TransportOption {
-	return func(t *transport) {
-		t.logger = l
-	}
+	return func(t *transport) { t.logger.Swap(l) }
+}
+
+// TransportLogLevel sets the minimum severity level the transport will log.
+func TransportLogLevel(level logging.Level) TransportOption {
+	return func(t *transport) { t.logger.SetLevel(level) }
 }
 
 // TransportRequestSampler allows one to set the sampling decision based on
@@ -138,7 +141,7 @@ func NewTransport(tracer *zipkin.Tracer, options ...TransportOption) (http.Round
 		rt:         http.DefaultTransport,
 		httpTrace:  false,
 		errHandler: defaultErrHandler,
-		logger:     log.New(os.Stderr, "", log.LstdFlags),
+		logger:     logging.NewLogger(nil),
 	}
 
 	for _, option := range options {
@@ -234,7 +237,7 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 					(*t.errResponseReader)(sp, ioutil.NopCloser(bytes.NewBuffer(sBody)))
 					res.Body = ioutil.NopCloser(bytes.NewBuffer(sBody))
 				} else {
-					t.logger.Printf("failed to read the response body in the ErrResponseReader: %v", err)
+					t.logger.Errorf("failed to read the response body in the ErrResponseReader: %v", err)
 				}
 			}
 		}

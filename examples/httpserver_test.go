@@ -18,7 +18,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"time"
 
 	"github.com/openzipkin/zipkin-go"
@@ -28,7 +27,7 @@ import (
 
 func Example() {
 	// set up a span reporter
-	reporter := logreporter.NewReporter(log.New(os.Stderr, "", log.LstdFlags))
+	reporter := logreporter.NewReporter(nil)
 	defer func() {
 		_ = reporter.Close()
 	}()

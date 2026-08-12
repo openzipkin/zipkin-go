@@ -21,34 +21,46 @@ package log
 import (
 	"encoding/json"
 	"log"
-	"os"
 	"time"
 
+	"github.com/openzipkin/zipkin-go/logging"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 )
 
 // logReporter will send spans to the default Go Logger.
 type logReporter struct {
-	logger *log.Logger
+	logger *logging.Logger
 }
 
-// NewReporter returns a new log reporter.
-func NewReporter(l *log.Logger) reporter.Reporter {
-	if l == nil {
-		// use standard type of log setup
-		l = log.New(os.Stderr, "", log.LstdFlags)
+// ReporterOption sets a parameter for the logReporter.
+type ReporterOption func(r *logReporter)
+
+// LogLevel sets the minimum severity level this reporter will log.
+func LogLevel(level logging.Level) ReporterOption {
+	return func(r *logReporter) { r.logger.SetLevel(level) }
+}
+
+// NewReporter returns a new log reporter. If l is nil, a default logger
+// writing to os.Stderr with standard flags is used.
+func NewReporter(l *log.Logger, options ...ReporterOption) reporter.Reporter {
+	r := &logReporter{
+		logger: logging.NewLogger(l),
 	}
-	return &logReporter{
-		logger: l,
+	for _, option := range options {
+		option(r)
 	}
+	return r
 }
 
 // Send outputs a span to the Go logger.
 func (r *logReporter) Send(s model.SpanModel) {
-	if b, err := json.MarshalIndent(s, "", "  "); err == nil {
-		r.logger.Printf("%s:\n%s\n\n", time.Now(), string(b))
+	b, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		r.logger.Errorf("failed when marshalling the span: %v", err)
+		return
 	}
+	r.logger.Infof("%s:\n%s\n\n", time.Now(), string(b))
 }
 
 // Close closes the reporter

@@ -22,10 +22,10 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
+	"github.com/openzipkin/zipkin-go/logging"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 )
@@ -47,7 +47,7 @@ type HTTPDoer interface { // nolint: revive // keep as is, we don't want to brea
 type httpReporter struct {
 	url           string
 	client        HTTPDoer
-	logger        *log.Logger
+	logger        *logging.Logger
 	batchInterval time.Duration
 	batchSize     int
 	maxBacklog    int
@@ -122,7 +122,7 @@ func (r *httpReporter) append(span *model.SpanModel) (newBatchSize int) {
 	r.batch = append(r.batch, span)
 	if len(r.batch) > r.maxBacklog {
 		dispose := len(r.batch) - r.maxBacklog
-		r.logger.Printf("backlog too long, disposing %d spans", dispose)
+		r.logger.Warnf("backlog too long, disposing %d spans", dispose)
 		r.batch = r.batch[dispose:]
 	}
 	newBatchSize = len(r.batch)
@@ -143,13 +143,13 @@ func (r *httpReporter) sendBatch() error {
 
 	body, err := r.serializer.Serialize(sendBatch)
 	if err != nil {
-		r.logger.Printf("failed when marshalling the spans batch: %s\n", err.Error())
+		r.logger.Errorf("failed when marshalling the spans batch: %s\n", err.Error())
 		return err
 	}
 
 	req, err := http.NewRequest("POST", r.url, bytes.NewReader(body))
 	if err != nil {
-		r.logger.Printf("failed when creating the request: %s\n", err.Error())
+		r.logger.Errorf("failed when creating the request: %s\n", err.Error())
 		return err
 	}
 
@@ -168,12 +168,12 @@ func (r *httpReporter) sendBatch() error {
 
 	resp, err := r.client.Do(req.WithContext(ctx))
 	if err != nil {
-		r.logger.Printf("failed to send the request: %s\n", err.Error())
+		r.logger.Errorf("failed to send the request: %s\n", err.Error())
 		return err
 	}
 	_ = resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		r.logger.Printf("failed the request with status code %d\n", resp.StatusCode)
+		r.logger.Warnf("failed the request with status code %d\n", resp.StatusCode)
 	}
 
 	// Remove sent spans from the batch even if they were not saved
@@ -230,7 +230,12 @@ func RequestCallback(rc RequestCallbackFn) ReporterOption {
 // Logger sets the logger used to report errors in the collection
 // process.
 func Logger(l *log.Logger) ReporterOption {
-	return func(r *httpReporter) { r.logger = l }
+	return func(r *httpReporter) { r.logger.Swap(l) }
+}
+
+// LogLevel sets the minimum severity level this reporter will log.
+func LogLevel(level logging.Level) ReporterOption {
+	return func(r *httpReporter) { r.logger.SetLevel(level) }
 }
 
 // Serializer sets the serialization function to use for sending span data to
@@ -249,7 +254,7 @@ func Serializer(serializer reporter.SpanSerializer) ReporterOption {
 func NewReporter(url string, opts ...ReporterOption) reporter.Reporter {
 	r := httpReporter{
 		url:           url,
-		logger:        log.New(os.Stderr, "", log.LstdFlags),
+		logger:        logging.NewLogger(nil),
 		client:        &http.Client{},
 		batchInterval: defaultBatchInterval,
 		batchSize:     defaultBatchSize,

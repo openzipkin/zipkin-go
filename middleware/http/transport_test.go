@@ -15,15 +15,19 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go/logging"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
@@ -222,5 +226,85 @@ func TestTransportRequestSamplerOverridesSamplingFromContext(t *testing.T) {
 
 		_ = rep.Close()
 		srv.Close()
+	}
+}
+
+func TestTransportLoggerOption(t *testing.T) {
+	var buf bytes.Buffer
+	tracer, err := zipkin.NewTracer(nil)
+	if err != nil {
+		t.Fatalf("unexpected error when creating tracer: %v", err)
+	}
+
+	_, err = NewTransport(
+		tracer,
+		TransportLogger(log.New(&buf, "", 0)),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error creating transport with TransportLogger: %v", err)
+	}
+}
+
+func TestTransportLogLevelOption(t *testing.T) {
+	tracer, err := zipkin.NewTracer(nil)
+	if err != nil {
+		t.Fatalf("unexpected error when creating tracer: %v", err)
+	}
+
+	_, err = NewTransport(
+		tracer,
+		TransportLogLevel(logging.ErrorLevel),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error creating transport with TransportLogLevel: %v", err)
+	}
+}
+
+type errorBody struct{}
+
+func (errorBody) Read([]byte) (int, error) { return 0, errors.New("simulated read failure") }
+func (errorBody) Close() error             { return nil }
+
+type failingBodyTransport struct{}
+
+func (failingBodyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusInternalServerError,
+		Body:       errorBody{},
+		Header:     make(http.Header),
+		Request:    req,
+	}, nil
+}
+
+func TestTransportLogLevelKeepsErrorsDuringErrResponseRead(t *testing.T) {
+	var buf bytes.Buffer
+	tracer, err := zipkin.NewTracer(recorder.NewReporter())
+	if err != nil {
+		t.Fatalf("unexpected error when creating tracer: %v", err)
+	}
+
+	tr, err := NewTransport(
+		tracer,
+		RoundTripper(failingBodyTransport{}),
+		TransportLogger(log.New(&buf, "", 0)),
+		TransportLogLevel(logging.ErrorLevel),
+		TransportErrResponseReader(func(_ zipkin.Span, _ io.Reader) {}),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error creating transport: %v", err)
+	}
+
+	req, err := http.NewRequest("GET", "http://example.com/", nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating request: %v", err)
+	}
+	if _, err := tr.RoundTrip(req); err != nil {
+		t.Fatalf("unexpected error during round trip: %v", err)
+	}
+
+	// the error raised while reading the response body is logged at Error
+	// level, so it must not be filtered out by ErrorLevel
+	if !strings.Contains(buf.String(), "failed to read the response body") {
+		t.Errorf("expected error log at ErrorLevel, got: %q", buf.String())
 	}
 }
