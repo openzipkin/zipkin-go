@@ -17,7 +17,6 @@ package model
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 	"reflect"
 	"strings"
@@ -216,14 +215,10 @@ func TestSpanNegativeDuration(t *testing.T) {
 		t.Fatalf("Span Marshal Error expected, have nil")
 	}
 
-	want := fmt.Sprintf(
-		"json: error calling MarshalJSON for type model.SpanModel: %s",
-		ErrValidDurationRequired.Error(),
-	)
-
-	if have := err.Error(); want != have {
-		t.Errorf("Span Marshal Error want %s, have %s", want, have)
+	if !errors.Is(err, ErrValidDurationRequired) {
+		t.Errorf("expected invalid duration error, got %v", err)
 	}
+
 }
 
 func TestSpanNegativeTimestamp(t *testing.T) {
@@ -248,13 +243,8 @@ func TestSpanNegativeTimestamp(t *testing.T) {
 	if _, err = json.Marshal(span); err == nil {
 		t.Fatalf("Span Marshal Error expected, have nil")
 	}
-
-	want := fmt.Sprintf(
-		"json: error calling MarshalJSON for type model.SpanModel: %s",
-		ErrValidTimestampRequired.Error(),
-	)
-	if have := err.Error(); want != have {
-		t.Errorf("Span Marshal Error want %s, have %s", want, have)
+	if !errors.Is(err, ErrValidTimestampRequired) {
+		t.Errorf("expected invalid timestamp error, got %v", err)
 	}
 
 }
