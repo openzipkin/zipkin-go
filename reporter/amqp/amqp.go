@@ -21,10 +21,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
+	"github.com/openzipkin/zipkin-go/logging"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 )
@@ -43,18 +43,20 @@ type rmqReporter struct {
 	conn     *amqp.Connection
 	exchange string
 	queue    string
-	logger   *log.Logger
+	logger   *logging.Logger
 }
 
 // ReporterOption sets a parameter for the rmqReporter
 type ReporterOption func(c *rmqReporter)
 
-// Logger sets the logger used to report errors in the collection
-// process.
-func Logger(logger *log.Logger) ReporterOption {
-	return func(c *rmqReporter) {
-		c.logger = logger
-	}
+// Logger sets the logger used to report errors in the collection process.
+func Logger(l *log.Logger) ReporterOption {
+	return func(c *rmqReporter) { c.logger.Swap(l) }
+}
+
+// LogLevel sets the minimum severity level this reporter will log.
+func LogLevel(level logging.Level) ReporterOption {
+	return func(c *rmqReporter) { c.logger.SetLevel(level) }
 }
 
 // Exchange sets the Exchange used to send messages (
@@ -90,7 +92,7 @@ func Connection(conn *amqp.Connection) ReporterOption {
 // NewReporter returns a new RabbitMq-backed Reporter. address should be as described here: https://www.rabbitmq.com/uri-spec.html
 func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, error) {
 	r := &rmqReporter{
-		logger:   log.New(os.Stderr, "", log.LstdFlags),
+		logger:   logging.NewLogger(nil),
 		queue:    defaultRmqRoutingKey,
 		exchange: defaultRmqExchange,
 		e:        make(chan error),
@@ -135,7 +137,7 @@ func NewReporter(address string, options ...ReporterOption) (reporter.Reporter, 
 
 func (r *rmqReporter) logErrors() {
 	for err := range r.e {
-		r.logger.Print("msg", err.Error())
+		r.logger.Error("msg", err.Error())
 	}
 }
 

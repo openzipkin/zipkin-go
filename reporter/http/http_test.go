@@ -18,14 +18,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/openzipkin/zipkin-go/idgenerator"
+	"github.com/openzipkin/zipkin-go/logging"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 	zipkinhttp "github.com/openzipkin/zipkin-go/reporter/http"
@@ -240,4 +243,102 @@ func (h headerClient) Do(req *http.Request) (*http.Response, error) {
 		}
 	}
 	return h.client.Do(req)
+}
+
+func TestReporterLoggerOption(t *testing.T) {
+	var buf bytes.Buffer
+	serializer := reporter.JSONSerializer{}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	rep := zipkinhttp.NewReporter(
+		ts.URL,
+		zipkinhttp.Serializer(serializer),
+		zipkinhttp.Logger(log.New(&buf, "", 0)),
+	)
+	for _, span := range generateSpans(1) {
+		rep.Send(*span)
+	}
+	rep.Close()
+	// No errors expected during normal operation; Logger option should not
+	// produce any output when everything succeeds.
+	if buf.Len() != 0 {
+		t.Errorf("expected no log output on success, got: %s", strings.TrimSpace(buf.String()))
+	}
+}
+
+func TestReporterLogLevelOption(t *testing.T) {
+	serializer := reporter.JSONSerializer{}
+
+	newFailingServer := func() *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+	}
+
+	t.Run("ErrorLevel suppresses warnings", func(t *testing.T) {
+		ts := newFailingServer()
+		defer ts.Close()
+
+		var buf bytes.Buffer
+		rep := zipkinhttp.NewReporter(
+			ts.URL,
+			zipkinhttp.Serializer(serializer),
+			zipkinhttp.Logger(log.New(&buf, "", 0)),
+			zipkinhttp.LogLevel(logging.ErrorLevel),
+		)
+		for _, span := range generateSpans(1) {
+			rep.Send(*span)
+		}
+		rep.Close()
+
+		if buf.Len() != 0 {
+			t.Errorf("expected no output at ErrorLevel, got: %s", strings.TrimSpace(buf.String()))
+		}
+	})
+
+	t.Run("WarnLevel shows warnings", func(t *testing.T) {
+		ts := newFailingServer()
+		defer ts.Close()
+
+		var buf bytes.Buffer
+		rep := zipkinhttp.NewReporter(
+			ts.URL,
+			zipkinhttp.Serializer(serializer),
+			zipkinhttp.Logger(log.New(&buf, "", 0)),
+			zipkinhttp.LogLevel(logging.WarnLevel),
+		)
+		for _, span := range generateSpans(1) {
+			rep.Send(*span)
+		}
+		rep.Close()
+
+		if !strings.Contains(buf.String(), "failed the request with status code 500") {
+			t.Errorf("expected warning at WarnLevel, got: %s", buf.String())
+		}
+	})
+
+	t.Run("LogLevel before Logger preserves the level", func(t *testing.T) {
+		ts := newFailingServer()
+		defer ts.Close()
+
+		var buf bytes.Buffer
+		rep := zipkinhttp.NewReporter(
+			ts.URL,
+			zipkinhttp.Serializer(serializer),
+			zipkinhttp.LogLevel(logging.ErrorLevel),
+			zipkinhttp.Logger(log.New(&buf, "", 0)),
+		)
+		for _, span := range generateSpans(1) {
+			rep.Send(*span)
+		}
+		rep.Close()
+
+		if buf.Len() != 0 {
+			t.Errorf("expected Logger option to preserve the ErrorLevel, got: %s", strings.TrimSpace(buf.String()))
+		}
+	})
 }

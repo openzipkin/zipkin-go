@@ -19,10 +19,10 @@ package kafka
 
 import (
 	"log"
-	"os"
 
 	"github.com/IBM/sarama"
 
+	"github.com/openzipkin/zipkin-go/logging"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 )
@@ -36,7 +36,7 @@ const defaultKafkaTopic = "zipkin"
 // broker.
 type kafkaReporter struct {
 	producer   sarama.AsyncProducer
-	logger     *log.Logger
+	logger     *logging.Logger
 	topic      string
 	serializer reporter.SpanSerializer
 }
@@ -44,12 +44,14 @@ type kafkaReporter struct {
 // ReporterOption sets a parameter for the kafkaReporter
 type ReporterOption func(c *kafkaReporter)
 
-// Logger sets the logger used to report errors in the collection
-// process.
-func Logger(logger *log.Logger) ReporterOption {
-	return func(c *kafkaReporter) {
-		c.logger = logger
-	}
+// Logger sets the logger used to report errors in the collection process.
+func Logger(l *log.Logger) ReporterOption {
+	return func(c *kafkaReporter) { c.logger.Swap(l) }
+}
+
+// LogLevel sets the minimum severity level this reporter will log.
+func LogLevel(level logging.Level) ReporterOption {
+	return func(c *kafkaReporter) { c.logger.SetLevel(level) }
 }
 
 // Producer sets the producer used to produce to Kafka. For tweaking
@@ -82,7 +84,7 @@ func Serializer(serializer reporter.SpanSerializer) ReporterOption {
 // TCP endpoints of the form "host:port".
 func NewReporter(address []string, options ...ReporterOption) (reporter.Reporter, error) {
 	r := &kafkaReporter{
-		logger:     log.New(os.Stderr, "", log.LstdFlags),
+		logger:     logging.NewLogger(nil),
 		topic:      defaultKafkaTopic,
 		serializer: reporter.JSONSerializer{},
 	}
@@ -105,7 +107,7 @@ func NewReporter(address []string, options ...ReporterOption) (reporter.Reporter
 
 func (r *kafkaReporter) logErrors() {
 	for pe := range r.producer.Errors() {
-		r.logger.Print("msg", pe.Msg, "err", pe.Err, "result", "failed to produce msg")
+		r.logger.Error("msg", pe.Msg, "err", pe.Err, "result", "failed to produce msg")
 	}
 }
 
@@ -114,7 +116,7 @@ func (r *kafkaReporter) Send(s model.SpanModel) {
 	ss := []*model.SpanModel{&s}
 	m, err := r.serializer.Serialize(ss)
 	if err != nil {
-		r.logger.Printf("failed when marshalling the span: %s\n", err.Error())
+		r.logger.Errorf("failed when marshalling the span: %s\n", err.Error())
 		return
 	}
 
