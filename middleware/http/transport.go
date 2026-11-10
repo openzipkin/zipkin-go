@@ -17,7 +17,6 @@ package http
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptrace"
@@ -228,11 +227,11 @@ func (t *transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 			t.errHandler(sp, nil, res.StatusCode)
 
 			if t.errResponseReader != nil {
-				sBody, err := ioutil.ReadAll(res.Body)
+				sBody, err := io.ReadAll(res.Body)
 				if err == nil {
 					res.Body.Close()
-					(*t.errResponseReader)(sp, ioutil.NopCloser(bytes.NewBuffer(sBody)))
-					res.Body = ioutil.NopCloser(bytes.NewBuffer(sBody))
+					(*t.errResponseReader)(sp, io.NopCloser(bytes.NewBuffer(sBody)))
+					res.Body = io.NopCloser(bytes.NewBuffer(sBody))
 				} else {
 					t.logger.Printf("failed to read the response body in the ErrResponseReader: %v", err)
 				}
