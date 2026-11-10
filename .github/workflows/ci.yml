@@ -13,13 +13,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:  # Use versions consistent with zipkin-go's Go support policy.
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest]
         go: ["1.22"]  # Current Go version
         include:
           - os: ubuntu-latest
             go: "1.21"
           - os: ubuntu-latest
             go: "1.20"  # Floor Go version of zipkin-go (current - 2)
+          - os: macos-latest
+            go: "1.25"  # Oldest Go version that links on macOS 26: golang/go#78012
     steps:
       # Set fetch-depth: 0 to fetch commit history and tags for use in version calculation
       - name: Check out code
@@ -33,6 +35,9 @@ jobs:
           go-version: ${{ matrix.go }}
 
       - name: Lint files
+        # The golangci-lint version in use does not support Go 1.25, which the
+        # macOS job needs. Lint results do not depend on the OS.
+        if: matrix.os != 'macos-latest'
         uses: golangci/golangci-lint-action@v4
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
