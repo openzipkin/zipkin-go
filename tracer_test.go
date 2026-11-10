@@ -85,14 +85,15 @@ func TestTracerOptionExtractFailurePolicy(t *testing.T) {
 	defer rep.Close()
 
 	policies := []struct {
-		policy ExtractFailurePolicy
-		err    error
+		policy   ExtractFailurePolicy
+		err      error // returned by NewTracer
+		panicErr error // carried by the panic when the parent failed extraction
 	}{
-		{-1, ErrInvalidExtractFailurePolicy},
-		{ExtractFailurePolicyRestart, nil},
-		{ExtractFailurePolicyError, nil},
-		{ExtractFailurePolicyTagAndRestart, nil},
-		{3, ErrInvalidExtractFailurePolicy},
+		{-1, ErrInvalidExtractFailurePolicy, ErrInvalidExtractFailurePolicy},
+		{ExtractFailurePolicyRestart, nil, nil},
+		{ExtractFailurePolicyError, nil, errExtract},
+		{ExtractFailurePolicyTagAndRestart, nil, nil},
+		{3, ErrInvalidExtractFailurePolicy, ErrInvalidExtractFailurePolicy},
 	}
 
 	for idx, item := range policies {
@@ -111,7 +112,7 @@ func TestTracerOptionExtractFailurePolicy(t *testing.T) {
 			tr.extractFailurePolicy = item.policy
 		}
 
-		errStr := failSpan(t, tr, idx, item.err)
+		errStr := failSpan(t, tr, idx, item.panicErr)
 		if item.policy == ExtractFailurePolicyTagAndRestart {
 			if want, have := "dummy", errStr; want != have {
 				t.Errorf("[%d] tag[error.extract tag] want %s, have %s", idx, want, have)
@@ -120,9 +121,12 @@ func TestTracerOptionExtractFailurePolicy(t *testing.T) {
 	}
 }
 
+// errExtract is the extraction error failSpan gives its parent context.
+var errExtract = errors.New("dummy")
+
 func failSpan(t *testing.T, tr *Tracer, idx int, want error) string {
 	sc := model.SpanContext{
-		Err: errors.New("dummy"),
+		Err: errExtract,
 	}
 
 	defer func() {
