@@ -14,12 +14,10 @@ jobs:
     strategy:
       matrix:  # Use versions consistent with zipkin-go's Go support policy.
         os: [macos-latest, windows-latest, ubuntu-latest]
-        go: ["1.22"]  # Current Go version
+        go: ["1.27"]  # Current Go version
         include:
           - os: ubuntu-latest
-            go: "1.21"
-          - os: ubuntu-latest
-            go: "1.20"  # Floor Go version of zipkin-go (current - 2)
+            go: "1.26"
     steps:
       # Set fetch-depth: 0 to fetch commit history and tags for use in version calculation
       - name: Check out code
@@ -33,10 +31,12 @@ jobs:
           go-version: ${{ matrix.go }}
 
       - name: Lint files
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v9
         with:
-          # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: latest
+          # Must be new enough to support the newest Go version in the matrix above:
+          # v2.14 is the oldest release that works with Go 1.27. Specified without
+          # patch version: we always use the latest patch version.
+          version: v2.14
 
       - name: Run tests
         run: go test -coverprofile coverage.txt -v ./...

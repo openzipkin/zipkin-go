@@ -17,7 +17,7 @@ package http_test
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -58,7 +58,7 @@ func newTestServer(t *testing.T, spans []*model.SpanModel, serializer reporter.S
 			t.Errorf("expected 'POST' request, got '%s'", r.Method)
 		}
 
-		aPayload, err := ioutil.ReadAll(r.Body)
+		aPayload, err := io.ReadAll(r.Body)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}

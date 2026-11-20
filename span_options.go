@@ -39,7 +39,7 @@ func Parent(sc model.SpanContext) SpanOption {
 			switch t.extractFailurePolicy {
 			case ExtractFailurePolicyRestart:
 			case ExtractFailurePolicyError:
-				panic(s.SpanContext.Err)
+				panic(sc.Err)
 			case ExtractFailurePolicyTagAndRestart:
 				s.Tags["error.extract"] = sc.Err.Error()
 			default:
